@@ -4,7 +4,8 @@ import { submitFeedback } from '@/lib/submitFeedback'
 import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, type StorageResult } from '@/lib/plantStorage'
 import { clearAllPhotos, deletePlantPhotos, getPhotoBlob } from '@/lib/photoStore'
 import PlantPhoto from '@/components/PlantPhoto'
-import type { AppSettings, DayCode, DayOfWeek, HistoryEntry, Plant, WaterNeed } from '@/types/plant'
+import PlantHealthTracker from '@/components/plant-health-tracker'
+import type { AppSettings, CheckInLog, DayCode, DayOfWeek, HistoryEntry, Plant, WaterNeed } from '@/types/plant'
 import svgPaths from '@/imports/NewDesign2-1/svg-cm3nd9oy62'
 import svgPaths2 from '@/imports/MyjungleSettimgs-2/svg-u9kpmn74e6'
 import svgAdd from '@/imports/MyjungleAddPlant/svg-fer892chf7'
@@ -117,6 +118,7 @@ function normalizePlant(raw: Plant & { watered?: boolean; lastWatered?: string |
     lastWateredAt: raw.lastWateredAt ?? raw.lastWatered ?? null,
     previousWateredAt: raw.previousWateredAt ?? null,
     history: Array.isArray(raw.history) ? raw.history : [],
+    checkIns: Array.isArray(raw.checkIns) ? raw.checkIns : [],
     isWateredToday: raw.isWateredToday ?? raw.watered ?? false,
   }
 }
@@ -1161,6 +1163,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
         lastWateredAt: null,
         previousWateredAt: null,
         history: [],
+        checkIns: [],
         isWateredToday: false,
       }
 
@@ -1395,19 +1398,8 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   )
 }
 
-const DETAIL_BLUE = '#3B82F6'
-const DETAIL_BLUE_LIGHT = '#DBEAFE'
-const DETAIL_ORANGE_LIGHT = '#FFEDD5'
 const DETAIL_GRAY_LIGHT = '#F3F4F6'
-const DETAIL_MINT_LIGHT = '#D9FFE8'
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-interface HealthCheckItem {
-  id: string
-  label: string
-  status: 'ok' | 'warning'
-  timeAgo: string
-}
 
 // ─── Plant Detail Helpers ─────────────────────────────────────────────────────
 
@@ -1491,49 +1483,6 @@ function getGrowthChartPoints(plant: Plant, previewMode = false) {
       value: entry.heightCm ?? getGrowthHeights(plant).start,
     }
   })
-}
-
-function getHealthScore(plant: Plant, todayIdx: number): number {
-  let score = 68
-  if (plant.isWateredToday || !plant.wateringDays.includes(todayIdx)) score += 14
-  if (plant.lastWateredAt) score += 8
-  if (plant.careNote.trim()) score += 5
-  if (plantHistory(plant).length > 0) score += 5
-  return Math.min(92, score)
-}
-
-function healthRating(score: number): string {
-  if (score >= 90) return 'Excellent'
-  if (score >= 75) return 'Good'
-  return 'Needs Care'
-}
-
-function getHealthChecks(plant: Plant, previewMode = false): HealthCheckItem[] {
-  if (previewMode) {
-    return [
-      { id: 'h1', label: 'Leaf Vitality: Lush & Vibrant', status: 'ok', timeAgo: 'Today' },
-      { id: 'h2', label: 'Soil Condition: Moist & Balanced', status: 'ok', timeAgo: '2 days ago' },
-      { id: 'h3', label: 'Minor Dust on Leaves — Cleaned', status: 'warning', timeAgo: '1 week ago' },
-    ]
-  }
-  const checks: HealthCheckItem[] = [
-    {
-      id: 'leaf',
-      label: plant.isWateredToday ? 'Leaf Vitality: Lush & Vibrant' : 'Leaf Vitality: Monitor hydration',
-      status: plant.isWateredToday ? 'ok' : 'warning',
-      timeAgo: 'Today',
-    },
-    {
-      id: 'soil',
-      label: plant.lastWateredAt ? 'Soil Condition: Moist & Balanced' : 'Soil Condition: Check moisture',
-      status: plant.lastWateredAt ? 'ok' : 'warning',
-      timeAgo: plant.lastWateredAt ? daysSinceLabel(plant.lastWateredAt) : 'Today',
-    },
-  ]
-  if (plant.careNote) {
-    checks.push({ id: 'care', label: `Care Note: ${plant.careNote.slice(0, 40)}${plant.careNote.length > 40 ? '…' : ''}`, status: 'ok', timeAgo: '1 week ago' })
-  }
-  return checks
 }
 
 const GROWTH_PREVIEW_ENTRIES = [
@@ -1795,129 +1744,6 @@ function GrowthHistorySection({
   )
 }
 
-function HealthGauge({ score }: { score: number }) {
-  const r = 36
-  const c = 2 * Math.PI * r
-  const offset = c - (score / 100) * c
-  return (
-    <svg height="88" viewBox="0 0 88 88" width="88" aria-hidden>
-      <circle className="health-gauge-track" cx="44" cy="44" r={r} />
-      <circle
-        className="health-gauge-fill"
-        cx="44"
-        cy="44"
-        r={r}
-        strokeDasharray={c}
-        strokeDashoffset={offset}
-      />
-      <text fill="#000" fontFamily="Unbounded, sans-serif" fontSize="16" fontWeight="900" textAnchor="middle" x="44" y="48">{score}%</text>
-    </svg>
-  )
-}
-
-function HealthTrackerContent({
-  plant,
-  todayIdx,
-  previewMode = false,
-  onRecordHealth,
-}: {
-  plant: Plant
-  todayIdx: number
-  previewMode?: boolean
-  onRecordHealth?: () => void
-}) {
-  const score = previewMode ? 92 : getHealthScore(plant, todayIdx)
-  const checks = getHealthChecks(plant, previewMode)
-
-  return (
-    <div className="flex flex-col gap-4 w-full">
-      <div className="rounded-2xl p-4 flex gap-4 items-center w-full" style={{ background: DETAIL_MINT_LIGHT, border: '2px solid #000' }}>
-        <HealthGauge score={score} />
-        <div className="flex flex-col gap-1 min-w-0">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>Overall Health Score</span>
-          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#666' }}>Thriving in current conditions</span>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 w-full">
-        {checks.map((item) => (
-          <div key={item.id} className="flex items-start gap-3 w-full">
-            <div
-              className="flex items-center justify-center shrink-0 size-7 rounded-full border-2 border-black"
-              style={{ background: item.status === 'ok' ? GREEN : '#FFB020' }}
-            >
-              {item.status === 'ok' ? (
-                <svg fill="none" height="12" viewBox="0 0 12 12" width="12"><path d="M2 6l3 3 5-6" stroke="#000" strokeLinecap="round" strokeWidth="2" /></svg>
-              ) : (
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>!</span>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#000', lineHeight: 1.35 }}>{item.label}</p>
-            </div>
-            <span className="shrink-0" style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>{item.timeAgo}</span>
-          </div>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={onRecordHealth}
-        className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
-        style={{ background: GREEN, height: 52 }}
-      >
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>Record Health Check</span>
-      </button>
-    </div>
-  )
-}
-
-function HealthTrackerSection({
-  plant,
-  todayIdx,
-  isPro,
-  onUpgrade,
-  onRecordHealth,
-}: {
-  plant: Plant
-  todayIdx: number
-  isPro: boolean
-  onUpgrade: () => void
-  onRecordHealth: () => void
-}) {
-  const score = isPro ? getHealthScore(plant, todayIdx) : 92
-  const rating = healthRating(score)
-
-  return (
-    <div className="neo-card relative rounded-3xl shrink-0 w-full overflow-hidden">
-      <div className="flex flex-col gap-4 p-4">
-        <div className="flex items-center justify-between gap-3 w-full">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
-            Health Tracker
-          </span>
-          <span
-            className="shrink-0 rounded-full px-3 py-1 border-2 border-black"
-            style={{ background: DETAIL_MINT_LIGHT, fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 11, color: '#047857' }}
-          >
-            {score}% {rating}
-          </span>
-        </div>
-
-        {isPro ? (
-          <HealthTrackerContent plant={plant} todayIdx={todayIdx} onRecordHealth={onRecordHealth} />
-        ) : (
-          <div className="relative min-h-[340px]">
-            <div className="pro-section-preview">
-              <HealthTrackerContent plant={plant} todayIdx={todayIdx} previewMode />
-            </div>
-            <ProSectionLock onUpgrade={onUpgrade} />
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ─── Screen 6: Plant Details ─────────────────────────────────────────────────
 
 function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete, onUpdate, onMarkWatered, onShowPro, onEditGlobalSchedule, todayIdx }: {
@@ -1929,7 +1755,6 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [showLogGrowth, setShowLogGrowth] = useState(false)
-  const [showRecordHealth, setShowRecordHealth] = useState(false)
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null)
   const [editName, setEditName] = useState(plant.name)
@@ -2062,17 +1887,23 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
     setShowLogGrowth(false)
   }
 
-  function recordHealthCheck() {
+  function saveCheckIn(data: Pick<CheckInLog, 'leafStatus' | 'soilStatus' | 'pestStatus' | 'note'>) {
+    const timestamp = new Date().toISOString()
+    const checkIn: CheckInLog = {
+      id: Date.now().toString(),
+      timestamp,
+      ...data,
+    }
     onUpdate({
       ...plant,
+      checkIns: [checkIn, ...(plant.checkIns ?? [])],
       history: [{
-        id: Date.now().toString(),
-        date: new Date().toISOString(),
-        note: 'Health check recorded.',
+        id: `${Date.now()}-health`,
+        date: timestamp,
+        note: data.note?.trim() || 'Health check recorded.',
         photo: plant.photo,
       }, ...plantHistory(plant)],
     })
-    setShowRecordHealth(false)
   }
 
   function openLightbox(photo: string) {
@@ -2193,12 +2024,12 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
               onPhotoClick={openLightbox}
             />
 
-            <HealthTrackerSection
+            <PlantHealthTracker
               plant={plant}
-              todayIdx={todayIdx}
               isPro={isPro}
               onUpgrade={onShowPro}
-              onRecordHealth={() => (isPro ? setShowRecordHealth(true) : onShowPro())}
+              onSaveCheckIn={saveCheckIn}
+              onRecordWatering={onMarkWatered}
             />
 
             <button
@@ -2289,17 +2120,6 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>SAVE LOG</span>
             </button>
           </div>
-        </DetailModal>
-      )}
-
-      {showRecordHealth && (
-        <DetailModal title="Record Health Check" onClose={() => setShowRecordHealth(false)}>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>
-            Log a quick health snapshot for {plant.name}?
-          </p>
-          <button type="button" onClick={recordHealthCheck} className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer" style={{ background: GREEN, height: 48 }}>
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>CONFIRM</span>
-          </button>
         </DetailModal>
       )}
 

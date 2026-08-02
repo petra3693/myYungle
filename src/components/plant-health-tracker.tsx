@@ -1,0 +1,286 @@
+import { useState } from 'react'
+import CheckInSheet from '@/components/check-in-sheet'
+import {
+  calculateHealthScore,
+  getHealthMetricRows,
+  getLatestCheckIn,
+} from '@/lib/health-calculator'
+import type { CheckInLog, Plant } from '@/types/plant'
+
+const GREEN = '#00FF66'
+const AMBER = '#FFB020'
+const DETAIL_MINT_LIGHT = '#D9FFE8'
+
+const PREVIEW_CHECK_IN: CheckInLog = {
+  id: 'preview-check-in',
+  timestamp: new Date().toISOString(),
+  leafStatus: 'lush',
+  soilStatus: 'moist',
+  pestStatus: 'clean',
+}
+
+function LockIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg fill="none" height={size} viewBox="0 0 24 24" width={size} aria-hidden>
+      <rect height="10" rx="2" stroke="#000" strokeWidth="2" width="14" x="5" y="11" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#000" strokeLinecap="round" strokeWidth="2" />
+    </svg>
+  )
+}
+
+function ProSectionLock({ onUpgrade }: { onUpgrade: () => void }) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+      <div className="neo-card flex flex-col items-center gap-3 rounded-2xl border-2 border-black bg-white p-5 text-center w-full max-w-[300px]">
+        <LockIcon />
+        <span
+          className="rounded-full border-2 border-black px-3 py-1"
+          style={{ background: GREEN, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}
+        >
+          PRO FEATURE
+        </span>
+        <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 14, color: '#000', lineHeight: 1.4 }}>
+          PRO Feature: Unlock History &amp; Tracking
+        </p>
+        <button
+          type="button"
+          onClick={onUpgrade}
+          className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
+          style={{ background: GREEN, height: 48 }}
+        >
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>UPGRADE TO PRO</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function HealthGauge({ score }: { score: number }) {
+  const r = 36
+  const c = 2 * Math.PI * r
+  const offset = c - (score / 100) * c
+  return (
+    <svg height="88" viewBox="0 0 88 88" width="88" aria-hidden>
+      <circle className="health-gauge-track" cx="44" cy="44" r={r} />
+      <circle
+        className="health-gauge-fill"
+        cx="44"
+        cy="44"
+        r={r}
+        strokeDasharray={c}
+        strokeDashoffset={offset}
+      />
+      <text fill="#000" fontFamily="Unbounded, sans-serif" fontSize="16" fontWeight="900" textAnchor="middle" x="44" y="48">{score}%</text>
+    </svg>
+  )
+}
+
+interface PlantHealthTrackerProps {
+  plant: Plant
+  isPro: boolean
+  onUpgrade: () => void
+  onSaveCheckIn: (data: Pick<CheckInLog, 'leafStatus' | 'soilStatus' | 'pestStatus' | 'note'>) => void
+  onRecordWatering?: () => void
+}
+
+function HealthTrackerBody({
+  plant,
+  previewMode = false,
+  onOpenCheckIn,
+  onRecordWatering,
+}: {
+  plant: Plant
+  previewMode?: boolean
+  onOpenCheckIn: () => void
+  onRecordWatering?: () => void
+}) {
+  const lastCheckIn = previewMode ? PREVIEW_CHECK_IN : getLatestCheckIn(plant.checkIns)
+  const health = calculateHealthScore(lastCheckIn)
+  const metrics = getHealthMetricRows(lastCheckIn)
+
+  const showWateringCta = lastCheckIn?.soilStatus === 'dry'
+  const showPestCta = lastCheckIn?.pestStatus === 'pests_detected'
+  const allHealthy = lastCheckIn && !showWateringCta && !showPestCta
+    && lastCheckIn.leafStatus === 'lush'
+    && lastCheckIn.soilStatus === 'moist'
+    && lastCheckIn.pestStatus === 'clean'
+
+  return (
+    <div className="flex flex-col gap-4 w-full">
+      <div
+        className="rounded-2xl p-4 flex gap-4 items-center w-full"
+        style={{ background: DETAIL_MINT_LIGHT, border: '2px solid #000' }}
+      >
+        <HealthGauge score={health.score} />
+        <div className="flex flex-col gap-1 min-w-0">
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
+            Overall Health Score
+          </span>
+          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#666' }}>
+            {health.summary}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 w-full">
+        {metrics.map((item) => (
+          <div key={item.id} className="flex items-start gap-3 w-full min-w-0">
+            <div
+              className="flex items-center justify-center shrink-0 size-7 rounded-full border-2 border-black text-sm"
+              style={{ background: item.isWarning ? AMBER : GREEN }}
+              aria-hidden
+            >
+              {item.emoji}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#000', lineHeight: 1.35 }}>
+                {item.label}: {item.value}
+              </p>
+            </div>
+            <span className="shrink-0" style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>
+              {item.timeAgo}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {!allHealthy && (showWateringCta || showPestCta) && (
+        <div className="flex flex-col gap-2 w-full">
+          {showWateringCta && (
+            <button
+              type="button"
+              onClick={onRecordWatering}
+              className="flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer active:scale-[0.98] transition-transform min-h-[44px] px-4 py-2"
+              style={{
+                background: GREEN,
+                fontFamily: 'Unbounded, sans-serif',
+                fontWeight: 900,
+                fontSize: 11,
+                color: '#000',
+                boxShadow: '2px 2px 0px 0px rgba(0,0,0,1)',
+              }}
+            >
+              💧 Record Watering
+            </button>
+          )}
+          {showPestCta && (
+            <button
+              type="button"
+              onClick={onOpenCheckIn}
+              className="flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer active:scale-[0.98] transition-transform min-h-[44px] px-4 py-2"
+              style={{
+                background: '#FFF4E5',
+                fontFamily: 'Unbounded, sans-serif',
+                fontWeight: 900,
+                fontSize: 11,
+                color: '#000',
+                boxShadow: '2px 2px 0px 0px rgba(0,0,0,1)',
+              }}
+            >
+              ⚠️ Quarantine &amp; Treat
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-2 w-full">
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>
+          Care Guidelines
+        </span>
+        <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}>
+          {plant.careNote.trim() || 'Loves indirect light. Keep soil evenly moist and wipe leaves weekly.'}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={onOpenCheckIn}
+        className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
+        style={{ background: GREEN, height: 52 }}
+      >
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
+          Record Health Check
+        </span>
+      </button>
+    </div>
+  )
+}
+
+export default function PlantHealthTracker({
+  plant,
+  isPro,
+  onUpgrade,
+  onSaveCheckIn,
+  onRecordWatering,
+}: PlantHealthTrackerProps) {
+  const [showCheckIn, setShowCheckIn] = useState(false)
+
+  const lastCheckIn = isPro ? getLatestCheckIn(plant.checkIns) : PREVIEW_CHECK_IN
+  const health = calculateHealthScore(lastCheckIn)
+
+  function handleOpenCheckIn() {
+    if (!isPro) {
+      onUpgrade()
+      return
+    }
+    setShowCheckIn(true)
+  }
+
+  function handleSubmitCheckIn(data: Pick<CheckInLog, 'leafStatus' | 'soilStatus' | 'pestStatus' | 'note'>) {
+    onSaveCheckIn(data)
+    setShowCheckIn(false)
+  }
+
+  return (
+    <>
+      <div className="neo-card relative rounded-3xl shrink-0 w-full overflow-hidden">
+        <div className="flex flex-col gap-4 p-4">
+          <div className="flex items-center justify-between gap-3 w-full min-w-0">
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
+              Health Tracker
+            </span>
+            <span
+              className="shrink-0 rounded-full px-3 py-1 border-2 border-black max-w-[55%] truncate"
+              style={{
+                background: health.isOutOfDate ? '#FFF4E5' : DETAIL_MINT_LIGHT,
+                fontFamily: 'Geist, sans-serif',
+                fontWeight: 700,
+                fontSize: 11,
+                color: health.isOutOfDate ? '#92400E' : '#047857',
+              }}
+            >
+              {health.checkInLabel}
+            </span>
+          </div>
+
+          {isPro ? (
+            <HealthTrackerBody
+              plant={plant}
+              onOpenCheckIn={handleOpenCheckIn}
+              onRecordWatering={onRecordWatering}
+            />
+          ) : (
+            <div className="relative min-h-[340px]">
+              <div className="pro-section-preview">
+                <HealthTrackerBody
+                  plant={plant}
+                  previewMode
+                  onOpenCheckIn={handleOpenCheckIn}
+                />
+              </div>
+              <ProSectionLock onUpgrade={onUpgrade} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showCheckIn && isPro && (
+        <CheckInSheet
+          plantName={plant.name}
+          onClose={() => setShowCheckIn(false)}
+          onSubmit={handleSubmitCheckIn}
+        />
+      )}
+    </>
+  )
+}
