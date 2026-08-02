@@ -990,11 +990,38 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade }: {
   )
 }
 
-// ─── Growth History ───────────────────────────────────────────────────────────
+const DETAIL_BLUE = '#3B82F6'
+const DETAIL_BLUE_LIGHT = '#DBEAFE'
+const DETAIL_ORANGE_LIGHT = '#FFEDD5'
+const DETAIL_GRAY_LIGHT = '#F3F4F6'
+const DETAIL_MINT_LIGHT = '#D9FFE8'
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+interface HealthCheckItem {
+  id: string
+  label: string
+  status: 'ok' | 'warning'
+  timeAgo: string
+}
+
+// ─── Plant Detail Helpers ─────────────────────────────────────────────────────
 
 function formatDetailDate(iso: string) {
   const d = new Date(iso)
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
+}
+
+function formatTimelineChip(iso: string) {
+  const d = new Date(iso)
+  return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`
+}
+
+function daysSinceLabel(iso: string | null): string {
+  if (!iso) return 'Never'
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
+  if (diff <= 0) return 'Today'
+  if (diff === 1) return '1 day ago'
+  return `${diff} days ago`
 }
 
 function getPlantAgeDays(plant: Plant): number {
@@ -1026,199 +1053,100 @@ function getGrowthHeights(plant: Plant): { start: number; current: number; delta
     return { start, current, delta: Math.round((current - start) * 10) / 10 }
   }
   const base = 12
-  const growth = plant.history.length * 1.8
+  const growth = Math.max(plant.history.length, 1) * 0.8
   const current = Math.round((base + growth) * 10) / 10
   return { start: base, current, delta: Math.round((current - base) * 10) / 10 }
 }
 
 function getGrowthTimeline(plant: Plant) {
   const sorted = [...plant.history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  const baseHeight = getGrowthHeights(plant).start
-  return sorted.map((entry, idx, arr) => ({
+  const baseHeight = getGrowthHeights(plant).current
+  return sorted.map((entry, idx) => ({
     ...entry,
-    heightCm: entry.heightCm ?? Math.round((baseHeight + (arr.length - idx - 1) * 2.4) * 10) / 10,
+    heightCm: entry.heightCm ?? Math.round((baseHeight - idx * 0.8) * 10) / 10,
   }))
 }
 
-function getGrowthChartPoints(plant: Plant) {
+function getGrowthChartPoints(plant: Plant, previewMode = false) {
+  if (previewMode) {
+    return [
+      { label: 'May', value: 12 },
+      { label: 'Jun', value: 12.5 },
+      { label: 'Jul', value: 13 },
+    ]
+  }
   const chronological = [...getGrowthTimeline(plant)].reverse()
   if (chronological.length === 0) {
-    return [{ label: 'Start', value: getGrowthHeights(plant).start }]
+    return [{ label: MONTHS_SHORT[new Date().getMonth()], value: getGrowthHeights(plant).start }]
   }
-  return chronological.map((entry) => ({
-    label: formatDetailDate(entry.date).slice(0, 5),
-    value: entry.heightCm ?? getGrowthHeights(plant).start,
-  }))
+  return chronological.map((entry) => {
+    const d = new Date(entry.date)
+    return {
+      label: MONTHS_SHORT[d.getMonth()],
+      value: entry.heightCm ?? getGrowthHeights(plant).start,
+    }
+  })
+}
+
+function getHealthScore(plant: Plant, todayIdx: number): number {
+  let score = 68
+  if (plant.isWateredToday || !plant.wateringDays.includes(todayIdx)) score += 14
+  if (plant.lastWateredAt) score += 8
+  if (plant.careNote.trim()) score += 5
+  if (plant.history.length > 0) score += 5
+  return Math.min(92, score)
+}
+
+function healthRating(score: number): string {
+  if (score >= 90) return 'Excellent'
+  if (score >= 75) return 'Good'
+  return 'Needs Care'
+}
+
+function getHealthChecks(plant: Plant, previewMode = false): HealthCheckItem[] {
+  if (previewMode) {
+    return [
+      { id: 'h1', label: 'Leaf Vitality: Lush & Vibrant', status: 'ok', timeAgo: 'Today' },
+      { id: 'h2', label: 'Soil Condition: Moist & Balanced', status: 'ok', timeAgo: '2 days ago' },
+      { id: 'h3', label: 'Minor Dust on Leaves — Cleaned', status: 'warning', timeAgo: '1 week ago' },
+    ]
+  }
+  const checks: HealthCheckItem[] = [
+    {
+      id: 'leaf',
+      label: plant.isWateredToday ? 'Leaf Vitality: Lush & Vibrant' : 'Leaf Vitality: Monitor hydration',
+      status: plant.isWateredToday ? 'ok' : 'warning',
+      timeAgo: 'Today',
+    },
+    {
+      id: 'soil',
+      label: plant.lastWateredAt ? 'Soil Condition: Moist & Balanced' : 'Soil Condition: Check moisture',
+      status: plant.lastWateredAt ? 'ok' : 'warning',
+      timeAgo: plant.lastWateredAt ? daysSinceLabel(plant.lastWateredAt) : 'Today',
+    },
+  ]
+  if (plant.careNote) {
+    checks.push({ id: 'care', label: `Care Note: ${plant.careNote.slice(0, 40)}${plant.careNote.length > 40 ? '…' : ''}`, status: 'ok', timeAgo: '1 week ago' })
+  }
+  return checks
 }
 
 const GROWTH_PREVIEW_ENTRIES = [
-  { id: 'preview-1', date: '2026-07-10', note: 'Repotted and measured.', heightCm: 14.2 },
-  { id: 'preview-2', date: '2026-07-24', note: 'New leaf unfurled.', heightCm: 16.8 },
-  { id: 'preview-3', date: '2026-08-02', note: 'Weekly growth check.', heightCm: 18.5 },
+  { id: 'preview-1', date: '2026-05-15', note: 'Baseline measurement.', heightCm: 12 },
+  { id: 'preview-2', date: '2026-06-20', note: 'Steady growth.', heightCm: 12.5 },
+  { id: 'preview-3', date: '2026-07-15', note: 'Weekly growth check.', heightCm: 13 },
 ]
 
-function LockIcon() {
+function LockIcon({ size = 28 }: { size?: number }) {
   return (
-    <svg fill="none" height="28" viewBox="0 0 24 24" width="28" aria-hidden>
+    <svg fill="none" height={size} viewBox="0 0 24 24" width={size} aria-hidden>
       <rect height="10" rx="2" stroke="#000" strokeWidth="2" width="14" x="5" y="11" />
       <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#000" strokeLinecap="round" strokeWidth="2" />
     </svg>
   )
 }
 
-function GrowthStatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="growth-stat-card flex-1">
-      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, color: '#000', textTransform: 'uppercase' }}>{label}</span>
-      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 16, color: '#000', lineHeight: 1.1 }}>{value}</span>
-      {sub && (
-        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>{sub}</span>
-      )}
-    </div>
-  )
-}
-
-function GrowthChart({ points }: { points: { label: string; value: number }[] }) {
-  const max = Math.max(...points.map((p) => p.value), 1)
-  const min = Math.min(...points.map((p) => p.value), 0)
-  const range = Math.max(max - min, 1)
-  const width = 280
-  const height = 96
-  const padX = 8
-  const padY = 10
-  const chartW = width - padX * 2
-  const chartH = height - padY * 2
-
-  const coords = points.map((p, i) => {
-    const x = padX + (points.length <= 1 ? chartW / 2 : (i / (points.length - 1)) * chartW)
-    const y = padY + chartH - ((p.value - min) / range) * chartH
-    return { x, y, ...p }
-  })
-
-  const polyline = coords.map((c) => `${c.x},${c.y}`).join(' ')
-
-  return (
-    <div className="neo-card rounded-2xl border-2 border-black bg-white p-3 w-full">
-      <div className="flex items-center justify-between mb-2">
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>Growth Over Time</span>
-        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 11, color: '#888' }}>cm</span>
-      </div>
-      <svg className="w-full" height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Plant growth chart">
-        {[0, 0.5, 1].map((t) => {
-          const y = padY + chartH * (1 - t)
-          return <line key={t} stroke="#E5E5E5" strokeWidth="1" x1={padX} x2={width - padX} y1={y} y2={y} />
-        })}
-        {coords.length > 1 && (
-          <polyline fill="none" points={polyline} stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-        )}
-        {coords.map((c, i) => (
-          <g key={`${c.label}-${i}`}>
-            <circle cx={c.x} cy={c.y} fill={GREEN} r="5" stroke="#000" strokeWidth="2" />
-            <text fill="#888" fontFamily="Geist, sans-serif" fontSize="9" textAnchor="middle" x={c.x} y={height - 1}>{c.label}</text>
-          </g>
-        ))}
-      </svg>
-    </div>
-  )
-}
-
-function GrowthTimeline({ entries, plantName }: { entries: ReturnType<typeof getGrowthTimeline>; plantName: string }) {
-  if (entries.length === 0) {
-    return (
-      <div className="neo-card rounded-2xl border-2 border-black bg-[#F7F7F7] p-4 w-full">
-        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#888' }}>
-          No timeline entries yet. Tap + New Status to log your first growth snapshot.
-        </span>
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative w-full">
-      <div className="growth-timeline-rail" aria-hidden />
-      <div className="flex flex-col gap-4">
-        {entries.map((entry) => (
-          <div key={entry.id} className="flex gap-3 items-start w-full">
-            <div className="relative z-[1] shrink-0 size-[54px] rounded-full overflow-hidden border-2 border-black bg-white">
-              <img alt="" src={entry.photo} className="w-full h-full object-cover" />
-            </div>
-            <div className="neo-card flex-1 min-w-0 rounded-2xl border-2 border-black bg-white p-3">
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>
-                  {plantName}
-                </span>
-                <span className="shrink-0 rounded-full border-2 border-black px-2 py-0.5" style={{ background: GREEN, fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 10, color: '#000' }}>
-                  {entry.heightCm} cm
-                </span>
-              </div>
-              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#888' }}>{formatDetailDate(entry.date)}</span>
-              <p className="mt-1" style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000', lineHeight: 1.4 }}>{entry.note}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function GrowthHistoryContent({
-  plant,
-  previewMode = false,
-}: {
-  plant: Plant
-  previewMode?: boolean
-}) {
-  const ageDays = previewMode ? 54 : getPlantAgeDays(plant)
-  const heights = previewMode ? { start: 14.2, current: 18.5, delta: 4.3 } : getGrowthHeights(plant)
-  const wateringCount = previewMode ? 12 : getWateringCount(plant)
-  const consistency = previewMode ? 92 : getConsistencyScore(plant)
-  const timeline = previewMode
-    ? GROWTH_PREVIEW_ENTRIES.map((entry) => ({ ...entry, photo: plant.photo, note: entry.note }))
-    : getGrowthTimeline(plant)
-  const chartPoints = previewMode
-    ? GROWTH_PREVIEW_ENTRIES.map((entry) => ({ label: formatDetailDate(entry.date).slice(0, 5), value: entry.heightCm }))
-    : getGrowthChartPoints(plant)
-
-  return (
-    <div className="flex flex-col gap-4 w-full">
-      <div className="grid grid-cols-3 gap-2 w-full">
-        <GrowthStatCard label="Days Tracked" value={`${ageDays}`} sub="Plant age" />
-        <GrowthStatCard label="Total Growth" value={`+${heights.delta} cm`} sub={`${heights.start} → ${heights.current} cm`} />
-        <GrowthStatCard label="Waterings" value={`${wateringCount}`} sub={`${consistency}% consistent`} />
-      </div>
-
-      <div className="neo-card rounded-2xl border-2 border-black bg-white p-3 w-full">
-        <div className="flex items-center justify-between mb-2">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>Consistency Score</span>
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>{consistency}%</span>
-        </div>
-        <div className="progress-bar-track">
-          <div className="progress-bar-fill" style={{ width: `${consistency}%` }} />
-        </div>
-      </div>
-
-      <GrowthChart points={chartPoints} />
-
-      <div className="flex flex-col gap-3 w-full">
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>Photo Timeline</span>
-        <GrowthTimeline entries={timeline} plantName={plant.name} />
-      </div>
-
-      {!previewMode && (
-        <div className="flex gap-4 items-center w-full cursor-pointer active:opacity-70">
-          <div className="flex items-center justify-center shrink-0 size-[54px] rounded-full border-2 border-black bg-[#F7F7F7]">
-            <svg fill="none" height="24" viewBox="0 0 24 24" width="24" aria-hidden>
-              <path d={svgDetail.p1a54b00} fill="black" />
-            </svg>
-          </div>
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>+ NEW STATUS</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function GrowthHistoryPaywallOverlay({ onUpgrade }: { onUpgrade: () => void }) {
+function ProSectionLock({ onUpgrade }: { onUpgrade: () => void }) {
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
       <div className="neo-card flex flex-col items-center gap-3 rounded-2xl border-2 border-black bg-white p-5 text-center w-full max-w-[300px]">
@@ -1230,7 +1158,7 @@ function GrowthHistoryPaywallOverlay({ onUpgrade }: { onUpgrade: () => void }) {
           PRO FEATURE
         </span>
         <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 14, color: '#000', lineHeight: 1.4 }}>
-          Track visual progress, height logs &amp; timeline
+          PRO Feature: Unlock History &amp; Tracking
         </p>
         <button
           type="button"
@@ -1245,30 +1173,213 @@ function GrowthHistoryPaywallOverlay({ onUpgrade }: { onUpgrade: () => void }) {
   )
 }
 
+function DetailModal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/40" onClick={onClose} aria-hidden />
+      <div className="fixed inset-x-4 top-1/2 z-[70] -translate-y-1/2 mx-auto max-w-md">
+        <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000', textTransform: 'uppercase' }}>{title}</span>
+            <button type="button" onClick={onClose} className="flex items-center justify-center size-8 rounded-full border-2 border-black bg-black cursor-pointer">
+              <svg fill="none" height="14" viewBox="0 0 18 18" width="14"><path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" /></svg>
+            </button>
+          </div>
+          {children}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function GrowthStatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="growth-stat-card flex-1">
+      <span className="detail-stat-label">{label}</span>
+      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000', lineHeight: 1.1 }}>{value}</span>
+      {sub && <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>{sub}</span>}
+    </div>
+  )
+}
+
+function GrowthChart({ points }: { points: { label: string; value: number }[] }) {
+  const max = Math.max(...points.map((p) => p.value), 1)
+  const min = Math.min(...points.map((p) => p.value), 0)
+  const range = Math.max(max - min, 0.5)
+  const width = 300
+  const height = 110
+  const padX = 16
+  const padY = 14
+  const chartW = width - padX * 2
+  const chartH = height - padY * 2 - 12
+
+  const coords = points.map((p, i) => {
+    const x = padX + (points.length <= 1 ? chartW / 2 : (i / (points.length - 1)) * chartW)
+    const y = padY + chartH - ((p.value - min) / range) * chartH
+    return { x, y, ...p }
+  })
+  const polyline = coords.map((c) => `${c.x},${c.y}`).join(' ')
+
+  return (
+    <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-3 w-full">
+      <div className="flex items-center justify-between mb-2">
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>Growth Over Time</span>
+        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 11, color: '#888' }}>cm</span>
+      </div>
+      <svg className="w-full" height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Plant growth chart">
+        {[0, 0.5, 1].map((t) => {
+          const y = padY + chartH * (1 - t)
+          return <line key={t} stroke="#EFEFEF" strokeWidth="1" x1={padX} x2={width - padX} y1={y} y2={y} />
+        })}
+        {coords.length > 1 && (
+          <polyline fill="none" points={polyline} stroke={GREEN} strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
+        )}
+        {coords.map((c, i) => (
+          <g key={`${c.label}-${i}`}>
+            <circle cx={c.x} cy={c.y} fill={GREEN} r="6" stroke="#000" strokeWidth="2" />
+            <text fill="#888" fontFamily="Geist, sans-serif" fontSize="10" textAnchor="middle" x={c.x} y={height - 2}>{c.label}</text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  )
+}
+
+function PhotoTimelineStrip({
+  entries,
+  onNewSnapshot,
+  onPhotoClick,
+}: {
+  entries: ReturnType<typeof getGrowthTimeline>
+  onNewSnapshot: () => void
+  onPhotoClick: (photo: string) => void
+}) {
+  return (
+    <div className="flex flex-col gap-3 w-full">
+      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>Photo Timeline</span>
+      <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+        <button type="button" onClick={onNewSnapshot} className="detail-snapshot-new cursor-pointer active:opacity-80">
+          <svg fill="none" height="22" viewBox="0 0 24 24" width="22" aria-hidden>
+            <path d={svgDetail.p1a54b00} fill={GREEN} />
+          </svg>
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, color: GREEN, textTransform: 'uppercase' }}>New Snapshot</span>
+        </button>
+        {entries.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            onClick={() => onPhotoClick(entry.photo)}
+            className="detail-snapshot-thumb cursor-pointer active:scale-[0.98] transition-transform"
+          >
+            <img alt="" src={entry.photo} className="w-full h-full object-cover" />
+            <div className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1.5">
+              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 10, color: '#fff' }}>
+                {formatTimelineChip(entry.date)} · {entry.heightCm}cm
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function GrowthHistoryContent({
+  plant,
+  previewMode = false,
+  onNewSnapshot,
+  onPhotoClick,
+}: {
+  plant: Plant
+  previewMode?: boolean
+  onNewSnapshot?: () => void
+  onPhotoClick?: (photo: string) => void
+}) {
+  const ageDays = previewMode ? 6 : getPlantAgeDays(plant)
+  const heights = previewMode ? { start: 12, current: 13, delta: 0.8 } : getGrowthHeights(plant)
+  const wateringCount = previewMode ? 1 : getWateringCount(plant)
+  const consistency = previewMode ? 50 : getConsistencyScore(plant)
+  const timeline = previewMode
+    ? GROWTH_PREVIEW_ENTRIES.map((entry) => ({ ...entry, photo: plant.photo }))
+    : getGrowthTimeline(plant)
+  const chartPoints = getGrowthChartPoints(plant, previewMode)
+
+  return (
+    <div className="flex flex-col gap-3 w-full">
+      <div className="grid grid-cols-3 gap-2 w-full">
+        <GrowthStatCard label="Days Tracked" value={`${ageDays}`} sub="Plant age" />
+        <GrowthStatCard label="Total Growth" value={`+${heights.delta} cm`} sub={`${heights.start} → ${heights.current} cm`} />
+        <GrowthStatCard label="Waterings" value={`${wateringCount}`} sub={`${consistency}% consistent`} />
+      </div>
+
+      <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-3 w-full">
+        <div className="flex items-center justify-between mb-2">
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>Consistency Score</span>
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: GREEN }}>{consistency}%</span>
+        </div>
+        <div className="progress-bar-track">
+          <div className="progress-bar-fill" style={{ width: `${consistency}%` }} />
+        </div>
+      </div>
+
+      <GrowthChart points={chartPoints} />
+      <PhotoTimelineStrip
+        entries={timeline}
+        onNewSnapshot={onNewSnapshot ?? (() => {})}
+        onPhotoClick={onPhotoClick ?? (() => {})}
+      />
+    </div>
+  )
+}
+
 function GrowthHistorySection({
   plant,
   isPro,
   onUpgrade,
+  onLogGrowth,
+  onNewSnapshot,
+  onPhotoClick,
 }: {
   plant: Plant
   isPro: boolean
   onUpgrade: () => void
+  onLogGrowth: () => void
+  onNewSnapshot: () => void
+  onPhotoClick: (photo: string) => void
 }) {
   return (
     <div className="neo-card relative rounded-3xl shrink-0 w-full overflow-hidden">
       <div className="flex flex-col gap-4 p-4">
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
-          Growth History
-        </span>
+        <div className="flex items-center justify-between gap-3 w-full">
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
+            Growth History
+          </span>
+          <button
+            type="button"
+            onClick={isPro ? onLogGrowth : onUpgrade}
+            className="btn-primary btn-green shrink-0 inline-flex items-center justify-center rounded-full border-2 border-black cursor-pointer px-3 py-1.5"
+            style={{ background: GREEN }}
+          >
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>+ Log Growth</span>
+          </button>
+        </div>
 
         {isPro ? (
-          <GrowthHistoryContent plant={plant} />
+          <GrowthHistoryContent plant={plant} onNewSnapshot={onNewSnapshot} onPhotoClick={onPhotoClick} />
         ) : (
-          <div className="relative min-h-[420px]">
-            <div className="growth-history-preview">
+          <div className="relative min-h-[380px]">
+            <div className="pro-section-preview">
               <GrowthHistoryContent plant={plant} previewMode />
             </div>
-            <GrowthHistoryPaywallOverlay onUpgrade={onUpgrade} />
+            <ProSectionLock onUpgrade={onUpgrade} />
           </div>
         )}
       </div>
@@ -1276,17 +1387,250 @@ function GrowthHistorySection({
   )
 }
 
+function HealthGauge({ score }: { score: number }) {
+  const r = 36
+  const c = 2 * Math.PI * r
+  const offset = c - (score / 100) * c
+  return (
+    <svg height="88" viewBox="0 0 88 88" width="88" aria-hidden>
+      <circle className="health-gauge-track" cx="44" cy="44" r={r} />
+      <circle
+        className="health-gauge-fill"
+        cx="44"
+        cy="44"
+        r={r}
+        strokeDasharray={c}
+        strokeDashoffset={offset}
+      />
+      <text fill="#000" fontFamily="Unbounded, sans-serif" fontSize="16" fontWeight="900" textAnchor="middle" x="44" y="48">{score}%</text>
+    </svg>
+  )
+}
+
+function HealthTrackerContent({
+  plant,
+  todayIdx,
+  previewMode = false,
+  onRecordHealth,
+}: {
+  plant: Plant
+  todayIdx: number
+  previewMode?: boolean
+  onRecordHealth?: () => void
+}) {
+  const score = previewMode ? 92 : getHealthScore(plant, todayIdx)
+  const checks = getHealthChecks(plant, previewMode)
+
+  return (
+    <div className="flex flex-col gap-4 w-full">
+      <div className="rounded-2xl p-4 flex gap-4 items-center w-full" style={{ background: DETAIL_MINT_LIGHT, border: '2px solid #000' }}>
+        <HealthGauge score={score} />
+        <div className="flex flex-col gap-1 min-w-0">
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>Overall Health Score</span>
+          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#666' }}>Thriving in current conditions</span>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 w-full">
+        {checks.map((item) => (
+          <div key={item.id} className="flex items-start gap-3 w-full">
+            <div
+              className="flex items-center justify-center shrink-0 size-7 rounded-full border-2 border-black"
+              style={{ background: item.status === 'ok' ? GREEN : '#FFB020' }}
+            >
+              {item.status === 'ok' ? (
+                <svg fill="none" height="12" viewBox="0 0 12 12" width="12"><path d="M2 6l3 3 5-6" stroke="#000" strokeLinecap="round" strokeWidth="2" /></svg>
+              ) : (
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>!</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#000', lineHeight: 1.35 }}>{item.label}</p>
+            </div>
+            <span className="shrink-0" style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>{item.timeAgo}</span>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={onRecordHealth}
+        className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
+        style={{ background: GREEN, height: 52 }}
+      >
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>Record Health Check</span>
+      </button>
+    </div>
+  )
+}
+
+function HealthTrackerSection({
+  plant,
+  todayIdx,
+  isPro,
+  onUpgrade,
+  onRecordHealth,
+}: {
+  plant: Plant
+  todayIdx: number
+  isPro: boolean
+  onUpgrade: () => void
+  onRecordHealth: () => void
+}) {
+  const score = isPro ? getHealthScore(plant, todayIdx) : 92
+  const rating = healthRating(score)
+
+  return (
+    <div className="neo-card relative rounded-3xl shrink-0 w-full overflow-hidden">
+      <div className="flex flex-col gap-4 p-4">
+        <div className="flex items-center justify-between gap-3 w-full">
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
+            Health Tracker
+          </span>
+          <span
+            className="shrink-0 rounded-full px-3 py-1 border-2 border-black"
+            style={{ background: DETAIL_MINT_LIGHT, fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 11, color: '#047857' }}
+          >
+            {score}% {rating}
+          </span>
+        </div>
+
+        {isPro ? (
+          <HealthTrackerContent plant={plant} todayIdx={todayIdx} onRecordHealth={onRecordHealth} />
+        ) : (
+          <div className="relative min-h-[340px]">
+            <div className="pro-section-preview">
+              <HealthTrackerContent plant={plant} todayIdx={todayIdx} previewMode />
+            </div>
+            <ProSectionLock onUpgrade={onUpgrade} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function WaterDropletIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg fill="none" height="20" viewBox="0 0 12 20" width="12">
+      <path
+        d={svgDetail.p35497c00}
+        fill={filled ? DETAIL_BLUE : DETAIL_BLUE_LIGHT}
+        stroke={filled ? DETAIL_BLUE : '#93C5FD'}
+        strokeLinecap="round"
+        strokeWidth="2"
+      />
+    </svg>
+  )
+}
+
 // ─── Screen 6: Plant Details ─────────────────────────────────────────────────
 
-function PlantDetailScreen({ plant, isPro, onBack, onDelete, onMarkWatered, onShowPro, todayIdx }: {
-  plant: Plant; isPro: boolean; onBack: () => void; onDelete: () => void; onMarkWatered: () => void; onShowPro: () => void; todayIdx: number
+function PlantDetailScreen({ plant, isPro, onBack, onDelete, onUpdate, onMarkWatered, onShowPro, todayIdx }: {
+  plant: Plant; isPro: boolean; onBack: () => void; onDelete: () => void; onUpdate: (p: Plant) => void
+  onMarkWatered: () => void; onShowPro: () => void; todayIdx: number
 }) {
+  const [showEdit, setShowEdit] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showLogGrowth, setShowLogGrowth] = useState(false)
+  const [showRecordHealth, setShowRecordHealth] = useState(false)
+  const [showPhotoPicker, setShowPhotoPicker] = useState(false)
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null)
+  const [editName, setEditName] = useState(plant.name)
+  const [editRoom, setEditRoom] = useState(plant.room)
+  const [editNote, setEditNote] = useState(plant.careNote)
+  const [growthNote, setGrowthNote] = useState('')
+  const [growthHeight, setGrowthHeight] = useState('')
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const libraryInputRef = useRef<HTMLInputElement>(null)
+
   const needsWater = plant.wateringDays.includes(todayIdx) && !plant.isWateredToday
   const waterFills = plant.waterNeed === 'Heavy' ? 3 : plant.waterNeed === 'Moderate' ? 2 : 1
+  const primaryDay = plant.wateringDays[0]
+  const onSchedule = !needsWater
+
+  function handlePhotoFile(file: File, asGrowthLog = false) {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') return
+      if (asGrowthLog && isPro) {
+        const height = growthHeight ? Number(growthHeight) : undefined
+        onUpdate({
+          ...plant,
+          photo: reader.result,
+          history: [{
+            id: Date.now().toString(),
+            date: new Date().toISOString(),
+            note: growthNote.trim() || 'Growth snapshot logged.',
+            photo: reader.result,
+            heightCm: height,
+          }, ...plant.history],
+        })
+        setGrowthNote('')
+        setGrowthHeight('')
+        setShowLogGrowth(false)
+      } else if (asGrowthLog) {
+        onUpdate({
+          ...plant,
+          history: [{
+            id: Date.now().toString(),
+            date: new Date().toISOString(),
+            note: 'New growth snapshot.',
+            photo: reader.result,
+            heightCm: growthHeight ? Number(growthHeight) : getGrowthHeights(plant).current,
+          }, ...plant.history],
+        })
+        setShowPhotoPicker(false)
+      } else {
+        onUpdate({ ...plant, photo: reader.result })
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function handlePhotoInputChange(e: React.ChangeEvent<HTMLInputElement>, asGrowthLog = false) {
+    const file = e.target.files?.[0]
+    if (file) handlePhotoFile(file, asGrowthLog)
+    e.target.value = ''
+  }
+
+  function saveEdit() {
+    if (!editName.trim()) return
+    onUpdate({ ...plant, name: editName.trim(), room: editRoom.trim() || plant.room, careNote: editNote })
+    setShowEdit(false)
+  }
+
+  function logGrowthEntry() {
+    onUpdate({
+      ...plant,
+      history: [{
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        note: growthNote.trim() || 'Growth check logged.',
+        photo: plant.photo,
+        heightCm: growthHeight ? Number(growthHeight) : getGrowthHeights(plant).current,
+      }, ...plant.history],
+    })
+    setGrowthNote('')
+    setGrowthHeight('')
+    setShowLogGrowth(false)
+  }
+
+  function recordHealthCheck() {
+    onUpdate({
+      ...plant,
+      history: [{
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        note: 'Health check recorded.',
+        photo: plant.photo,
+      }, ...plant.history],
+    })
+    setShowRecordHealth(false)
+  }
 
   return (
     <div className="content-stretch flex flex-col items-start justify-between relative size-full" style={{ background: BG }}>
-      {/* Sheet content */}
       <div className="content-stretch flex flex-col items-start relative shrink-0 w-full flex-1 min-h-0">
         <div className="app-header relative shrink-0 w-full">
           <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000', textTransform: 'uppercase' }}>Plant Details</span>
@@ -1295,6 +1639,7 @@ function PlantDetailScreen({ plant, isPro, onBack, onDelete, onMarkWatered, onSh
             onClick={onBack}
             className="bg-black flex items-center justify-center rounded-full shrink-0 cursor-pointer border-2 border-black"
             style={{ width: 38, height: 38 }}
+            aria-label="Close plant details"
           >
             <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
               <path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" />
@@ -1302,124 +1647,199 @@ function PlantDetailScreen({ plant, isPro, onBack, onDelete, onMarkWatered, onSh
           </button>
         </div>
 
-        {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto w-full pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
-          <div className="content-stretch flex flex-col gap-[16px] items-start px-[20px] pb-[20px] relative w-full">
+          <div className="content-stretch flex flex-col gap-4 items-start px-5 pb-6 relative w-full">
 
-            {/* Hero photo */}
+            {/* Hero photo + species tag */}
             <div className="h-[219px] relative rounded-3xl shrink-0 w-full overflow-hidden border-2 border-black">
-              <img
-                alt={plant.name}
-                src={plant.photo}
-                className="absolute h-[107.47%] left-0 max-w-none top-[-1.66%] w-full object-cover"
-              />
-            </div>
-
-            {/* Info card */}
-            <div className="neo-card relative rounded-3xl shrink-0 w-full">
-              <div className="content-stretch flex flex-col gap-[24px] items-start justify-center p-[16px] relative size-full">
-
-                {/* Name + tags + edit */}
-                <div className="content-stretch flex items-start justify-between relative shrink-0 w-full">
-                  <div className="content-stretch flex flex-col gap-[6px] items-start relative shrink-0">
-                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000', textTransform: 'uppercase' }}>{plant.name}</span>
-                    <div className="content-stretch flex gap-[4px] items-start relative shrink-0">
-                      {/* Room tag */}
-                      <div className="badge bg-[#F7F7F7] content-stretch flex items-start px-[6px] py-[2px] relative shrink-0">
-                        <span style={{ fontSize: 9, color: '#000' }}>{plant.room}</span>
-                      </div>
-                      {/* Day tags */}
-                      {plant.wateringDays.map((d) => (
-                        <div key={d} className="badge content-stretch flex items-start px-[6px] py-[2px] relative shrink-0" style={{ background: GREEN }}>
-                          <span style={{ fontSize: 9, color: '#000' }}>{DAY_NAMES[d]}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  {/* Pencil edit icon */}
-                  <div className="relative shrink-0" style={{ width: 16, height: 15 }}>
-                    <svg fill="none" height="15" viewBox="0 0 16 15" width="16">
-                      <path d={svgDetail.p3c709780} fill="black" />
-                    </svg>
-                  </div>
-                </div>
-
-                {/* Care Note */}
-                <div className="content-stretch flex flex-col gap-[8px] items-start justify-center relative shrink-0 w-full">
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Care Note</span>
-                  <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}>
-                    {plant.careNote || 'No care notes added yet.'}
-                  </span>
-                </div>
-
-                {/* Water Level */}
-                <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Water Level</span>
-                  <div className="content-stretch flex gap-[5px] h-[16px] items-end relative shrink-0">
-                    {Array.from({ length: waterFills }).map((_, i) => (
-                      <div key={i} className="h-[20px] relative shrink-0 w-[12px]">
-                        <svg fill="none" height="20" viewBox="0 0 12 20" width="12">
-                          <path d={svgDetail.p35497c00} fill="#00FF66" stroke="#00FF66" strokeLinecap="round" strokeWidth="2" />
-                        </svg>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Last Watered */}
-                <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Last Watered</span>
-                  <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>
-                    {plant.lastWateredAt ? formatDetailDate(plant.lastWateredAt) : 'Never'}
-                  </span>
-                </div>
-
-                {/* Status */}
-                <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0 w-full">
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Status</span>
-                  <div className="content-stretch flex h-[24px] items-center justify-between relative shrink-0 w-full">
-                    <span className="font-display" style={{ fontSize: 14, color: needsWater ? RED : '#000', textTransform: 'uppercase' }}>
-                      {needsWater ? 'NEED WATER' : 'WATERED ✓'}
-                    </span>
-                    {needsWater && (
-                      <div className="inline-grid place-items-start" style={{ gridTemplateColumns: 'max-content', gridTemplateRows: 'max-content' }}>
-                        <span className="font-display" style={{ fontSize: 12, color: '#000', gridColumn: 1, gridRow: 1, marginTop: 11, textTransform: 'uppercase' }}>MARK AS WATERED</span>
-                        <button
-                          onClick={onMarkWatered}
-                          className="flex items-center justify-center relative rounded-full size-[40px] cursor-pointer active:scale-90 transition-all border-2 border-black"
-                          style={{ background: GREEN, gridColumn: 1, gridRow: 1, marginLeft: 126 }}
-                        >
-                          <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-                            <path d={svgDetail.p2afd9fa0} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
+              <img alt={plant.name} src={plant.photo} className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute bottom-3 left-3">
+                <span className="detail-tag detail-tag-filled">{plant.name}</span>
               </div>
             </div>
 
-            <GrowthHistorySection plant={plant} isPro={isPro} onUpgrade={onShowPro} />
+            {/* Species info card */}
+            <div className="neo-card relative rounded-3xl shrink-0 w-full">
+              <div className="flex flex-col gap-4 p-4">
+                <div className="flex items-start justify-between gap-3 w-full">
+                  <div className="flex flex-col gap-2 min-w-0">
+                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>{plant.name}</span>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" className="detail-tag detail-tag-outline cursor-default">{plant.room.toUpperCase()}</button>
+                      {primaryDay != null && (
+                        <button type="button" className="detail-tag detail-tag-filled cursor-default">{DAY_NAMES[primaryDay].toUpperCase()}</button>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setEditName(plant.name); setEditRoom(plant.room); setEditNote(plant.careNote); setShowEdit(true) }}
+                    className="flex items-center justify-center shrink-0 size-9 rounded-full border-2 border-black bg-white cursor-pointer active:scale-95"
+                    aria-label="Edit plant"
+                  >
+                    <svg fill="none" height="15" viewBox="0 0 16 15" width="16">
+                      <path d={svgDetail.p3c709780} fill="black" />
+                    </svg>
+                  </button>
+                </div>
 
-            {/* Delete button */}
-            <div className="content-stretch flex items-start pb-[20px] pt-[8px] relative shrink-0 w-full">
-              <button
-                onClick={onDelete}
-                className="btn-secondary bg-white flex flex-1 h-[41px] items-center justify-center relative rounded-full cursor-pointer active:scale-95 transition-all border-2"
-                style={{ borderColor: RED }}
-              >
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: RED }}>DELETE PLANT</span>
-              </button>
+                <div className="grid grid-cols-2 gap-3 w-full">
+                  <div className="detail-mini-card" style={{ background: DETAIL_BLUE_LIGHT }}>
+                    <span className="detail-stat-label">Water Level</span>
+                    <div className="flex gap-1 items-end">
+                      {[0, 1, 2].map((i) => (
+                        <WaterDropletIcon key={i} filled={i < waterFills} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="detail-mini-card" style={{ background: DETAIL_ORANGE_LIGHT }}>
+                    <span className="detail-stat-label">Last Watered</span>
+                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
+                      {daysSinceLabel(plant.lastWateredAt)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="detail-mini-card w-full" style={{ background: DETAIL_GRAY_LIGHT }}>
+                  <span className="detail-stat-label">Care Note</span>
+                  <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}>
+                    {plant.careNote || 'No care notes added yet.'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="size-2 rounded-full shrink-0" style={{ background: onSchedule ? GREEN : RED }} aria-hidden />
+                  <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#000' }}>
+                    {onSchedule ? 'On Schedule' : 'Needs Water'}
+                  </span>
+                  {needsWater && (
+                    <button
+                      type="button"
+                      onClick={onMarkWatered}
+                      className="ml-auto shrink-0 rounded-full border-2 border-black px-3 py-1 cursor-pointer active:scale-95"
+                      style={{ background: GREEN, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, color: '#000' }}
+                    >
+                      MARK WATERED
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
+            <GrowthHistorySection
+              plant={plant}
+              isPro={isPro}
+              onUpgrade={onShowPro}
+              onLogGrowth={() => (isPro ? setShowLogGrowth(true) : onShowPro())}
+              onNewSnapshot={() => (isPro ? setShowPhotoPicker(true) : onShowPro())}
+              onPhotoClick={setLightboxPhoto}
+            />
+
+            <HealthTrackerSection
+              plant={plant}
+              todayIdx={todayIdx}
+              isPro={isPro}
+              onUpgrade={onShowPro}
+              onRecordHealth={() => (isPro ? setShowRecordHealth(true) : onShowPro())}
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="btn-secondary bg-white flex w-full h-[52px] items-center justify-center rounded-full cursor-pointer active:scale-[0.98] transition-all border-2"
+              style={{ borderColor: RED }}
+            >
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: RED }}>Delete Plant</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Tab bar */}
       <TabBar active="home" onChange={() => onBack()} />
+
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoInputChange(e, true)} />
+      <input ref={libraryInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoInputChange(e, true)} />
+
+      {showEdit && (
+        <DetailModal title="Edit Plant" onClose={() => setShowEdit(false)}>
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="detail-stat-label">Plant Name</span>
+              <input value={editName} onChange={(e) => setEditName(e.target.value)} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="detail-stat-label">Room</span>
+              <input value={editRoom} onChange={(e) => setEditRoom(e.target.value)} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="detail-stat-label">Care Note</span>
+              <textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={3} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full resize-none" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
+            </label>
+            <button type="button" onClick={saveEdit} className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer" style={{ background: GREEN, height: 48 }}>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>SAVE CHANGES</span>
+            </button>
+          </div>
+        </DetailModal>
+      )}
+
+      {showDeleteConfirm && (
+        <DetailModal title="Delete Plant?" onClose={() => setShowDeleteConfirm(false)}>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}>
+            This will permanently remove {plant.name} from your jungle.
+          </p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setShowDeleteConfirm(false)} className="flex-1 h-11 rounded-full border-2 border-black bg-white cursor-pointer" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10 }}>Cancel</button>
+            <button type="button" onClick={() => { setShowDeleteConfirm(false); onDelete() }} className="flex-1 h-11 rounded-full border-2 cursor-pointer" style={{ borderColor: RED, color: RED, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, background: '#fff' }}>Delete</button>
+          </div>
+        </DetailModal>
+      )}
+
+      {showLogGrowth && (
+        <DetailModal title="Log Growth" onClose={() => setShowLogGrowth(false)}>
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="detail-stat-label">Height (cm)</span>
+              <input value={growthHeight} onChange={(e) => setGrowthHeight(e.target.value)} inputMode="decimal" placeholder={`${getGrowthHeights(plant).current}`} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="detail-stat-label">Note</span>
+              <textarea value={growthNote} onChange={(e) => setGrowthNote(e.target.value)} rows={2} placeholder="What changed since last check?" className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full resize-none" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
+            </label>
+            <button type="button" onClick={logGrowthEntry} className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer" style={{ background: GREEN, height: 44 }}>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>SAVE LOG</span>
+            </button>
+          </div>
+        </DetailModal>
+      )}
+
+      {showRecordHealth && (
+        <DetailModal title="Record Health Check" onClose={() => setShowRecordHealth(false)}>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>
+            Log a quick health snapshot for {plant.name}?
+          </p>
+          <button type="button" onClick={recordHealthCheck} className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer" style={{ background: GREEN, height: 48 }}>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>CONFIRM</span>
+          </button>
+        </DetailModal>
+      )}
+
+      {showPhotoPicker && (
+        <PhotoActionSheet
+          onClose={() => setShowPhotoPicker(false)}
+          onTakePhoto={() => { setShowPhotoPicker(false); cameraInputRef.current?.click() }}
+          onChooseLibrary={() => { setShowPhotoPicker(false); libraryInputRef.current?.click() }}
+        />
+      )}
+
+      {lightboxPhoto && (
+        <>
+          <div className="fixed inset-0 z-[80] bg-black/80" onClick={() => setLightboxPhoto(null)} aria-hidden />
+          <div className="fixed inset-4 z-[90] flex items-center justify-center">
+            <img alt="Growth snapshot" src={lightboxPhoto} className="max-w-full max-h-full object-contain rounded-2xl border-2 border-white" />
+            <button type="button" onClick={() => setLightboxPhoto(null)} className="absolute top-6 right-6 size-10 rounded-full border-2 border-white bg-black/50 text-white cursor-pointer">✕</button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -1847,6 +2267,11 @@ export default function App() {
     setScreen('main'); setSelectedPlant(null)
   }
 
+  function handleUpdatePlant(updated: Plant) {
+    setPlants((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+    setSelectedPlant(updated)
+  }
+
   function handleWaterToggle(plantId: string) {
     setPlants((prevPlants) =>
       prevPlants.map((plant) => {
@@ -1960,6 +2385,7 @@ export default function App() {
         plant={live} isPro={settings.isPro} todayIdx={todayIdx}
         onBack={() => { setScreen('main'); setSelectedPlant(null) }}
         onDelete={() => handleDeletePlant(live.id)}
+        onUpdate={handleUpdatePlant}
         onMarkWatered={() => handleWaterToggle(live.id)}
         onShowPro={() => setScreen('pro')}
       />
