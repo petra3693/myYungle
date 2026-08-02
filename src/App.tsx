@@ -34,6 +34,14 @@ const DAY_OF_WEEK: DayOfWeek[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 
 const MAX_FREE_PLANTS = 5
 const PLANT_PHOTOS = [plantImg0, plantImg1, plantImg2, plantImg3]
 
+function isFreeTierLimitReached(plantCount: number, isPro: boolean): boolean {
+  return !isPro && plantCount >= MAX_FREE_PLANTS
+}
+
+function canAddMorePlants(plantCount: number, isPro: boolean): boolean {
+  return isPro || plantCount < MAX_FREE_PLANTS
+}
+
 const DEFAULT_SETTINGS: AppSettings = {
   globalWaterSchedule: [],
   hasCompletedOnboarding: false,
@@ -283,10 +291,23 @@ function SvgCloverHero() {
 
 // ─── Tab Bar ──────────────────────────────────────────────────────────────────
 
-function TabBar({ active, onChange }: { active: TabScreen; onChange: (t: TabScreen) => void }) {
-  const tabs: { id: TabScreen; label: string; path: string; stroke: boolean }[] = [
+function TabBar({
+  active,
+  onChange,
+  plantCount = 0,
+  isPro = false,
+  onUpgrade,
+}: {
+  active: TabScreen
+  onChange: (t: TabScreen) => void
+  plantCount?: number
+  isPro?: boolean
+  onUpgrade?: () => void
+}) {
+  const limitReached = isFreeTierLimitReached(plantCount, isPro)
+  const tabs: { id: TabScreen; label: string; path: string; stroke: boolean; upgradeTab?: boolean }[] = [
     { id: 'home', label: 'MY JUNGLE', path: svgPaths2.p2046d6b0, stroke: true },
-    { id: 'add', label: 'ADD NEW', path: svgPaths2.p3e11a380, stroke: true },
+    { id: 'add', label: limitReached ? 'UPGRADE' : 'ADD NEW', path: svgPaths2.p3e11a380, stroke: true, upgradeTab: limitReached },
     { id: 'watering', label: 'WATERING', path: svgPaths2.p376ce800, stroke: true },
     { id: 'settings', label: 'PRO', path: svgPaths2.p1eebb470, stroke: false },
   ]
@@ -295,23 +316,40 @@ function TabBar({ active, onChange }: { active: TabScreen; onChange: (t: TabScre
       <div className="neo-tab-bar-inner">
       {tabs.map((t) => {
         const on = t.id === active
+        const isUpgradeTab = Boolean(t.upgradeTab)
+        const tabBg = on ? GREEN : isUpgradeTab ? '#EFEFEF' : 'transparent'
+        const iconColor = on ? BLACK : isUpgradeTab ? BLACK : '#aaa'
+        const labelColor = on ? BLACK : isUpgradeTab ? BLACK : '#aaa'
+
         return (
           <button
             key={t.id}
             type="button"
-            onClick={() => onChange(t.id)}
-            className="flex flex-col items-center justify-center gap-1 min-w-0 cursor-pointer transition-colors py-2"
-            style={{ background: on ? GREEN : 'transparent' }}
+            onClick={() => {
+              if (t.id === 'add' && limitReached && onUpgrade) {
+                onUpgrade()
+                return
+              }
+              onChange(t.id)
+            }}
+            className={`flex flex-col items-center justify-center gap-1 min-w-0 cursor-pointer transition-colors py-2 ${isUpgradeTab ? 'border-x-2 border-black' : ''}`}
+            style={{ background: tabBg }}
+            aria-label={isUpgradeTab ? 'Upgrade to Pro' : t.label}
           >
             <div className="flex items-center justify-center" style={{ width: 20, height: 20 }}>
               <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
                 {t.stroke
-                  ? <path d={t.path} stroke={on ? BLACK : '#aaa'} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-                  : <path d={t.path} fill={on ? BLACK : '#aaa'} />
+                  ? <path d={t.path} stroke={iconColor} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+                  : <path d={t.path} fill={iconColor} />
                 }
               </svg>
             </div>
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 8, color: on ? BLACK : '#aaa', textTransform: 'uppercase' }}>{t.label}</span>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 8, color: labelColor, textTransform: 'uppercase' }}>{t.label}</span>
+            {isUpgradeTab && (
+              <span className="neo-pill px-1 py-px" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 6, background: RED, color: '#fff', lineHeight: 1.2 }}>
+                PRO
+              </span>
+            )}
           </button>
         )
       })}
@@ -592,6 +630,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
   onDeletePlant: (id: string) => void; onWaterPlant: (id: string) => void; onGoAdd: () => void; onSettings: () => void; onShowPro: () => void; todayIdx: number
 }) {
   const needsWater = plants.filter((p) => p.wateringDays.includes(todayIdx) && !p.isWateredToday)
+  const limitReached = isFreeTierLimitReached(plants.length, settings.isPro)
 
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
@@ -648,12 +687,18 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
             </div>
           )}
 
-          {/* Add plant button */}
-            <button type="button" onClick={onGoAdd}
-            className="btn-primary btn-green w-full flex items-center justify-center rounded-full border-2 border-black mb-4 cursor-pointer"
-            style={{ background: GREEN, height: 56 }}
+          {/* Add plant / Upgrade CTA */}
+          <button
+            type="button"
+            onClick={limitReached ? onShowPro : onGoAdd}
+            className={`w-full flex items-center justify-center rounded-full border-2 border-black mb-4 cursor-pointer transition-all min-h-[52px] py-3.5 px-6 ${
+              limitReached ? 'btn-primary bg-[#EFEFEF]' : 'btn-primary btn-green'
+            }`}
+            style={{ background: limitReached ? '#EFEFEF' : GREEN }}
           >
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000' }}>+ ADD PLANT</span>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000' }}>
+              {limitReached ? 'UPGRADE TO PRO' : '+ ADD PLANT'}
+            </span>
           </button>
         </div>
       </div>
@@ -670,41 +715,52 @@ function AddPlantForm({
   currentPlantCount: number
   onUpgrade: () => void
 }) {
-  const isLimitReached = currentPlantCount >= MAX_FREE_PLANTS
+  const isLimitReached = isFreeTierLimitReached(currentPlantCount, false)
   const remainingSlots = Math.max(0, MAX_FREE_PLANTS - currentPlantCount)
-  const progressPercentage = (currentPlantCount / MAX_FREE_PLANTS) * 100
+  const progressPercentage = Math.min(100, (currentPlantCount / MAX_FREE_PLANTS) * 100)
 
   return (
-    <div className="free-tier-card w-full">
+    <div className={`free-tier-card w-full transition-colors ${isLimitReached ? 'free-tier-card--limit' : ''}`}>
       <div className="free-tier-header">
         <span className="font-display font-bold" style={{ fontSize: 10, color: '#000' }}>FREE TIER</span>
-        <div className="plants-used-badge">
+        <div className={`plants-used-badge ${isLimitReached ? 'plants-used-badge--limit' : ''}`}>
           {currentPlantCount}/{MAX_FREE_PLANTS} PLANTS USED
         </div>
       </div>
 
       <div className="progress-bar-track">
         <div
-          className="progress-bar-fill"
+          className={`progress-bar-fill ${isLimitReached ? 'progress-bar-fill--limit' : ''}`}
           style={{ width: `${progressPercentage}%` }}
         />
       </div>
 
-      <p className="text-sm text-gray-500" style={{ fontFamily: 'Geist, sans-serif' }}>
-        {isLimitReached ? (
-          <span className="font-bold" style={{ color: RED }}>Limit reached. </span>
-        ) : (
-          `${remainingSlots} slots remaining. `
-        )}
-        <button
-          type="button"
-          onClick={onUpgrade}
-          className="underline font-bold text-black cursor-pointer bg-transparent border-0 p-0"
-          style={{ fontFamily: 'Geist, sans-serif', fontSize: 'inherit' }}
-        >
-          Upgrade to add unlimited plants
-        </button>
-      </p>
+      {isLimitReached ? (
+        <div className="flex flex-col gap-3">
+          <p
+            className="flex items-center gap-2"
+            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 14, color: RED, lineHeight: 1.4 }}
+            role="alert"
+          >
+            <span aria-hidden>⚠️</span>
+            <span>Limit reached — you&apos;ve used all {MAX_FREE_PLANTS} free plant slots.</span>
+          </p>
+          <button
+            type="button"
+            onClick={onUpgrade}
+            className="btn-primary btn-green w-full flex items-center justify-center rounded-full border-2 border-black cursor-pointer min-h-[44px] py-2.5 px-5 transition-all"
+            style={{ background: GREEN }}
+          >
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>
+              UPGRADE TO ADD UNLIMITED PLANTS
+            </span>
+          </button>
+        </div>
+      ) : (
+        <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#666', lineHeight: 1.5 }}>
+          {remainingSlots} {remainingSlots === 1 ? 'slot' : 'slots'} remaining on the free tier.
+        </p>
+      )}
     </div>
   )
 }
@@ -1020,7 +1076,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   const [saving, setSaving] = useState(false)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
-  const canAdd = settings.isPro || plants.length < MAX_FREE_PLANTS
+  const canAdd = canAddMorePlants(plants.length, settings.isPro)
 
   useEffect(() => {
     if (!isCustomSchedule) setDays(scheduleToIndices(settings.globalWaterSchedule))
@@ -1302,10 +1358,9 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
               type="button"
               onClick={() => { void save() }}
               disabled={!name.trim() || !canAdd || days.length === 0 || saving}
-              className="btn-primary btn-green flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer disabled:opacity-40"
-              style={{ background: GREEN, height: 56 }}
+              className="btn-primary btn-green save-jungle-btn w-full flex items-center justify-center rounded-full border-2 border-black cursor-pointer transition-all"
             >
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: 'inherit' }}>
                 {saving ? 'SAVING…' : 'SAVE TO JUNGLE'}
               </span>
             </button>
@@ -2928,7 +2983,7 @@ export default function App() {
 
   function handleAddPlant(p: Plant) {
     try {
-      if (!settings.isPro && plants.length >= MAX_FREE_PLANTS) {
+      if (!canAddMorePlants(plants.length, settings.isPro)) {
         console.error('[myJungle] Free tier plant limit reached')
         setStorageError('Free tier limit reached. Upgrade to Pro to add more plants.')
         return
@@ -3052,7 +3107,7 @@ export default function App() {
             onClose={() => setScreen('main')}
           />
         </div>
-        <TabBar active="settings" onChange={(t) => { setTab(t); setScreen('main') }} />
+        <TabBar active="settings" onChange={(t) => { setTab(t); setScreen('main') }} plantCount={plants.length} isPro={settings.isPro} onUpgrade={() => setScreen('pro')} />
       </div>
     )
   } else if (screen === 'settings') {
@@ -3108,7 +3163,7 @@ export default function App() {
     content = (
       <div className="relative flex flex-col h-full min-h-0">
         <div className="flex-1 min-h-0 overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))]">{tabContent}</div>
-        <TabBar active={tab} onChange={(t) => { setTab(t); setScreen('main') }} />
+        <TabBar active={tab} onChange={(t) => { setTab(t); setScreen('main') }} plantCount={plants.length} isPro={settings.isPro} onUpgrade={() => setScreen('pro')} />
       </div>
     )
   }

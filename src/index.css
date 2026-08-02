@@ -206,6 +206,37 @@
     box-shadow: none;
   }
 
+  .save-jungle-btn {
+    min-height: 52px;
+    padding: 0.875rem 1.5rem;
+    background: var(--color-neo-green);
+    color: #000;
+    box-shadow: 4px 4px 0px #111111;
+  }
+
+  .save-jungle-btn:disabled {
+    background: #e5e5e5 !important;
+    color: #737373 !important;
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 1;
+  }
+
+  .free-tier-card--limit {
+    background: rgb(255 45 85 / 0.08);
+    border-color: var(--color-neo-red);
+    box-shadow: 0 0 0 1px rgb(255 45 85 / 0.25);
+  }
+
+  .plants-used-badge--limit {
+    border-color: var(--color-neo-red);
+    color: var(--color-neo-red);
+  }
+
+  .progress-bar-fill--limit {
+    background: var(--color-neo-red);
+  }
+
   .free-tier-card {
     border: 2px solid #000;
     border-radius: 16px;
