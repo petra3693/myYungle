@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import { submitFeedback } from '@/lib/submitFeedback'
 import svgPaths from '@/imports/NewDesign2-1/svg-cm3nd9oy62'
 import svgPaths2 from '@/imports/MyjungleSettimgs-2/svg-u9kpmn74e6'
 import svgAdd from '@/imports/MyjungleAddPlant/svg-fer892chf7'
 import svgDetail from '@/imports/MyjungleAddPlant-1/svg-op7ttlkxgr'
 import svgBatch from '@/imports/MyjungleBatchChecklist/svg-yfmp6xfqu5'
-import svgPro from '@/imports/MyjungleProPaywall/svg-frfo2l2sh3'
+import ProScreen from '@/components/ProScreen'
 import svgSettings from '@/imports/MyjungleSettings/svg-doomn8mxv7'
 import detailHeroImg from '@/imports/MyjungleAddPlant-1/06984fd808ab72dc75d1af5314ea222465c42869.png'
 import detailThumbImg from '@/imports/MyjungleAddPlant-1/24c699409182c3e5d2a17cf3bf10988ef662ca0c.png'
@@ -25,12 +26,17 @@ interface HistoryEntry {
   heightCm?: number
 }
 
+type DayCode = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN'
+type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'
+
 interface Plant {
   id: string
   name: string
   room: string
   careNote: string
   wateringDays: number[]
+  isCustomSchedule: boolean
+  scheduleDays: DayCode[]
   waterNeed: WaterNeed
   photo: string
   lastWateredAt: string | null
@@ -44,6 +50,10 @@ interface AppSettings {
   hasCompletedOnboarding: boolean
   pushNotifications: boolean
   reminderTime: string
+  soundAlerts: boolean
+  hapticFeedback: boolean
+  timezoneAutoSync: boolean
+  timezone: string
   isPro: boolean
 }
 
@@ -54,8 +64,9 @@ const BG = '#F7F7F7'
 const BLACK = '#000000'
 const RED = '#FF2D55'
 const WATERED_BG = '#D9FFE8'
-const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const
+const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const
+const DAY_OF_WEEK: DayOfWeek[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
 const MAX_FREE_PLANTS = 5
 const PLANT_PHOTOS = [plantImg0, plantImg1, plantImg2, plantImg3]
 
@@ -64,6 +75,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   hasCompletedOnboarding: false,
   pushNotifications: true,
   reminderTime: '09:00',
+  soundAlerts: true,
+  hapticFeedback: true,
+  timezoneAutoSync: true,
+  timezone: 'UTC',
   isPro: false,
 }
 
@@ -73,12 +88,7 @@ function loadPlants(): Plant[] {
   try {
     const r = localStorage.getItem('mj_plants')
     const raw = r ? JSON.parse(r) : []
-    return (raw as Array<Plant & { watered?: boolean; lastWatered?: string | null }>).map((p) => ({
-      ...p,
-      isWateredToday: p.isWateredToday ?? p.watered ?? false,
-      lastWateredAt: p.lastWateredAt ?? p.lastWatered ?? null,
-      previousWateredAt: p.previousWateredAt ?? null,
-    }))
+    return (raw as Array<Plant & { watered?: boolean; lastWatered?: string | null }>).map(normalizePlant)
   } catch { return [] }
 }
 function savePlants(p: Plant[]) { localStorage.setItem('mj_plants', JSON.stringify(p)) }
@@ -91,8 +101,27 @@ function scheduleToIndices(schedule: string[]): number[] {
   return sortSchedule(schedule).map((d) => DAYS.indexOf(d)).filter((i) => i >= 0)
 }
 
-function indicesToSchedule(indices: number[]): string[] {
-  return sortSchedule([...indices].sort((a, b) => a - b).map((i) => DAYS[i]))
+function indicesToSchedule(indices: number[]): DayCode[] {
+  return sortSchedule([...indices].sort((a, b) => a - b).map((i) => DAYS[i])) as DayCode[]
+}
+
+function scheduleIndicesFromPlant(plant: Pick<Plant, 'wateringDays' | 'scheduleDays'>): number[] {
+  if (plant.scheduleDays?.length) return scheduleToIndices(plant.scheduleDays)
+  return [...plant.wateringDays].sort((a, b) => a - b)
+}
+
+function normalizePlant(raw: Plant & { watered?: boolean; lastWatered?: string | null; isCustomSchedule?: boolean; scheduleDays?: DayCode[] }): Plant {
+  const wateringDays = [...(raw.wateringDays ?? [])].sort((a, b) => a - b)
+  const scheduleDays = raw.scheduleDays?.length ? sortSchedule(raw.scheduleDays) as DayCode[] : indicesToSchedule(wateringDays)
+  return {
+    ...raw,
+    wateringDays: scheduleToIndices(scheduleDays),
+    scheduleDays,
+    isCustomSchedule: raw.isCustomSchedule ?? false,
+    isWateredToday: raw.isWateredToday ?? raw.watered ?? false,
+    lastWateredAt: raw.lastWateredAt ?? raw.lastWatered ?? null,
+    previousWateredAt: raw.previousWateredAt ?? null,
+  }
 }
 
 function loadSettings(): AppSettings {
@@ -106,11 +135,13 @@ function loadSettings(): AppSettings {
         ? indicesToSchedule(parsed.wateringDays)
         : []
     const hasCompletedOnboarding = parsed.hasCompletedOnboarding ?? globalWaterSchedule.length > 0
+    const timezone = parsed.timezone || getDeviceTimezone()
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
       globalWaterSchedule,
       hasCompletedOnboarding,
+      timezone,
     }
   } catch {
     return DEFAULT_SETTINGS
@@ -118,9 +149,79 @@ function loadSettings(): AppSettings {
 }
 function saveSettings(s: AppSettings) { localStorage.setItem('mj_settings', JSON.stringify(s)) }
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+function isNotificationSupported(): boolean {
+  return typeof window !== 'undefined' && 'Notification' in window
+}
+
+function getDeviceTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    return 'UTC'
+  }
+}
+
+function getEffectiveTimezone(settings: Pick<AppSettings, 'timezoneAutoSync' | 'timezone'>): string {
+  return settings.timezoneAutoSync ? getDeviceTimezone() : settings.timezone
+}
+
+async function requestNotificationPermission(): Promise<NotificationPermission | 'unsupported'> {
+  if (!isNotificationSupported()) return 'unsupported'
+  if (Notification.permission === 'granted') return 'granted'
+  if (Notification.permission === 'denied') return 'denied'
+  return Notification.requestPermission()
+}
+
+function sendTestNotification(settings: AppSettings): boolean {
+  if (!isNotificationSupported() || Notification.permission !== 'granted') return false
+  try {
+    const tz = getEffectiveTimezone(settings)
+    new Notification('myJungle — Test Alert', {
+      body: `Watering reminder test for ${settings.reminderTime} (${tz}).`,
+      tag: 'myjungle-test',
+    })
+    if (settings.hapticFeedback && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([15, 30, 15])
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
+function formatReminderTime(value: string): string {
+  const [h, m] = value.split(':')
+  if (!h || !m) return value
+  return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getTodayDayIndex() { return (new Date().getDay() + 6) % 7 }
+function getTodayDayIndex(): number { return (new Date().getDay() + 6) % 7 }
+
+function getDayOfWeek(index: number): DayOfWeek {
+  return DAY_OF_WEEK[index] ?? 'MONDAY'
+}
+
+/** Hydration-safe: day index is null until after mount. */
+function useTodayDayIndex(): number | null {
+  const [todayIdx, setTodayIdx] = useState<number | null>(null)
+  useEffect(() => { setTodayIdx(getTodayDayIndex()) }, [])
+  return todayIdx
+}
+
+function getPlantsForDay(plants: Plant[], dayIdx: number): Plant[] {
+  return plants.filter((p) => p.wateringDays.includes(dayIdx))
+}
+
+function getWateringDayOrder(globalWaterSchedule: string[], plants: Plant[], todayIdx: number): number[] {
+  const fromGlobal = scheduleToIndices(globalWaterSchedule)
+  const fromPlants = [...new Set(plants.flatMap((p) => p.wateringDays))]
+  const allDays = [...new Set([...fromGlobal, ...fromPlants, todayIdx])].sort((a, b) => a - b)
+  return [todayIdx, ...allDays.filter((d) => d !== todayIdx)]
+}
 function todayISO() { return new Date().toISOString().split('T')[0] }
 function formatDate(iso: string) { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
 
@@ -702,23 +803,239 @@ function PhotoActionSheet({
   )
 }
 
+// ─── Custom Schedule ──────────────────────────────────────────────────────────
+
+const CHECK_PATH = svgAdd.p2c13d500
+
+function CustomScheduleModal({
+  isOpen,
+  selectedDays,
+  globalSchedule,
+  onClose,
+  onApply,
+  onUseDefault,
+  onEditGlobalSchedule,
+}: {
+  isOpen: boolean
+  selectedDays: number[]
+  globalSchedule: DayCode[]
+  onClose: () => void
+  onApply: (days: number[]) => void
+  onUseDefault: () => void
+  onEditGlobalSchedule: () => void
+}) {
+  const [draftDays, setDraftDays] = useState<number[]>(selectedDays)
+
+  useEffect(() => {
+    if (isOpen) setDraftDays(selectedDays)
+  }, [isOpen, selectedDays])
+
+  if (!isOpen) return null
+
+  function toggleDraftDay(i: number) {
+    setDraftDays((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]))
+  }
+
+  function handleApply() {
+    if (draftDays.length === 0) return
+    onApply([...draftDays].sort((a, b) => a - b))
+  }
+
+  const globalLabel = globalSchedule.length ? globalSchedule.join(', ') : 'No global days set'
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/40" onClick={onClose} aria-hidden />
+      <div className="fixed inset-x-4 top-1/2 z-[70] -translate-y-1/2 mx-auto max-w-md">
+        <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000', textTransform: 'uppercase' }}>
+              Custom Watering Schedule
+            </span>
+            <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888', lineHeight: 1.4 }}>
+              Pick any days for this plant only. General schedule: {globalLabel}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1.5 w-full">
+            {DAYS.map((d, i) => {
+              const on = draftDays.includes(i)
+              const inGlobal = globalSchedule.includes(d as DayCode)
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => toggleDraftDay(i)}
+                  className="neo-pill relative w-full cursor-pointer active:scale-[0.99] transition-all rounded-full border-2 border-black"
+                  style={{ background: on ? GREEN : '#F3F4F6' }}
+                >
+                  <div className="flex items-center justify-between px-5 py-2">
+                    <div className="flex items-center gap-2">
+                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: on ? '#000' : '#888' }}>{d}</span>
+                      {inGlobal && !on && (
+                        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 9, color: '#888' }}>in general</span>
+                      )}
+                    </div>
+                    {on ? (
+                      <svg fill="none" height="18" viewBox="0 0 18 18" width="18" aria-hidden>
+                        <path d={CHECK_PATH} stroke="#000" strokeLinecap="round" strokeWidth="2" />
+                      </svg>
+                    ) : (
+                      <div className="size-[18px] rounded-full border-2 border-[#888]" aria-hidden />
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => { onClose(); onEditGlobalSchedule() }}
+            className="w-full text-left underline cursor-pointer"
+            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#000' }}
+          >
+            Edit Global General Schedule
+          </button>
+
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={handleApply}
+              disabled={draftDays.length === 0}
+              className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer disabled:opacity-40"
+              style={{ background: GREEN, height: 48 }}
+            >
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>Apply for this Plant</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { onUseDefault(); onClose() }}
+              className="flex w-full items-center justify-center rounded-full border-2 border-black bg-white cursor-pointer"
+              style={{ height: 44, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}
+            >
+              Use General Default Schedule
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex w-full items-center justify-center cursor-pointer"
+              style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#888' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function WateringScheduleSection({
+  days,
+  isCustomSchedule,
+  globalIndices,
+  onToggleDay,
+  onOpenCustomModal,
+  onResetToDefault,
+}: {
+  days: number[]
+  isCustomSchedule: boolean
+  globalIndices: number[]
+  onToggleDay: (index: number) => void
+  onOpenCustomModal: () => void
+  onResetToDefault: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-2 w-full">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', lineHeight: 1.4 }}>
+          How often does your plant need<br />to be watered? *
+        </div>
+        {isCustomSchedule && (
+          <span
+            className="rounded-full border-2 border-black px-2.5 py-1 shrink-0"
+            style={{ background: GREEN, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, color: '#000' }}
+          >
+            Custom Schedule
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-[7px] w-full">
+        {DAYS.map((d, i) => {
+          const on = days.includes(i)
+          const disabled = !isCustomSchedule && !globalIndices.includes(i)
+          return (
+            <button
+              key={d}
+              type="button"
+              onClick={() => onToggleDay(i)}
+              disabled={disabled}
+              className={`neo-pill relative w-full transition-all rounded-full border-2 border-black ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-[0.99]'}`}
+              style={{ background: on ? GREEN : disabled ? '#E5E5E5' : '#F3F4F6' }}
+            >
+              <div className="flex items-center justify-between px-5 py-1.5">
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: disabled && !on ? '#888' : '#000' }}>{d}</span>
+                {on ? (
+                  <svg fill="none" height="18" viewBox="0 0 18 18" width="18" aria-hidden>
+                    <path d={CHECK_PATH} stroke="#000" strokeLinecap="round" strokeWidth="2" />
+                  </svg>
+                ) : (
+                  <div className="size-[18px] rounded-full border-2 border-[#888]" aria-hidden />
+                )}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      {isCustomSchedule ? (
+        <button
+          type="button"
+          onClick={onResetToDefault}
+          className="text-left cursor-pointer underline"
+          style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#000' }}
+        >
+          Use General Default Schedule
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onOpenCustomModal}
+          className="text-left cursor-pointer underline"
+          style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#000' }}
+        >
+          Modify schedule / Enable extra days for this plant
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── Screen 5: Add New ───────────────────────────────────────────────────────
 
-function AddScreen({ plants, settings, onSave, onCancel, onUpgrade }: {
+function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobalSchedule }: {
   plants: Plant[]; settings: AppSettings; onSave: (p: Plant) => void; onCancel: () => void; onUpgrade: () => void
+  onEditGlobalSchedule: () => void
 }) {
   const globalIndices = scheduleToIndices(settings.globalWaterSchedule)
   const [name, setName] = useState('')
   const [room, setRoom] = useState('')
   const [note, setNote] = useState('')
   const [days, setDays] = useState<number[]>(globalIndices)
-  const [extraDaysUnlocked, setExtraDaysUnlocked] = useState(false)
+  const [isCustomSchedule, setIsCustomSchedule] = useState(false)
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [waterNeed, setWaterNeed] = useState<WaterNeed>('Moderate')
   const [photo, setPhoto] = useState<string | null>(null)
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const canAdd = settings.isPro || plants.length < MAX_FREE_PLANTS
+
+  useEffect(() => {
+    if (!isCustomSchedule) setDays(scheduleToIndices(settings.globalWaterSchedule))
+  }, [settings.globalWaterSchedule.join(','), isCustomSchedule, settings.globalWaterSchedule])
 
   function handlePhotoFile(file: File) {
     const reader = new FileReader()
@@ -735,22 +1052,47 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade }: {
   }
 
   function toggleDay(i: number) {
-    const inGlobal = globalIndices.includes(i)
-    if (!extraDaysUnlocked && !inGlobal) return
-    setDays((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]))
+    if (!isCustomSchedule && !globalIndices.includes(i)) {
+      setShowScheduleModal(true)
+      return
+    }
+    if (!isCustomSchedule) {
+      setDays((prev) => {
+        const next = prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
+        return next.length ? next : prev
+      })
+      return
+    }
+    setDays((prev) => {
+      const next = prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
+      return next.length ? next : prev
+    })
+  }
+
+  function applyCustomSchedule(selected: number[]) {
+    setDays(selected)
+    setIsCustomSchedule(true)
+    setShowScheduleModal(false)
+  }
+
+  function resetToGeneralSchedule() {
+    setDays(globalIndices)
+    setIsCustomSchedule(false)
+    setShowScheduleModal(false)
   }
 
   function save() {
-    if (!name.trim()) return
+    if (!name.trim() || days.length === 0) return
+    const scheduleDays = indicesToSchedule(days)
     onSave({
       id: Date.now().toString(), name: name.trim(), room: room || 'Unknown', careNote: note,
-      wateringDays: days, waterNeed, photo: photo ?? PLANT_PHOTOS[Math.floor(Math.random() * PLANT_PHOTOS.length)],
+      wateringDays: scheduleToIndices(scheduleDays), scheduleDays, isCustomSchedule,
+      waterNeed, photo: photo ?? PLANT_PHOTOS[Math.floor(Math.random() * PLANT_PHOTOS.length)],
       lastWateredAt: null, previousWateredAt: null, history: [], isWateredToday: false,
     })
   }
 
   const dropletPath = svgAdd.p13e3d5f0
-  const checkPath = svgAdd.p2c13d500
 
   function WaterDroplet({ filled }: { filled: boolean }) {
     const c = filled ? 'black' : GREEN
@@ -875,48 +1217,24 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade }: {
             </div>
           </div>
 
-          {/* Watering days */}
-          <div className="flex flex-col gap-[8px] w-full">
-            <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', lineHeight: 1.4 }}>
-              How often does your plant need<br />to be watered? *
-            </div>
-            <div className="flex flex-col gap-[7px] w-full">
-              {DAYS.map((d, i) => {
-                const on = days.includes(i)
-                const inGlobal = globalIndices.includes(i)
-                const disabled = !extraDaysUnlocked && !inGlobal
-                return (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => toggleDay(i)}
-                    disabled={disabled}
-                    className={`neo-pill relative w-full transition-all ${disabled ? 'opacity-40 cursor-not-allowed bg-gray-200' : 'cursor-pointer active:scale-[0.99]'}`}
-                    style={{ background: on ? GREEN : disabled ? undefined : 'white' }}
-                  >
-                    <div className="flex items-center justify-between px-[20px] py-[6px]">
-                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</span>
-                      {on ? (
-                        <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-                          <path d={checkPath} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
-                        </svg>
-                      ) : (
-                        <div style={{ width: 18, height: 18, borderRadius: '100px', background: 'rgba(0,0,0,0)' }} />
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-            <button
-              type="button"
-              onClick={() => setExtraDaysUnlocked(true)}
-              className="text-left cursor-pointer underline"
-              style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#000' }}
-            >
-              Modify schedule / Enable extra days for this plant
-            </button>
-          </div>
+          <WateringScheduleSection
+            days={days}
+            isCustomSchedule={isCustomSchedule}
+            globalIndices={globalIndices}
+            onToggleDay={toggleDay}
+            onOpenCustomModal={() => setShowScheduleModal(true)}
+            onResetToDefault={resetToGeneralSchedule}
+          />
+
+          <CustomScheduleModal
+            isOpen={showScheduleModal}
+            selectedDays={days}
+            globalSchedule={settings.globalWaterSchedule as DayCode[]}
+            onClose={() => setShowScheduleModal(false)}
+            onApply={applyCustomSchedule}
+            onUseDefault={resetToGeneralSchedule}
+            onEditGlobalSchedule={onEditGlobalSchedule}
+          />
 
           {/* Water needs segmented */}
           <div className="flex flex-col gap-[8px] w-full">
@@ -965,7 +1283,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade }: {
             <button
               type="button"
               onClick={save}
-              disabled={!name.trim() || !canAdd}
+              disabled={!name.trim() || !canAdd || days.length === 0}
               className="btn-primary btn-green flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer disabled:opacity-40"
               style={{ background: GREEN, height: 56 }}
             >
@@ -1526,12 +1844,14 @@ function WaterDropletIcon({ filled }: { filled: boolean }) {
 
 // ─── Screen 6: Plant Details ─────────────────────────────────────────────────
 
-function PlantDetailScreen({ plant, isPro, onBack, onDelete, onUpdate, onMarkWatered, onShowPro, todayIdx }: {
-  plant: Plant; isPro: boolean; onBack: () => void; onDelete: () => void; onUpdate: (p: Plant) => void
-  onMarkWatered: () => void; onShowPro: () => void; todayIdx: number
+function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete, onUpdate, onMarkWatered, onShowPro, onEditGlobalSchedule, todayIdx }: {
+  plant: Plant; isPro: boolean; globalWaterSchedule: DayCode[]; onBack: () => void; onDelete: () => void; onUpdate: (p: Plant) => void
+  onMarkWatered: () => void; onShowPro: () => void; onEditGlobalSchedule: () => void; todayIdx: number
 }) {
+  const globalIndices = scheduleToIndices(globalWaterSchedule)
   const [showEdit, setShowEdit] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [showLogGrowth, setShowLogGrowth] = useState(false)
   const [showRecordHealth, setShowRecordHealth] = useState(false)
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
@@ -1539,6 +1859,8 @@ function PlantDetailScreen({ plant, isPro, onBack, onDelete, onUpdate, onMarkWat
   const [editName, setEditName] = useState(plant.name)
   const [editRoom, setEditRoom] = useState(plant.room)
   const [editNote, setEditNote] = useState(plant.careNote)
+  const [editDays, setEditDays] = useState<number[]>(scheduleIndicesFromPlant(plant))
+  const [editIsCustomSchedule, setEditIsCustomSchedule] = useState(plant.isCustomSchedule)
   const [growthNote, setGrowthNote] = useState('')
   const [growthHeight, setGrowthHeight] = useState('')
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -1595,9 +1917,57 @@ function PlantDetailScreen({ plant, isPro, onBack, onDelete, onUpdate, onMarkWat
   }
 
   function saveEdit() {
-    if (!editName.trim()) return
-    onUpdate({ ...plant, name: editName.trim(), room: editRoom.trim() || plant.room, careNote: editNote })
+    if (!editName.trim() || editDays.length === 0) return
+    const scheduleDays = indicesToSchedule(editDays)
+    onUpdate({
+      ...plant,
+      name: editName.trim(),
+      room: editRoom.trim() || plant.room,
+      careNote: editNote,
+      wateringDays: scheduleToIndices(scheduleDays),
+      scheduleDays,
+      isCustomSchedule: editIsCustomSchedule,
+    })
     setShowEdit(false)
+  }
+
+  function toggleEditDay(i: number) {
+    if (!editIsCustomSchedule && !globalIndices.includes(i)) {
+      setShowScheduleModal(true)
+      return
+    }
+    if (!editIsCustomSchedule) {
+      setEditDays((prev) => {
+        const next = prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
+        return next.length ? next : prev
+      })
+      return
+    }
+    setEditDays((prev) => {
+      const next = prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
+      return next.length ? next : prev
+    })
+  }
+
+  function applyEditCustomSchedule(selected: number[]) {
+    setEditDays(selected)
+    setEditIsCustomSchedule(true)
+    setShowScheduleModal(false)
+  }
+
+  function resetEditToGeneralSchedule() {
+    setEditDays(globalIndices)
+    setEditIsCustomSchedule(false)
+    setShowScheduleModal(false)
+  }
+
+  function openEditModal() {
+    setEditName(plant.name)
+    setEditRoom(plant.room)
+    setEditNote(plant.careNote)
+    setEditDays(scheduleIndicesFromPlant(plant))
+    setEditIsCustomSchedule(plant.isCustomSchedule)
+    setShowEdit(true)
   }
 
   function logGrowthEntry() {
@@ -1665,6 +2035,9 @@ function PlantDetailScreen({ plant, isPro, onBack, onDelete, onUpdate, onMarkWat
                   <div className="flex flex-col gap-2 min-w-0">
                     <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>{plant.name}</span>
                     <div className="flex flex-wrap gap-2">
+                      {plant.isCustomSchedule ? (
+                        <button type="button" className="detail-tag detail-tag-filled cursor-default">Custom Schedule</button>
+                      ) : null}
                       <button type="button" className="detail-tag detail-tag-outline cursor-default">{plant.room.toUpperCase()}</button>
                       {primaryDay != null && (
                         <button type="button" className="detail-tag detail-tag-filled cursor-default">{DAY_NAMES[primaryDay].toUpperCase()}</button>
@@ -1673,7 +2046,7 @@ function PlantDetailScreen({ plant, isPro, onBack, onDelete, onUpdate, onMarkWat
                   </div>
                   <button
                     type="button"
-                    onClick={() => { setEditName(plant.name); setEditRoom(plant.room); setEditNote(plant.careNote); setShowEdit(true) }}
+                    onClick={openEditModal}
                     className="flex items-center justify-center shrink-0 size-9 rounded-full border-2 border-black bg-white cursor-pointer active:scale-95"
                     aria-label="Edit plant"
                   >
@@ -1762,7 +2135,7 @@ function PlantDetailScreen({ plant, isPro, onBack, onDelete, onUpdate, onMarkWat
 
       {showEdit && (
         <DetailModal title="Edit Plant" onClose={() => setShowEdit(false)}>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 max-h-[70dvh] overflow-y-auto">
             <label className="flex flex-col gap-1">
               <span className="detail-stat-label">Plant Name</span>
               <input value={editName} onChange={(e) => setEditName(e.target.value)} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
@@ -1775,12 +2148,30 @@ function PlantDetailScreen({ plant, isPro, onBack, onDelete, onUpdate, onMarkWat
               <span className="detail-stat-label">Care Note</span>
               <textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={3} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full resize-none" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
             </label>
-            <button type="button" onClick={saveEdit} className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer" style={{ background: GREEN, height: 48 }}>
+            <WateringScheduleSection
+              days={editDays}
+              isCustomSchedule={editIsCustomSchedule}
+              globalIndices={globalIndices}
+              onToggleDay={toggleEditDay}
+              onOpenCustomModal={() => setShowScheduleModal(true)}
+              onResetToDefault={resetEditToGeneralSchedule}
+            />
+            <button type="button" onClick={saveEdit} disabled={editDays.length === 0} className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer disabled:opacity-40" style={{ background: GREEN, height: 48 }}>
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>SAVE CHANGES</span>
             </button>
           </div>
         </DetailModal>
       )}
+
+      <CustomScheduleModal
+        isOpen={showScheduleModal}
+        selectedDays={editDays}
+        globalSchedule={globalWaterSchedule}
+        onClose={() => setShowScheduleModal(false)}
+        onApply={applyEditCustomSchedule}
+        onUseDefault={resetEditToGeneralSchedule}
+        onEditGlobalSchedule={() => { setShowScheduleModal(false); setShowEdit(false); onEditGlobalSchedule() }}
+      />
 
       {showDeleteConfirm && (
         <DetailModal title="Delete Plant?" onClose={() => setShowDeleteConfirm(false)}>
@@ -1847,70 +2238,102 @@ function PlantDetailScreen({ plant, isPro, onBack, onDelete, onUpdate, onMarkWat
 // ─── Screen 7: Watering ───────────────────────────────────────────────────────
 
 function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, onMarkAll }: {
-  plants: Plant[]; globalWaterSchedule: string[]; todayIdx: number; onMarkWatered: (id: string) => void; onMarkAll: () => void
+  plants: Plant[]
+  globalWaterSchedule: string[]
+  todayIdx: number | null
+  onMarkWatered: (id: string) => void
+  onMarkAll: () => void
 }) {
-  const scheduleDays = scheduleToIndices(globalWaterSchedule)
   const grouped: Record<number, Plant[]> = {}
-  plants.forEach((p) => p.wateringDays.forEach((d) => { if (!grouped[d]) grouped[d] = []; grouped[d].push(p) }))
+  plants.forEach((p) => {
+    p.wateringDays.forEach((d) => {
+      if (!grouped[d]) grouped[d] = []
+      if (!grouped[d].some((x) => x.id === p.id)) grouped[d].push(p)
+    })
+  })
 
-  const totalUnwatered = Object.values(grouped).flat().filter((p) => !p.isWateredToday).length
-
-  const waterNeedFills = (need: WaterNeed) => need === 'Light' ? 1 : need === 'Moderate' ? 2 : 3
+  const todayPlantCount = todayIdx === null ? 0 : getPlantsForDay(plants, todayIdx).length
+  const orderedDays = todayIdx === null ? scheduleToIndices(globalWaterSchedule) : getWateringDayOrder(globalWaterSchedule, plants, todayIdx)
+  const waterNeedFills = (need: WaterNeed) => (need === 'Light' ? 1 : need === 'Moderate' ? 2 : 3)
 
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
       <div className="app-header shrink-0">
         <div className="flex flex-col">
           <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000', lineHeight: 1.2 }}>WATERING</p>
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#888' }}>{plants.length} PLANTS</p>
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#888' }}>
+            {todayPlantCount} {todayPlantCount === 1 ? 'PLANT' : 'PLANTS'}
+          </p>
         </div>
       </div>
-      <div className="shrink-0 px-5 pb-4">
-        <button type="button" onClick={onMarkAll}
-          className="btn-primary btn-green relative w-full flex items-center justify-center rounded-full border-2 border-black cursor-pointer"
-          style={{ background: GREEN, height: 48 }}
-        >
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
-            MARK ALL {totalUnwatered} AS WATERED
-          </span>
-        </button>
-      </div>
-      {/* Scrollable list */}
+
+      {todayPlantCount > 0 && (
+        <div className="shrink-0 px-5 pb-4">
+          <button
+            type="button"
+            onClick={onMarkAll}
+            className="btn-primary btn-green relative w-full flex items-center justify-center rounded-full border-2 border-black cursor-pointer"
+            style={{ background: GREEN, height: 48 }}
+          >
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
+              MARK ALL {todayPlantCount} PLANTS TODAY AS WATERED
+            </span>
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto pb-4 flex flex-col gap-5">
-        {scheduleDays.map((di) => {
+        {orderedDays.map((di) => {
           const dayPlants = grouped[di] || []
-          const dayName = DAY_NAMES[di].toUpperCase()
+          const isToday = todayIdx !== null && di === todayIdx
+          const dayName = getDayOfWeek(di)
           return (
-            <div key={di} className="flex flex-col gap-[10px] px-5">
-              <div className="shrink-0">
-                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>{dayName} ROUTINE</p>
-                {dayPlants.length === 0 && (
-                  <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>No plants assigned</p>
+            <div
+              key={di}
+              className={`flex flex-col gap-[10px] mx-5 ${isToday ? 'neo-card rounded-2xl p-4 border-2 border-black' : 'px-0'}`}
+              style={isToday ? { background: `${GREEN}40` } : undefined}
+            >
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
+                  {isToday ? 'TODAY ROUTINE' : `${dayName} ROUTINE`}
+                </p>
+                {isToday && (
+                  <span
+                    className="neo-pill inline-flex items-center px-2 py-0.5 border-2 border-black"
+                    style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, background: GREEN, color: '#000' }}
+                  >
+                    {dayName}
+                  </span>
                 )}
               </div>
+              {dayPlants.length === 0 && (
+                <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>No plants assigned</p>
+              )}
               {dayPlants.map((p) => {
                 const fills = waterNeedFills(p.waterNeed)
                 return (
-                  <div key={p.id} className="neo-plant-card relative rounded-2xl shrink-0 w-full overflow-hidden"
+                  <div
+                    key={p.id}
+                    className="neo-plant-card relative rounded-2xl shrink-0 w-full overflow-hidden"
                     style={{ background: p.isWateredToday ? WATERED_BG : 'white' }}
                   >
                     <div className="flex items-center gap-3 px-4 py-3 w-full">
-                      {/* Thumbnail */}
                       <div className="shrink-0 size-[54px] rounded-full overflow-hidden border-2 border-black">
                         <img alt="" className="w-full h-full object-cover" src={p.photo} />
                       </div>
-                      {/* Title + badges */}
                       <div className="flex flex-1 flex-col gap-1 min-w-0">
-                        <p className="overflow-hidden text-ellipsis whitespace-nowrap uppercase"
-                          style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
+                        <p
+                          className="overflow-hidden text-ellipsis whitespace-nowrap uppercase"
+                          style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}
+                        >
                           {p.name}
                         </p>
                         <div className="flex flex-wrap gap-1">
                           <div className="badge px-1.5 py-0.5" style={{ background: BG }}>
                             <span style={{ fontSize: 9, color: '#000' }}>{p.room.toUpperCase()}</span>
                           </div>
-                          <div className="badge px-1.5 py-0.5" style={{ background: GREEN }}>
-                            <span style={{ fontSize: 9, color: '#000' }}>{DAY_NAMES[di].toUpperCase()}</span>
+                          <div className="badge px-1.5 py-0.5" style={{ background: isToday ? GREEN : BG }}>
+                            <span style={{ fontSize: 9, color: '#000' }}>{isToday ? 'TODAY' : dayName}</span>
                           </div>
                         </div>
                         <div className="flex gap-[5px] h-4 items-end">
@@ -1927,7 +2350,6 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
                           ))}
                         </div>
                       </div>
-                      {/* Quick water — right-aligned */}
                       <button
                         type="button"
                         onClick={() => onMarkWatered(p.id)}
@@ -1957,83 +2379,346 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
   )
 }
 
-// ─── Screen 8: Pro Paywall ───────────────────────────────────────────────────
+// ─── Screen 8: Pro Paywall — see @/components/ProScreen.tsx ──────────────────
 
-function ProPaywallScreen({ onUnlock, onClose }: { onUnlock: () => void; onClose: () => void }) {
-  const props = [
-    { title: 'UNLIMITED PLANTS', sub: 'No caps on your growing jungle' },
-    { title: 'GROWTH TIMELINE', sub: 'Interactive logs of plant status' },
-    { title: '100% OFFLINE & PRIVATE', sub: 'All data stored strictly on your device' },
-  ]
+// ─── Settings UI ──────────────────────────────────────────────────────────────
+
+function SettingsToggle({ on, onToggle, ariaLabel }: { on: boolean; onToggle: () => void; ariaLabel: string }) {
   return (
-    <div className="flex flex-col h-full" style={{ background: BG }}>
-      {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto flex flex-col items-start shrink-0 w-full">
-        {/* Hero collage */}
-        <div className="h-[180px] relative shrink-0 w-full overflow-clip" style={{ background: GREEN }}>
-          {/* Centered clover droplet illustration */}
-          <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[160px] top-1/2">
-            <svg className="absolute block inset-0 size-full" fill="none" height="160" preserveAspectRatio="none" viewBox="0 0 160 160" width="160">
-              <path d={svgPro.p1e4fc7f0} fill="black" stroke="black" strokeLinecap="round" strokeWidth="2" />
-            </svg>
-          </div>
-          <div className="absolute border-black border-b-2 inset-0 pointer-events-none" />
-        </div>
+    <button
+      type="button"
+      onClick={onToggle}
+      className="relative shrink-0 cursor-pointer min-h-[44px] min-w-[66px] flex items-center justify-center"
+      aria-label={ariaLabel}
+      aria-pressed={on}
+    >
+      <svg fill="none" height="38" viewBox="0 0 66 38" width="66" aria-hidden>
+        <rect fill={on ? GREEN : '#ccc'} height="36" rx="18" width="64" x="1" y="1" />
+        <rect height="36" rx="18" stroke="black" strokeWidth="2" width="64" x="1" y="1" />
+        <circle cx={on ? 46 : 20} cy="19" fill="white" r="13" stroke="black" strokeWidth="2" />
+      </svg>
+    </button>
+  )
+}
 
-        {/* Intro text */}
-        <div className="flex flex-col items-center w-full">
-          <div className="flex flex-col gap-2 items-center pb-3 pt-5 px-6 w-full text-center">
-            <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000', lineHeight: 1.2 }}>
-              NO SUBSCRIPTIONS. UNLIMITED JUNGLE.
-            </p>
-            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#888' }}>
-              Take absolute control of your collection offline.
-            </p>
-          </div>
-        </div>
+const TIMEZONE_OPTIONS = [
+  'UTC',
+  'Europe/Berlin',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Budapest',
+  'America/New_York',
+  'America/Chicago',
+  'America/Los_Angeles',
+  'Asia/Tokyo',
+  'Asia/Singapore',
+  'Australia/Sydney',
+]
 
-        {/* Value props list */}
-        <div className="flex flex-col gap-3 px-6 w-full shrink-0">
-          {props.map((p, i) => (
-            <div key={i} className="neo-card relative rounded-2xl w-full">
-              <div className="flex items-center gap-3 p-3">
-                {/* Badge icon */}
-                <div className="relative flex items-center justify-center rounded-full shrink-0 size-9 border-2 border-black" style={{ background: GREEN }}>
-                  <svg fill="none" height="16" viewBox="0 0 16 16" width="16">
-                    <clipPath id={`clip-${i}`}><rect fill="white" height="16" width="16" /></clipPath>
-                    <g clipPath={`url(#clip-${i})`}>
-                      <path d={svgPro.p397b9d00} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
-                    </g>
-                  </svg>
-                </div>
-                {/* Text */}
-                <div className="flex flex-col gap-[2px] flex-1 min-w-0">
-                  <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{p.title}</p>
-                  <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>{p.sub}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+function NotificationSettingsPanel({
+  settings,
+  onChange,
+}: {
+  settings: AppSettings
+  onChange: (patch: Partial<AppSettings>) => void
+}) {
+  const timeInputRef = useRef<HTMLInputElement>(null)
+  const [permissionDenied, setPermissionDenied] = useState(false)
+  const [testResult, setTestResult] = useState<string | null>(null)
+  const deviceTz = getDeviceTimezone()
+  const effectiveTz = getEffectiveTimezone(settings)
+  const timezoneOptions = TIMEZONE_OPTIONS.includes(deviceTz)
+    ? TIMEZONE_OPTIONS
+    : [deviceTz, ...TIMEZONE_OPTIONS]
 
-        {/* Buy section */}
-        <div className="flex flex-col items-center w-full">
-          <div className="flex flex-col gap-[10px] items-center px-6 py-5 w-full">
-            <button type="button" onClick={onUnlock}
-              className="btn-primary btn-green relative flex items-center justify-center rounded-full shrink-0 w-full cursor-pointer border-2 border-black"
-              style={{ background: GREEN, height: 58 }}
-            >
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
-                UNLOCK PRO FOREVER — $5.99
-              </p>
-            </button>
-            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 11, color: '#000', textAlign: 'center' }}>
-              One-time payment. No monthly fees. Yours forever.
-            </p>
-          </div>
+  useEffect(() => {
+    if (!isNotificationSupported()) return
+    if (settings.pushNotifications && Notification.permission === 'denied') {
+      setPermissionDenied(true)
+      onChange({ pushNotifications: false })
+    }
+  }, [])
+
+  async function handlePushToggle() {
+    if (settings.pushNotifications) {
+      onChange({ pushNotifications: false })
+      setTestResult(null)
+      return
+    }
+
+    if (!isNotificationSupported()) {
+      setPermissionDenied(true)
+      return
+    }
+
+    const permission = await requestNotificationPermission()
+    if (permission === 'granted') {
+      onChange({ pushNotifications: true })
+      setPermissionDenied(false)
+      if (settings.hapticFeedback && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(10)
+      }
+      return
+    }
+
+    if (permission === 'denied') {
+      setPermissionDenied(true)
+      onChange({ pushNotifications: false })
+      return
+    }
+
+    onChange({ pushNotifications: false })
+  }
+
+  function openTimePicker() {
+    const input = timeInputRef.current
+    if (!input) return
+    if (typeof input.showPicker === 'function') {
+      input.showPicker()
+    } else {
+      input.click()
+    }
+  }
+
+  function handleTestNotification() {
+    if (!isNotificationSupported()) {
+      setTestResult('Notifications are not supported on this device.')
+      return
+    }
+    if (Notification.permission !== 'granted') {
+      setTestResult('Enable push notifications first.')
+      return
+    }
+    const ok = sendTestNotification(settings)
+    setTestResult(ok ? 'Test notification sent!' : 'Could not send test notification.')
+  }
+
+  return (
+    <>
+      {/* Push notification */}
+      <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
+        <div className="flex flex-col gap-1 flex-1 min-w-0">
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Push Notification</p>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Allow notifications for watering</p>
         </div>
+        <SettingsToggle on={settings.pushNotifications} onToggle={handlePushToggle} ariaLabel="Toggle push notifications" />
       </div>
-    </div>
+
+      {permissionDenied && (
+        <div className="neo-card rounded-2xl border-2 border-black bg-white p-3 flex flex-col gap-2">
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: RED, lineHeight: 1.4 }}>
+            Notifications are blocked. Open your device or browser settings and allow notifications for myJungle, then try again.
+          </p>
+          <button
+            type="button"
+            onClick={() => setPermissionDenied(false)}
+            className="self-start underline cursor-pointer"
+            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#000' }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Watering reminder time */}
+      <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
+        <div className="flex flex-col gap-1 flex-1 min-w-0">
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Watering Reminder Time</p>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Alert at this time ({effectiveTz})</p>
+        </div>
+        <button
+          type="button"
+          onClick={openTimePicker}
+          className="relative bg-white border-2 border-black flex items-center justify-center gap-2 min-w-[100px] px-4 py-2 rounded-full shrink-0 h-11 whitespace-nowrap cursor-pointer active:scale-[0.98]"
+        >
+          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 16, color: '#000' }}>
+            {formatReminderTime(settings.reminderTime)}
+          </span>
+          <svg fill="none" height="15" viewBox="0 0 16 15" width="16" aria-hidden className="shrink-0">
+            <path d={svgSettings.p3c709780} fill="black" />
+          </svg>
+          <input
+            ref={timeInputRef}
+            type="time"
+            value={settings.reminderTime}
+            onChange={(e) => onChange({ reminderTime: e.target.value })}
+            className="absolute opacity-0 pointer-events-none w-0 h-0"
+            tabIndex={-1}
+            aria-hidden
+          />
+        </button>
+      </div>
+
+      {/* Device timezone sync */}
+      <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
+        <div className="flex flex-col gap-1 flex-1 min-w-0">
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Device Timezone Sync</p>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>
+            {settings.timezoneAutoSync ? `Auto-synced: ${deviceTz}` : `Manual: ${settings.timezone}`}
+          </p>
+        </div>
+        <SettingsToggle
+          on={settings.timezoneAutoSync}
+          onToggle={() => onChange({
+            timezoneAutoSync: !settings.timezoneAutoSync,
+            timezone: settings.timezoneAutoSync ? settings.timezone : deviceTz,
+          })}
+          ariaLabel="Toggle timezone auto sync"
+        />
+      </div>
+
+      {!settings.timezoneAutoSync && (
+        <div className="neo-input rounded-xl border-2 border-black w-full min-h-[44px]">
+          <select
+            value={settings.timezone}
+            onChange={(e) => onChange({ timezone: e.target.value })}
+            className="w-full h-11 px-3 bg-transparent outline-none rounded-xl"
+            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 14, color: '#000' }}
+          >
+            {timezoneOptions.map((tz) => (
+              <option key={tz} value={tz}>{tz}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Sound alerts */}
+      <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
+        <div className="flex flex-col gap-1 flex-1 min-w-0">
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Sound Alerts</p>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Play sound with notifications</p>
+        </div>
+        <SettingsToggle
+          on={settings.soundAlerts}
+          onToggle={() => onChange({ soundAlerts: !settings.soundAlerts })}
+          ariaLabel="Toggle sound alerts"
+        />
+      </div>
+
+      {/* Haptic feedback */}
+      <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
+        <div className="flex flex-col gap-1 flex-1 min-w-0">
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Haptic Feedback</p>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Vibrate on alerts and toggles</p>
+        </div>
+        <SettingsToggle
+          on={settings.hapticFeedback}
+          onToggle={() => {
+            const next = !settings.hapticFeedback
+            onChange({ hapticFeedback: next })
+            if (next && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+              navigator.vibrate(10)
+            }
+          }}
+          ariaLabel="Toggle haptic feedback"
+        />
+      </div>
+
+      {/* Test notification */}
+      <div className="flex flex-col gap-2 py-2 w-full">
+        <button
+          type="button"
+          onClick={handleTestNotification}
+          className="btn-secondary flex w-full min-h-[44px] items-center justify-center rounded-full border-2 border-black bg-white cursor-pointer active:scale-[0.98]"
+        >
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>Send Test Notification</span>
+        </button>
+        {testResult && (
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}>{testResult}</p>
+        )}
+      </div>
+    </>
+  )
+}
+
+// ─── Feedback Form ────────────────────────────────────────────────────────────
+
+interface FeedbackFormState {
+  thought: string
+  issue: string
+  contact: string
+}
+
+function FeedbackForm() {
+  const [fields, setFields] = useState<FeedbackFormState>({ thought: '', issue: '', contact: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setSuccessMessage(null)
+    setErrorMessage(null)
+    setSubmitting(true)
+
+    try {
+      const result = await submitFeedback({
+        thought: fields.thought,
+        issue: fields.issue,
+        contact: fields.contact,
+      })
+
+      if (result.success) {
+        setFields({ thought: '', issue: '', contact: '' })
+        setSuccessMessage('Thanks! Your feedback was sent.')
+      } else {
+        setErrorMessage(result.error ?? 'Failed to send feedback.')
+      }
+    } catch {
+      setErrorMessage('Failed to send feedback. Please check your connection and try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const fieldConfig = [
+    { key: 'thought' as const, placeholder: "Tell us what's on your mind..." },
+    { key: 'issue' as const, placeholder: 'What went wrong? / Describe the issue' },
+    { key: 'contact' as const, placeholder: 'What would you like to see in the app?' },
+  ]
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2 pb-3 w-full">
+      <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>We&apos;d love to hear from you!</p>
+      {fieldConfig.map(({ key, placeholder }) => (
+        <div key={key} className="neo-input relative rounded-2xl w-full min-h-[46px]">
+          <input
+            value={fields[key]}
+            onChange={(e) => {
+              setFields((f) => ({ ...f, [key]: e.target.value }))
+              setSuccessMessage(null)
+              setErrorMessage(null)
+            }}
+            placeholder={placeholder}
+            disabled={submitting}
+            className="w-full h-[46px] px-5 outline-none bg-transparent rounded-2xl focus:ring-2 focus:ring-[#00FF66] focus:ring-inset disabled:opacity-60"
+            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}
+          />
+        </div>
+      ))}
+
+      {errorMessage && (
+        <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: RED, lineHeight: 1.4 }} role="alert">
+          {errorMessage}
+        </p>
+      )}
+      {successMessage && (
+        <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#047857', lineHeight: 1.4 }} role="status">
+          {successMessage}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="btn-primary btn-green relative flex items-center justify-center rounded-full w-full min-h-[44px] cursor-pointer border-2 border-black disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ background: GREEN, height: 44 }}
+      >
+        <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
+          {submitting ? 'SENDING…' : 'SEND'}
+        </p>
+      </button>
+    </form>
   )
 }
 
@@ -2043,7 +2728,6 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
   plants: Plant[]; settings: AppSettings; onSave: (s: AppSettings) => void; onExport: () => void; onReset: () => void; onClose: () => void; onShowPro: () => void
 }) {
   const [s, setS] = useState(settings)
-  const [feedback, setFeedback] = useState({ mind: '', issue: '', feature: '' })
   useEffect(() => { onSave(s) }, [s])
 
   function toggleDay(i: number) {
@@ -2109,43 +2793,10 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
             </div>
           </div>
 
-          {/* Push notification */}
-          <div className="flex gap-[25px] items-start py-3 w-full">
-            <div className="flex flex-col gap-3 flex-1">
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Push Notification</p>
-              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Allow notifications for watering</p>
-            </div>
-            {/* Toggle */}
-            <button onClick={() => setS((p) => ({ ...p, pushNotifications: !p.pushNotifications }))}
-              className="relative shrink-0 cursor-pointer"
-              style={{ width: 66, height: 38 }}
-            >
-              <svg fill="none" height="38" viewBox="0 0 66 38" width="66">
-                <rect fill={s.pushNotifications ? GREEN : '#ccc'} height="36" rx="18" width="64" x="1" y="1" />
-                <rect height="36" rx="18" stroke="black" strokeWidth="2" width="64" x="1" y="1" />
-                <circle cx={s.pushNotifications ? 46 : 20} cy="19" fill="white" r="13" stroke="black" strokeWidth="2" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Watering reminder time */}
-          <div className="flex gap-[25px] items-start py-3 w-full">
-            <div className="flex flex-col gap-3 flex-1">
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Watering Reminder Time</p>
-              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Alert at this time</p>
-            </div>
-            <div className="relative bg-white border-2 border-black flex gap-3 items-center px-[11px] py-[3px] rounded-full shrink-0" style={{ height: 45, minWidth: 103 }}>
-              <input
-                type="time" value={s.reminderTime}
-                onChange={(e) => setS((p) => ({ ...p, reminderTime: e.target.value }))}
-                className="outline-none bg-transparent w-[56px]"
-                style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 16, color: '#000' }}
-              />
-              <svg fill="none" height="15" viewBox="0 0 16 15" width="16">
-                <path d={svgSettings.p3c709780} fill="black" />
-              </svg>
-            </div>
-          </div>
+          <NotificationSettingsPanel
+            settings={s}
+            onChange={(patch) => setS((p) => ({ ...p, ...patch }))}
+          />
         </div>
 
         {/* ── Data & Privacy ── */}
@@ -2185,26 +2836,7 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
         {/* ── Send Feedback ── */}
         <div className="flex flex-col gap-3 px-5">
           <p className="section-header" style={{ fontSize: 14 }}>Send Feedback</p>
-          <div className="flex flex-col gap-2 pb-3 w-full">
-            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>We&apos;d love to hear from you!</p>
-            {[
-              { key: 'mind' as const, placeholder: "Tell us what's on your mind..." },
-              { key: 'issue' as const, placeholder: 'What went wrong?" / "Describe the issue' },
-              { key: 'feature' as const, placeholder: 'What would you like to see in the app?' },
-            ].map(({ key, placeholder }) => (
-              <div key={key} className="neo-input relative rounded-2xl w-full" style={{ height: 46 }}>
-                <input
-                  value={feedback[key]} onChange={(e) => setFeedback((f) => ({ ...f, [key]: e.target.value }))}
-                  placeholder={placeholder}
-                  className="absolute left-5 top-[14px] outline-none bg-transparent w-[calc(100%-40px)] font-body"
-                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#888' }}
-                />
-              </div>
-            ))}
-            <button type="button" className="btn-primary btn-green relative flex items-center justify-center rounded-full w-full cursor-pointer border-2 border-black" style={{ background: GREEN, height: 41 }}>
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>SEND</p>
-            </button>
-          </div>
+          <FeedbackForm />
         </div>
 
         {/* ── MY JUNGLE PRO STATUS ── */}
@@ -2246,7 +2878,8 @@ export default function App() {
   const [plants, setPlants] = useState<Plant[]>(loadPlants)
   const [settings, setSettings] = useState<AppSettings>(loadSettings)
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null)
-  const todayIdx = getTodayDayIndex()
+  const todayIdx = useTodayDayIndex()
+  const todayIdxSafe = todayIdx ?? -1
 
   useEffect(() => { savePlants(plants) }, [plants])
   useEffect(() => { saveSettings(settings) }, [settings])
@@ -2322,8 +2955,9 @@ export default function App() {
   }
 
   function handleMarkAll() {
+    if (todayIdxSafe < 0) return
     setPlants((prev) => prev.map((p) => {
-      if (!p.wateringDays.includes(todayIdx) || p.isWateredToday) return p
+      if (!p.wateringDays.includes(todayIdxSafe) || p.isWateredToday) return p
       const now = new Date().toISOString()
       return {
         ...p,
@@ -2361,7 +2995,7 @@ export default function App() {
     content = (
       <div className="relative flex flex-col h-full min-h-0">
         <div className="flex-1 min-h-0 overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
-          <ProPaywallScreen
+          <ProScreen
             onUnlock={() => { setSettings((s) => ({ ...s, isPro: true })); setScreen('main') }}
             onClose={() => setScreen('main')}
           />
@@ -2382,12 +3016,14 @@ export default function App() {
     const live = plants.find((p) => p.id === selectedPlant.id) || selectedPlant
     content = (
       <PlantDetailScreen
-        plant={live} isPro={settings.isPro} todayIdx={todayIdx}
+        plant={live} isPro={settings.isPro} todayIdx={todayIdxSafe}
+        globalWaterSchedule={settings.globalWaterSchedule as DayCode[]}
         onBack={() => { setScreen('main'); setSelectedPlant(null) }}
         onDelete={() => handleDeletePlant(live.id)}
         onUpdate={handleUpdatePlant}
         onMarkWatered={() => handleWaterToggle(live.id)}
         onShowPro={() => setScreen('pro')}
+        onEditGlobalSchedule={() => setScreen('settings')}
       />
     )
   } else {
@@ -2396,7 +3032,7 @@ export default function App() {
     if (tab === 'home') {
       tabContent = (
         <HomeScreen
-          plants={plants} settings={settings} todayIdx={todayIdx}
+          plants={plants} settings={settings} todayIdx={todayIdxSafe}
           onSelectPlant={(p) => { setSelectedPlant(p); setScreen('detail') }}
           onDeletePlant={handleDeletePlant}
           onWaterPlant={handleWaterToggle}
@@ -2406,12 +3042,12 @@ export default function App() {
         />
       )
     } else if (tab === 'add') {
-      tabContent = <AddScreen plants={plants} settings={settings} onSave={handleAddPlant} onCancel={() => setTab('home')} onUpgrade={() => setScreen('pro')} />
+      tabContent = <AddScreen plants={plants} settings={settings} onSave={handleAddPlant} onCancel={() => setTab('home')} onUpgrade={() => setScreen('pro')} onEditGlobalSchedule={() => { setTab('settings'); setScreen('settings') }} />
     } else if (tab === 'watering') {
       tabContent = <WateringScreen plants={plants} globalWaterSchedule={settings.globalWaterSchedule} todayIdx={todayIdx} onMarkWatered={handleWaterToggle} onMarkAll={handleMarkAll} />
     } else {
       tabContent = (
-        <ProPaywallScreen
+        <ProScreen
           onUnlock={() => { setSettings((s) => ({ ...s, isPro: true })); setTab('home') }}
           onClose={() => setTab('home')}
         />

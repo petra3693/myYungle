@@ -1,4 +1,4 @@
-import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type HtmlTagDescriptor, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
@@ -9,6 +9,7 @@ import siteConfiguration from './.figma/make/site.json'
 export default defineConfig(({ mode }) => {
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
+  const env = loadEnv(mode, process.cwd(), '')
 
   return {
     base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : '/',
@@ -23,6 +24,7 @@ export default defineConfig(({ mode }) => {
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),
       figmaMakeKitPlugin({ storiesGlob: '/src/**/*.stories.{ts,tsx,js,jsx}' }),
+      feedbackApiDevPlugin(env),
     ],
     resolve: {
       alias: {
@@ -41,6 +43,51 @@ export default defineConfig(({ mode }) => {
     },
   }
 })
+
+/** Dev-only POST /api/feedback — mirrors Vercel serverless route in `api/feedback.ts`. */
+function feedbackApiDevPlugin(env: Record<string, string>): Plugin {
+  return {
+    name: 'feedback-api-dev',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const url = req.url?.split('?')[0]
+        if (url !== '/api/feedback') return next()
+
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ success: false, error: 'Method not allowed' }))
+          return
+        }
+
+        try {
+          const chunks: Buffer[] = []
+          for await (const chunk of req) {
+            chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+          }
+          const raw = Buffer.concat(chunks).toString('utf8')
+          const body = raw ? JSON.parse(raw) : {}
+
+          process.env.DISCORD_WEBHOOK_URL = env.DISCORD_WEBHOOK_URL ?? process.env.DISCORD_WEBHOOK_URL
+          process.env.RESEND_API_KEY = env.RESEND_API_KEY ?? process.env.RESEND_API_KEY
+          process.env.FEEDBACK_TO_EMAIL = env.FEEDBACK_TO_EMAIL ?? process.env.FEEDBACK_TO_EMAIL
+          process.env.FEEDBACK_FROM_EMAIL = env.FEEDBACK_FROM_EMAIL ?? process.env.FEEDBACK_FROM_EMAIL
+
+          const { handleFeedbackRequest } = await import('./src/server/feedbackHandler')
+          const result = await handleFeedbackRequest(body)
+          res.statusCode = result.status
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify(result.body))
+        } catch {
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ success: false, error: 'Failed to send feedback. Please try again later.' }))
+        }
+      })
+    },
+  }
+}
 
 type FigmaSiteConfiguration = {
   title?: string
