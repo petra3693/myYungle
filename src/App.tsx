@@ -49,7 +49,11 @@ interface AppSettings {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const GREEN = '#00f078'
+const GREEN = '#00FF66'
+const BG = '#F7F7F7'
+const BLACK = '#000000'
+const RED = '#FF2D55'
+const WATERED_BG = '#D9FFE8'
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const FREE_LIMIT = 5
@@ -108,21 +112,21 @@ function formatDate(iso: string) { return new Date(iso).toLocaleDateString('en-G
 function SvgSignal() {
   return (
     <svg className="block" fill="none" height="20" viewBox="0 0 20 20" width="20">
-      <path clipRule="evenodd" d={svgPaths.p2bb6eb80} fill="#111111" fillRule="evenodd" />
+      <path clipRule="evenodd" d={svgPaths.p2bb6eb80} fill="#000000" fillRule="evenodd" />
     </svg>
   )
 }
 function SvgWifi() {
   return (
     <svg className="block" fill="none" height="20" viewBox="0 0 20 20" width="20">
-      <path clipRule="evenodd" d={svgPaths.p646c5c0} fill="#111111" fillRule="evenodd" />
+      <path clipRule="evenodd" d={svgPaths.p646c5c0} fill="#000000" fillRule="evenodd" />
     </svg>
   )
 }
 function SvgBattery() {
   return (
     <svg className="block" fill="none" height="20" viewBox="0 0 28 20" width="28">
-      <path d={svgPaths.p66c9640} fill="#111111" />
+      <path d={svgPaths.p66c9640} fill="#000000" />
     </svg>
   )
 }
@@ -133,7 +137,7 @@ function SvgDrop() {
     </svg>
   )
 }
-function SvgDropSmall({ color = '#111111', filled = false }: { color?: string; filled?: boolean }) {
+function SvgDropSmall({ color = '#000000', filled = false }: { color?: string; filled?: boolean }) {
   return (
     <svg className="block" fill="none" height="20" viewBox="0 0 12 20" width="12">
       <path d={svgPaths.p35497c00} fill={filled ? color : 'none'} stroke={color} strokeLinecap="round" strokeWidth="2" />
@@ -143,21 +147,21 @@ function SvgDropSmall({ color = '#111111', filled = false }: { color?: string; f
 function SvgDroplet24() {
   return (
     <svg className="block" fill="none" height="24" viewBox="0 0 24 24" width="24">
-      <path d={svgPaths.p32e52500} stroke="#111111" strokeLinecap="round" strokeWidth="2" />
+      <path d={svgPaths.p32e52500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
     </svg>
   )
 }
 function SvgCheck() {
   return (
     <svg className="block" fill="none" height="18" viewBox="0 0 18 18" width="18">
-      <path d={svgPaths.p3901e500} stroke="#111111" strokeLinecap="round" strokeWidth="2" />
+      <path d={svgPaths.p3901e500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
     </svg>
   )
 }
 function SvgSettings() {
   return (
     <svg className="block" fill="none" height="18" viewBox="0 0 18 18" width="18">
-      <path d={svgPaths.p1f61bb80} stroke="#111111" strokeLinecap="round" strokeWidth="2" />
+      <path d={svgPaths.p1f61bb80} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
     </svg>
   )
 }
@@ -179,7 +183,7 @@ function SvgStar() {
   return (
     <svg className="block" fill="none" height="16" viewBox="0 0 16 16" width="16">
       <g clipPath="url(#star-clip)">
-        <path d={svgPaths.p397b9d00} stroke="#111111" strokeLinecap="round" strokeWidth="2" />
+        <path d={svgPaths.p397b9d00} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
       </g>
       <defs><clipPath id="star-clip"><rect fill="white" height="16" width="16" /></clipPath></defs>
     </svg>
@@ -196,7 +200,7 @@ function SvgCloverHero() {
 // ─── Status Bar ───────────────────────────────────────────────────────────────
 
 function StatusBar({ light = false }: { light?: boolean }) {
-  const c = light ? '#fff' : '#111'
+  const c = light ? '#fff' : BLACK
   return (
     <div className="flex items-center justify-between px-6 shrink-0" style={{ height: 44 }}>
       <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 700, fontSize: 12, color: c }}>9:41</span>
@@ -225,26 +229,34 @@ function TabBar({ active, onChange }: { active: TabScreen; onChange: (t: TabScre
     { id: 'settings', label: 'PRO', path: svgPaths2.p1eebb470, stroke: false },
   ]
   return (
-    <div className="border-t-2 border-[#111] bg-white shrink-0 flex items-center px-3" style={{ height: 72 }}>
+    <nav
+      className="neo-tab-bar flex items-stretch"
+      style={{ height: 72 }}
+      aria-label="Main navigation"
+    >
       {tabs.map((t) => {
         const on = t.id === active
         return (
-          <button key={t.id} onClick={() => onChange(t.id)}
-            className="flex-1 flex flex-col items-center gap-1 cursor-pointer"
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onChange(t.id)}
+            className="flex flex-1 flex-col items-center justify-center gap-1 min-w-0 cursor-pointer transition-colors"
+            style={{ background: on ? GREEN : 'transparent', paddingTop: 4, paddingBottom: 4 }}
           >
-            <div style={{ background: on ? '#d1ffe8' : 'transparent', borderRadius: 0, paddingTop: 6, paddingBottom: 6, paddingLeft: 10, paddingRight: 10 }}>
+            <div className="flex items-center justify-center" style={{ width: 20, height: 20 }}>
               <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
                 {t.stroke
-                  ? <path d={t.path} stroke={on ? '#111' : '#aaa'} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-                  : <path d={t.path} fill={on ? '#111' : '#aaa'} />
+                  ? <path d={t.path} stroke={on ? BLACK : '#aaa'} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+                  : <path d={t.path} fill={on ? BLACK : '#aaa'} />
                 }
               </svg>
             </div>
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 8, color: on ? '#111' : '#aaa' }}>{t.label}</span>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 8, color: on ? BLACK : '#aaa', textTransform: 'uppercase' }}>{t.label}</span>
           </button>
         )
       })}
-    </div>
+    </nav>
   )
 }
 
@@ -277,8 +289,8 @@ function SplashScreen({ onNext }: { onNext: () => void }) {
 
       {/* Text */}
       <div className="text-animate text-center">
-        <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 28, color: '#111', letterSpacing: '-0.01em' }}>MYJUNGLE</div>
-        <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111', opacity: 0.55, marginTop: 4 }}>Version 1.0.0.</div>
+        <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 28, color: '#000', letterSpacing: '-0.01em' }}>MYJUNGLE</div>
+        <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', opacity: 0.55, marginTop: 4 }}>Version 1.0.0.</div>
       </div>
     </div>
   )
@@ -292,7 +304,7 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
     setS((p) => ({ ...p, wateringDays: p.wateringDays.includes(i) ? p.wateringDays.filter((x) => x !== i) : [...p.wateringDays, i] }))
   }
   return (
-    <div className="flex flex-col h-full" style={{ background: '#efefef' }}>
+    <div className="flex flex-col h-full" style={{ background: BG }}>
       <StatusBar />
 
       {/* Drop art + brand */}
@@ -301,15 +313,15 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
           <path d={svgPaths.p1cd02a80} fill="black" stroke="black" strokeLinecap="round" strokeWidth="2" />
         </svg>
         <div className="flex items-center justify-center px-5 py-4 w-full">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 24, color: '#111' }}>MYJUNGLE</span>
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 24, color: '#000' }}>MYJUNGLE</span>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {/* Weekly strip */}
         <div className="flex flex-col gap-2 px-5 py-3">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111' }}>WEEKLY WATER SCHEDULE</span>
-          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111' }}>Choose which days you&apos;d like to water</span>
+        <span className="section-header" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>WEEKLY WATER SCHEDULE</span>
+          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Choose which days you&apos;d like to water</span>
           {/* Day cards — full-width vertical list, gap-[7px] */}
           <div className="flex flex-col" style={{ gap: 7, marginTop: 4 }}>
             {DAYS.map((d, i) => {
@@ -318,13 +330,13 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
                 <button
                   key={d}
                   onClick={() => toggleDay(i)}
-                  className="relative flex items-center justify-between w-full rounded-[12px] border-2 border-[#111] cursor-pointer active:scale-[0.98] transition-all"
+                  className="neo-pill relative flex items-center justify-between w-full cursor-pointer active:scale-[0.98] transition-all"
                   style={{ background: on ? GREEN : 'white', paddingLeft: 20, paddingRight: 20, paddingTop: 6, paddingBottom: 6 }}
                 >
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#111' }}>{d}</span>
+                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</span>
                   {on ? (
                     <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-                      <path d={svgPaths.p2c13d500} stroke="#111111" strokeLinecap="round" strokeWidth="2" />
+                      <path d={svgPaths.p2c13d500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
                     </svg>
                   ) : (
                     <div style={{ width: 18, height: 18 }} />
@@ -339,8 +351,8 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
         <div className="flex flex-col px-5" style={{ paddingTop: 52, paddingBottom: 12, gap: 12 }}>
           <div className="flex items-start justify-between w-full" style={{ gap: 25 }}>
             <div className="flex flex-col" style={{ gap: 12 }}>
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111', textTransform: 'uppercase' }}>Push Notification</span>
-              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111' }}>Allow notifications for watering</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Push Notification</span>
+              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Allow notifications for watering</span>
             </div>
             {/* Toggle — 66×38, rounded-[18px] pill */}
             <div
@@ -351,7 +363,7 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
               <div style={{
                 width: 64, height: 36, borderRadius: 18,
                 background: s.pushNotifications ? GREEN : 'white',
-                border: '2px solid #111',
+                border: '2px solid black',
                 position: 'relative', margin: '1px',
                 transition: 'background .2s',
               }}>
@@ -361,8 +373,8 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
                   left: s.pushNotifications ? 30 : 2,
                   width: 26, height: 26,
                   borderRadius: 13,
-                  background: s.pushNotifications ? '#111' : '#D9D9D9',
-                  border: '2px solid #111',
+                  background: s.pushNotifications ? BLACK : '#D9D9D9',
+                  border: '2px solid black',
                   transition: 'left .2s',
                 }} />
               </div>
@@ -373,10 +385,10 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
           <div className="flex items-start pt-2 pb-5 w-full">
             <button
               onClick={() => onSave(s)}
-              className="flex flex-1 items-center justify-center rounded-[100px] border-2 border-[#111] drop-shadow-[4px_4px_0px_#111] cursor-pointer active:scale-[0.98] transition-all"
+              className="flex flex-1 items-center justify-center rounded-full border-2 border-black btn-primary cursor-pointer active:scale-[0.98] transition-all"
               style={{ background: GREEN, height: 56 }}
             >
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#111' }}>Start</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>START</span>
             </button>
           </div>
         </div>
@@ -390,8 +402,8 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <div onClick={() => onChange(!checked)} className="cursor-pointer select-none relative" style={{ width: 50, height: 28 }}>
-      <div style={{ width: 50, height: 28, borderRadius: 14, background: checked ? GREEN : '#ddd', border: '2px solid #111', transition: 'background .2s', position: 'relative' }}>
-        <div style={{ position: 'absolute', top: 2, left: checked ? 22 : 2, width: 20, height: 20, borderRadius: 10, background: '#111', transition: 'left .2s' }} />
+      <div style={{ width: 50, height: 28, borderRadius: 14, background: checked ? GREEN : '#ddd', border: '2px solid black', transition: 'background .2s', position: 'relative' }}>
+        <div style={{ position: 'absolute', top: 2, left: checked ? 22 : 2, width: 20, height: 20, borderRadius: 10, background: BLACK, transition: 'left .2s' }} />
       </div>
     </div>
   )
@@ -403,23 +415,23 @@ function WeeklyStrip({ plants, todayIdx }: { plants: Plant[]; todayIdx: number }
   const counts = DAYS.map((_, i) => plants.filter((p) => p.wateringDays.includes(i)).length)
   return (
     <div className="px-5 py-3 shrink-0">
-      <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111', marginBottom: 8 }}>WEEKLY WATER SCHEDULE</div>
+      <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', marginBottom: 8 }}>WEEKLY WATER SCHEDULE</div>
       <div className="flex items-start justify-between gap-1">
         {DAYS.map((d, i) => {
           const isToday = i === todayIdx
           const count = counts[i]
           const hasPlants = count > 0
           // Card bg: today=black, scheduled=green, empty=white
-          const bg = isToday ? '#111' : hasPlants ? GREEN : 'white'
-          const textColor = isToday ? 'white' : '#111'
+          const bg = isToday ? BLACK : hasPlants ? GREEN : 'white'
+          const textColor = isToday ? 'white' : BLACK
           // Badge: today=white bg+black text; scheduled=black bg+green text; empty=transparent+#888 text
-          const badgeBg = isToday ? 'white' : hasPlants ? '#111' : 'transparent'
-          const badgeText = isToday ? '#111' : hasPlants ? GREEN : '#888'
+          const badgeBg = isToday ? 'white' : hasPlants ? BLACK : 'transparent'
+          const badgeText = isToday ? BLACK : hasPlants ? GREEN : '#888'
           return (
-            <div key={d} className="flex flex-col items-center gap-1 rounded-[12px] border-2 border-[#111] py-2.5" style={{ background: bg, width: 44 }}>
+            <div key={d} className="neo-pill flex flex-col items-center gap-1 py-2.5" style={{ background: bg, width: 44 }}>
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: textColor }}>{d}</span>
               <div className="flex items-center justify-center rounded-full" style={{ width: 18, height: 18, background: badgeBg }}>
-                <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 10, color: badgeText }}>{count}</span>
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: badgeText }}>{count}</span>
               </div>
             </div>
           )
@@ -439,15 +451,14 @@ function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
   const waterNeedCount = plant.waterNeed === 'Heavy' ? 3 : plant.waterNeed === 'Moderate' ? 2 : 1
   // watered: mint-green card bg + white btn + green droplet
   // unwatered: white card bg + green btn + black checkmark
-  const cardBg = plant.watered ? '#d1ffe8' : 'white'
-  const btnBg = plant.watered ? 'white' : GREEN
+  const cardBg = plant.watered ? WATERED_BG : 'white'
 
   return (
-    <div className="relative rounded-[16px] overflow-hidden border-2 border-[#111] shrink-0">
+    <div className="neo-plant-card relative rounded-2xl overflow-hidden shrink-0">
       {/* Pink delete panel always behind card */}
       <div
         className="absolute inset-y-0 right-0 flex items-center justify-center cursor-pointer"
-        style={{ width: 95, background: '#FF0863' }}
+        style={{ width: 95, background: RED }}
         onClick={onDelete}
       >
         <svg fill="none" height="28" viewBox="46 27 27 28" width="27">
@@ -456,7 +467,7 @@ function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
       </div>
       {/* Card slides left to reveal delete */}
       <div
-        className="flex items-center gap-3 p-3 cursor-pointer relative"
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer relative w-full"
         style={{ background: cardBg, transform: swiped ? 'translateX(-95px)' : 'none', transition: 'transform .22s cubic-bezier(0.4,0,0.2,1)', zIndex: 1 }}
         onTouchStart={(e) => { startX.current = e.touches[0].clientX }}
         onTouchEnd={(e) => {
@@ -466,18 +477,18 @@ function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
         }}
         onClick={() => { if (swiped) setSwiped(false); else onTap() }}
       >
-        {/* Photo */}
-        <div className="shrink-0 rounded-[36px] overflow-hidden border-2 border-[#111]" style={{ width: 54, height: 54 }}>
+        {/* Thumbnail */}
+        <div className="shrink-0 size-[54px] rounded-full overflow-hidden border-2 border-black">
           <img src={plant.photo} alt={plant.name} className="w-full h-full object-cover" />
         </div>
-        {/* Meta */}
-        <div className="flex-1 flex flex-col gap-1 min-w-0">
-          <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+        {/* Title + badges */}
+        <div className="flex flex-1 flex-col gap-1 min-w-0">
+          <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
             {plant.name}
           </div>
-          <div className="flex gap-1">
-            <span className="px-1.5 py-0.5 rounded-[6px] border border-[#111]" style={{ background: '#efefef', fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 9, color: '#111', textTransform: 'uppercase' }}>{plant.room}</span>
-            <span className="px-1.5 py-0.5 rounded-[6px] border border-[#111]" style={{ background: GREEN, fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 9, color: '#111', textTransform: 'uppercase' }}>
+          <div className="flex flex-wrap gap-1">
+            <span className="badge px-1.5 py-0.5" style={{ background: BG, fontSize: 9, color: '#000' }}>{plant.room}</span>
+            <span className="badge px-1.5 py-0.5" style={{ background: GREEN, fontSize: 9, color: '#000' }}>
               {plant.wateringDays.map((d) => DAYS[d]).join(' & ')}
             </span>
           </div>
@@ -487,11 +498,13 @@ function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
             ))}
           </div>
         </div>
-        {/* Quick water button */}
+        {/* Quick water — right-aligned */}
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); onWater() }}
-          className="shrink-0 flex items-center justify-center rounded-full border-2 border-[#111] cursor-pointer active:scale-90 transition-all"
-          style={{ width: 40, height: 40, background: btnBg }}
+          className="ml-auto shrink-0 flex items-center justify-center rounded-full border-2 border-black size-10 cursor-pointer active:scale-90 transition-all"
+          style={{ background: plant.watered ? 'white' : GREEN }}
+          aria-label={plant.watered ? 'Plant watered' : 'Mark as watered'}
         >
           {plant.watered ? (
             <svg fill="none" height="18" viewBox="7 5.5 14 18" width="14">
@@ -499,7 +512,7 @@ function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
             </svg>
           ) : (
             <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-              <path d={svgPaths2.p3901e500} stroke="#111111" strokeLinecap="round" strokeWidth="2" />
+              <path d={svgPaths2.p3901e500} stroke={BLACK} strokeLinecap="round" strokeWidth="2" />
             </svg>
           )}
         </button>
@@ -517,20 +530,20 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
   const needsWater = plants.filter((p) => p.wateringDays.includes(todayIdx) && !p.watered)
 
   return (
-    <div className="flex flex-col h-full" style={{ background: '#efefef' }}>
+    <div className="flex flex-col h-full" style={{ background: BG }}>
       {/* Header */}
-      <div style={{ background: '#efefef' }}>
+      <div style={{ background: BG }}>
         <StatusBar />
         <div className="flex items-center justify-between px-5 pb-2">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 24, color: '#111' }}>MYJUNGLE</span>
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 24, color: '#000' }}>MYJUNGLE</span>
           <div className="flex items-center gap-2">
             {/* PRO badge */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[12px] border-2 border-[#111] drop-shadow-[4px_4px_0px_#111]" style={{ background: GREEN }}>
+            <div className="badge flex items-center gap-1.5 px-2.5 py-1.5" style={{ background: GREEN }}>
               <SvgLeaf />
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111' }}>PRO</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>PRO</span>
             </div>
             {/* Settings button */}
-            <button onClick={onSettings} className="flex items-center justify-center rounded-full border-2 border-[#111] bg-white drop-shadow-[4px_4px_0px_#111] cursor-pointer active:scale-90 transition-all" style={{ width: 38, height: 38 }}>
+            <button onClick={onSettings} className="flex items-center justify-center rounded-full border-2 border-black bg-white cursor-pointer active:scale-90 transition-all" style={{ width: 38, height: 38 }}>
               <SvgSettings />
             </button>
           </div>
@@ -540,9 +553,9 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
       <div className="flex-1 overflow-y-auto">
         {/* Alert banner */}
         <div className="px-5 pt-4 pb-3">
-          <div className="flex items-center gap-3 px-4 py-3.5 rounded-[16px] border-2 border-[#111] drop-shadow-[4px_4px_0px_#111]" style={{ background: GREEN }}>
+          <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 border-black" style={{ background: GREEN }}>
             <SvgDroplet24 />
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#111', lineHeight: 1.2 }}>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000', lineHeight: 1.2 }}>
               {needsWater.length} PLANTS NEED WATER TODAY!
             </span>
           </div>
@@ -554,7 +567,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
         {/* Specimens */}
         <div className="px-5">
           <div className="flex items-center justify-between mb-3">
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#111' }}>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
               MY SPECIMENS ({plants.length})
             </span>
           </div>
@@ -562,7 +575,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
           {plants.length === 0 ? (
             <div className="flex flex-col items-center py-12 opacity-40">
               <SvgDrop />
-              <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111', marginTop: 12 }}>No plants yet. Tap below to add one!</div>
+              <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', marginTop: 12 }}>No plants yet. Tap below to add one!</div>
             </div>
           ) : (
             <div className="flex flex-col gap-2 mb-4">
@@ -573,11 +586,11 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
           )}
 
           {/* Add plant button */}
-          <button onClick={onGoAdd}
-            className="w-full flex items-center justify-center rounded-[100px] border-2 border-[#111] drop-shadow-[4px_4px_0px_#111] mb-4 cursor-pointer active:scale-95 transition-all"
+            <button onClick={onGoAdd}
+            className="btn-primary w-full flex items-center justify-center rounded-full border-2 border-black mb-4 cursor-pointer active:scale-95 transition-all"
             style={{ background: GREEN, height: 56 }}
           >
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#111' }}>+ ADD PLANT</span>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000' }}>+ ADD PLANT</span>
           </button>
         </div>
       </div>
@@ -624,22 +637,22 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
   }
 
   return (
-    <div className="flex flex-col h-full" style={{ background: '#efefef' }}>
+    <div className="flex flex-col h-full" style={{ background: BG }}>
       <StatusBar />
 
       {/* Modal header */}
       <div className="flex flex-col items-center pb-[16px] pt-[8px] shrink-0 w-full">
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#111' }}>ADD NEW </span>
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000' }}>ADD NEW </span>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-[16px] items-start px-[20px] pb-[20px]">
 
           {/* Photo upload */}
-          <div className="bg-white drop-shadow-[4px_4px_0px_#111] relative rounded-[20px] w-full" style={{ border: '2px solid #111' }}>
+          <div className="neo-card relative rounded-3xl w-full">
             <div className="flex items-center gap-[16px] p-[16px]">
               {/* Photo placeholder */}
-              <div className="bg-[#efefef] relative rounded-[39px] shrink-0 size-[64px] overflow-hidden">
+              <div className="bg-[#F7F7F7] relative rounded-full shrink-0 size-[64px] overflow-hidden border-2 border-black">
                 <div className="absolute" style={{ left: 20, top: 20 }}>
                   <svg fill="none" height="24" viewBox="0 0 24 24" width="24">
                     <path d={svgAdd.p22b7c700} fill="black" />
@@ -648,9 +661,9 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
               </div>
               {/* Upload action */}
               <div className="flex flex-col gap-[6px] flex-1 min-w-0">
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111', textTransform: 'uppercase' }}>Your Plant&apos;s Photo</span>
-                <div className="relative inline-flex rounded-[8px] cursor-pointer active:scale-95 transition-all" style={{ background: GREEN, border: '2px solid #111' }}>
-                  <span className="px-[12px] py-[6px]" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#111' }}>+ TAKE PHOTO</span>
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Your Plant&apos;s Photo</span>
+                <div className="relative inline-flex rounded-full border-2 border-black cursor-pointer active:scale-95 transition-all btn-primary" style={{ background: GREEN }}>
+                  <span className="px-[12px] py-[6px]" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>+ TAKE PHOTO</span>
                 </div>
               </div>
             </div>
@@ -660,21 +673,21 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
           <div className="flex flex-col gap-[12px] w-full">
             {/* Plant Name */}
             <div className="flex flex-col gap-[6px] w-full">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111' }}>PLANT NAME *</span>
-              <div className="bg-white relative rounded-[12px] w-full" style={{ border: '2px solid #111' }}>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>PLANT NAME *</span>
+              <div className="neo-input relative rounded-[12px] w-full">
                 <input
                   value={name} onChange={(e) => setName(e.target.value)}
                   placeholder="Pilea Peperomioides"
                   className="w-full p-[14px] outline-none bg-transparent rounded-[12px]"
-                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111' }}
+                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}
                 />
               </div>
             </div>
 
             {/* Room Location */}
             <div className="flex flex-col gap-[6px] w-full">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111' }}>ROOM LOCATION</span>
-              <div className="bg-white relative rounded-[12px] w-full" style={{ border: '2px solid #111' }}>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>ROOM LOCATION</span>
+              <div className="neo-input relative rounded-[12px] w-full">
                 <input
                   value={room} onChange={(e) => setRoom(e.target.value)}
                   placeholder="e.g. Living Room, Kitchen"
@@ -686,8 +699,8 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
 
             {/* Care Note */}
             <div className="flex flex-col gap-[6px] w-full">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111', textTransform: 'uppercase' }}>Care Note (max 500 Ca.)</span>
-              <div className="bg-white relative rounded-[12px] w-full" style={{ border: '2px solid #111', height: 96 }}>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Care Note (max 500 Ca.)</span>
+              <div className="neo-input relative rounded-[12px] w-full" style={{ height: 96 }}>
                 <textarea
                   value={note} onChange={(e) => setNote(e.target.value)}
                   placeholder="Optional care notes for this plant"
@@ -700,7 +713,7 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
 
           {/* Watering days */}
           <div className="flex flex-col gap-[8px] w-full">
-            <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111', textTransform: 'uppercase', lineHeight: 1.4 }}>
+            <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', lineHeight: 1.4 }}>
               How often does your plant need<br />to be watered? *
             </div>
             <div className="flex flex-col gap-[7px] w-full">
@@ -710,14 +723,14 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
                   <button
                     key={d}
                     onClick={() => toggleDay(i)}
-                    className="relative rounded-[12px] w-full cursor-pointer active:scale-[0.99] transition-all"
-                    style={{ background: on ? GREEN : 'white', border: '2px solid #111' }}
+                    className="neo-pill relative w-full cursor-pointer active:scale-[0.99] transition-all"
+                    style={{ background: on ? GREEN : 'white' }}
                   >
                     <div className="flex items-center justify-between px-[20px] py-[6px]">
-                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#111' }}>{d}</span>
+                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</span>
                       {on ? (
                         <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-                          <path d={checkPath} stroke="#111111" strokeLinecap="round" strokeWidth="2" />
+                          <path d={checkPath} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
                         </svg>
                       ) : (
                         <div style={{ width: 18, height: 18, borderRadius: '100px', background: 'rgba(0,0,0,0)' }} />
@@ -731,10 +744,10 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
 
           {/* Water needs segmented */}
           <div className="flex flex-col gap-[8px] w-full">
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111', textTransform: 'uppercase', whiteSpace: 'pre' }}>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', whiteSpace: 'pre' }}>
               {`How much water does your plant need?  *`}
             </span>
-            <div className="bg-white relative rounded-[12px] w-full" style={{ border: '2px solid #111', height: 37 }}>
+            <div className="neo-input relative rounded-[12px] w-full" style={{ height: 37 }}>
               <div className="flex items-center h-full px-[4px]">
                 {(['Light', 'Moderate', 'Heavy'] as WaterNeed[]).map((w) => {
                   const on = waterNeed === w
@@ -743,16 +756,16 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
                     <button
                       key={w}
                       onClick={() => setWaterNeed(w)}
-                      className="flex items-center justify-center gap-[2px] py-[10px] rounded-[8px] cursor-pointer active:scale-95 transition-all"
+                      className="flex items-center justify-center gap-[2px] py-[10px] rounded-full cursor-pointer active:scale-95 transition-all"
                       style={{
                         flex: on ? '0 0 auto' : '1 0 0',
                         width: on ? 135 : undefined,
                         height: 37,
                         background: on ? GREEN : 'transparent',
-                        border: on ? '2px solid #111' : 'none',
+                        border: on ? '2px solid black' : '2px solid transparent',
                       }}
                     >
-                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#111' }}>{w.toUpperCase()}</span>
+                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{w.toUpperCase()}</span>
                       {Array.from({ length: dropCount }).map((_, idx) => (
                         <WaterDroplet key={idx} filled={on} />
                       ))}
@@ -765,13 +778,13 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
 
           {/* Free tier bar */}
           {!settings.isPro && (
-            <div className="overflow-clip relative rounded-[16px] w-full" style={{ height: 109 }}>
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#111', position: 'absolute', left: 14, top: 27 }}>FREE TIER</span>
-              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 11, color: '#888', position: 'absolute', right: 14, top: 27 }}>{plants.length}/{FREE_LIMIT} PLANTS USED</span>
+            <div className="overflow-clip relative rounded-2xl w-full border-2 border-black" style={{ height: 109 }}>
+              <span className="font-display" style={{ fontSize: 10, color: '#000', position: 'absolute', left: 14, top: 27 }}>FREE TIER</span>
+              <span className="badge" style={{ fontSize: 11, color: '#888', position: 'absolute', right: 14, top: 27 }}>{plants.length}/{FREE_LIMIT} PLANTS USED</span>
               {/* Progress track */}
-              <div className="absolute rounded-[20px]" style={{ background: '#efefef', border: '2px solid black', height: 10, left: 14, top: 50, width: 326 }} />
+              <div className="absolute rounded-full" style={{ background: BG, border: '2px solid black', height: 10, left: 14, top: 50, width: 326 }} />
               {/* Progress fill */}
-              <div className="absolute rounded-[20px]" style={{ background: GREEN, border: '2px solid black', height: 10, left: 14, top: 50, width: Math.round((plants.length / FREE_LIMIT) * 326) }} />
+              <div className="absolute rounded-full" style={{ background: GREEN, border: '2px solid black', height: 10, left: 14, top: 50, width: Math.round((plants.length / FREE_LIMIT) * 326) }} />
               {/* Slots remaining text */}
               <div style={{ position: 'absolute', left: 14, top: 70 }}>
                 <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>{slotsLeft} slots remaining. </span>
@@ -788,10 +801,10 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
             <button
               onClick={save}
               disabled={!name.trim() || !canAdd}
-              className="flex flex-1 items-center justify-center rounded-[100px] drop-shadow-[4px_4px_0px_#111] cursor-pointer active:scale-95 transition-all disabled:opacity-40"
-              style={{ background: GREEN, border: '2px solid #111', height: 56 }}
+              className="btn-primary flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer active:scale-95 transition-all disabled:opacity-40"
+              style={{ background: GREEN, height: 56 }}
             >
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#111' }}>SAVE TO JUNGLE </span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>SAVE TO JUNGLE</span>
             </button>
           </div>
 
@@ -799,10 +812,10 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
           <div className="flex w-full pb-[40px]">
             <button
               onClick={onCancel}
-              className="flex flex-1 items-center justify-center rounded-[100px] drop-shadow-[4px_4px_0px_#111] cursor-pointer active:scale-95 transition-all bg-white"
-              style={{ border: '2px solid #111', height: 41 }}
+              className="btn-secondary flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer active:scale-95 transition-all bg-white"
+              style={{ height: 41 }}
             >
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111' }}>CANCEL</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>CANCEL</span>
             </button>
           </div>
 
@@ -826,7 +839,7 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
   }
 
   return (
-    <div className="bg-[#efefef] content-stretch flex flex-col items-start justify-between relative size-full">
+    <div className="content-stretch flex flex-col items-start justify-between relative size-full" style={{ background: BG }}>
       {/* Sheet content */}
       <div className="content-stretch flex flex-col items-start relative shrink-0 w-full flex-1 min-h-0">
         <StatusBar />
@@ -835,12 +848,11 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
         <div className="relative shrink-0 w-full">
           <div className="flex flex-row items-center justify-center size-full">
             <div className="content-stretch flex items-center justify-between pb-[36px] pt-[28px] px-[20px] relative size-full">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#111', textTransform: 'uppercase' }}>Plant Details</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000', textTransform: 'uppercase' }}>Plant Details</span>
               {/* × close button */}
               <button
                 onClick={onBack}
-                className="bg-[#111] content-stretch flex items-center justify-center relative rounded-[100px] shrink-0 size-[38px] cursor-pointer active:scale-90 transition-all"
-                style={{ border: '2px solid #111' }}
+                className="bg-black content-stretch flex items-center justify-center relative rounded-full shrink-0 size-[38px] cursor-pointer active:scale-90 transition-all border-2 border-black"
               >
                 <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
                   <path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" />
@@ -855,7 +867,7 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
           <div className="content-stretch flex flex-col gap-[16px] items-start px-[20px] pb-[20px] relative w-full">
 
             {/* Hero photo */}
-            <div className="h-[219px] relative rounded-[20px] shrink-0 w-full overflow-hidden" style={{ border: '2px solid #111' }}>
+            <div className="h-[219px] relative rounded-3xl shrink-0 w-full overflow-hidden border-2 border-black">
               <img
                 alt={plant.name}
                 src={plant.photo}
@@ -864,22 +876,22 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
             </div>
 
             {/* Info card */}
-            <div className="bg-white relative rounded-[20px] shrink-0 w-full" style={{ border: '2px solid #111' }}>
+            <div className="neo-card relative rounded-3xl shrink-0 w-full">
               <div className="content-stretch flex flex-col gap-[24px] items-start justify-center p-[16px] relative size-full">
 
                 {/* Name + tags + edit */}
                 <div className="content-stretch flex items-start justify-between relative shrink-0 w-full">
                   <div className="content-stretch flex flex-col gap-[6px] items-start relative shrink-0">
-                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#111', textTransform: 'uppercase' }}>{plant.name}</span>
+                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000', textTransform: 'uppercase' }}>{plant.name}</span>
                     <div className="content-stretch flex gap-[4px] items-start relative shrink-0">
                       {/* Room tag */}
-                      <div className="bg-[#efefef] content-stretch flex items-start px-[6px] py-[2px] relative rounded-[6px] shrink-0" style={{ border: '1px solid #111' }}>
-                        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 9, color: '#111', textTransform: 'uppercase' }}>{plant.room}</span>
+                      <div className="badge bg-[#F7F7F7] content-stretch flex items-start px-[6px] py-[2px] relative shrink-0">
+                        <span style={{ fontSize: 9, color: '#000' }}>{plant.room}</span>
                       </div>
                       {/* Day tags */}
                       {plant.wateringDays.map((d) => (
-                        <div key={d} className="bg-[#00f078] content-stretch flex items-start px-[6px] py-[2px] relative rounded-[6px] shrink-0" style={{ border: '1px solid #111' }}>
-                          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 9, color: '#111', textTransform: 'uppercase' }}>{DAY_NAMES[d]} </span>
+                        <div key={d} className="badge content-stretch flex items-start px-[6px] py-[2px] relative shrink-0" style={{ background: GREEN }}>
+                          <span style={{ fontSize: 9, color: '#000' }}>{DAY_NAMES[d]}</span>
                         </div>
                       ))}
                     </div>
@@ -894,20 +906,20 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
 
                 {/* Care Note */}
                 <div className="content-stretch flex flex-col gap-[8px] items-start justify-center relative shrink-0 w-full">
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111', textTransform: 'uppercase' }}>Care Note</span>
-                  <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111', lineHeight: 1.5 }}>
+                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Care Note</span>
+                  <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}>
                     {plant.careNote || 'No care notes added yet.'}
                   </span>
                 </div>
 
                 {/* Water Level */}
                 <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111', textTransform: 'uppercase' }}>Water Level</span>
+                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Water Level</span>
                   <div className="content-stretch flex gap-[5px] h-[16px] items-end relative shrink-0">
                     {Array.from({ length: waterFills }).map((_, i) => (
                       <div key={i} className="h-[20px] relative shrink-0 w-[12px]">
                         <svg fill="none" height="20" viewBox="0 0 12 20" width="12">
-                          <path d={svgDetail.p35497c00} fill="#00F078" stroke="#00F078" strokeLinecap="round" strokeWidth="2" />
+                          <path d={svgDetail.p35497c00} fill="#00FF66" stroke="#00FF66" strokeLinecap="round" strokeWidth="2" />
                         </svg>
                       </div>
                     ))}
@@ -916,29 +928,29 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
 
                 {/* Last Watered */}
                 <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111', textTransform: 'uppercase' }}>Last Watered</span>
-                  <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111' }}>
+                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Last Watered</span>
+                  <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>
                     {plant.lastWatered ? formatDetailDate(plant.lastWatered) : 'Never'}
                   </span>
                 </div>
 
                 {/* Status */}
                 <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0 w-full">
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111', textTransform: 'uppercase' }}>Status</span>
+                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Status</span>
                   <div className="content-stretch flex h-[24px] items-center justify-between relative shrink-0 w-full">
-                    <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 14, color: needsWater ? '#ff0863' : '#111' }}>
+                    <span className="font-display" style={{ fontSize: 14, color: needsWater ? RED : '#000', textTransform: 'uppercase' }}>
                       {needsWater ? 'NEED WATER' : 'WATERED ✓'}
                     </span>
                     {needsWater && (
                       <div className="inline-grid place-items-start" style={{ gridTemplateColumns: 'max-content', gridTemplateRows: 'max-content' }}>
-                        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 12, color: '#111', gridColumn: 1, gridRow: 1, marginTop: 11 }}>MARK AS WATERED</span>
+                        <span className="font-display" style={{ fontSize: 12, color: '#000', gridColumn: 1, gridRow: 1, marginTop: 11, textTransform: 'uppercase' }}>MARK AS WATERED</span>
                         <button
                           onClick={onMarkWatered}
-                          className="bg-[#00f078] flex items-center justify-center relative rounded-[100px] size-[40px] cursor-pointer active:scale-90 transition-all"
-                          style={{ border: '2px solid #111', gridColumn: 1, gridRow: 1, marginLeft: 126 }}
+                          className="flex items-center justify-center relative rounded-full size-[40px] cursor-pointer active:scale-90 transition-all border-2 border-black"
+                          style={{ background: GREEN, gridColumn: 1, gridRow: 1, marginLeft: 126 }}
                         >
                           <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-                            <path d={svgDetail.p2afd9fa0} stroke="#111111" strokeLinecap="round" strokeWidth="2" />
+                            <path d={svgDetail.p2afd9fa0} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
                           </svg>
                         </button>
                       </div>
@@ -950,14 +962,14 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
             </div>
 
             {/* History card */}
-            <div className="bg-white relative rounded-[20px] shrink-0 w-full" style={{ border: '2px solid #111' }}>
+            <div className="neo-card relative rounded-3xl shrink-0 w-full">
               <div className="content-stretch flex flex-col gap-[24px] items-start justify-center p-[16px] relative size-full">
 
                 {/* Section heading */}
                 <div className="content-stretch flex flex-col gap-[8px] items-start justify-center relative shrink-0 w-full">
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#111', textTransform: 'uppercase' }}>GROWN HISTORY</span>
+                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>GROWN HISTORY</span>
                   {plant.history.length === 0 && (
-                    <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111' }}>No history entries yet.</span>
+                    <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>No history entries yet.</span>
                   )}
                 </div>
 
@@ -965,14 +977,14 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
                 {plant.history.map((h) => (
                   <div key={h.id} className="content-stretch flex gap-[16px] items-start relative shrink-0 w-full">
                     {/* Thumb */}
-                    <div className="relative rounded-[36px] shrink-0 size-[54px] overflow-hidden">
-                      <img alt="" src={h.photo} className="absolute inset-0 max-w-none object-cover pointer-events-none rounded-[36px] size-full" />
+                    <div className="relative rounded-full shrink-0 size-[54px] overflow-hidden border-2 border-black">
+                      <img alt="" src={h.photo} className="absolute inset-0 max-w-none object-cover pointer-events-none rounded-full size-full" />
                     </div>
                     {/* Meta */}
                     <div className="content-stretch flex flex-1 flex-col gap-[4px] items-start min-w-0 relative">
-                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{plant.name.toUpperCase()}</span>
+                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{plant.name.toUpperCase()}</span>
                       <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#888' }}>{formatDetailDate(h.date)}</span>
-                      <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111', width: 230 }}>{h.note}</span>
+                      <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', width: 230 }}>{h.note}</span>
                     </div>
                     {/* Trash icon */}
                     <div className="relative shrink-0 size-[18px]">
@@ -996,11 +1008,11 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
                   {/* Camera placeholder circle */}
                   <div className="relative shrink-0 size-[54px]">
                     <svg fill="none" height="54" viewBox="0 0 54 54" width="54">
-                      <rect fill="#EFEFEF" height="54" rx="27" width="54" />
+                      <rect fill="#F7F7F7" height="54" rx="27" width="54" />
                       <path d={svgDetail.p1a54b00} fill="black" />
                     </svg>
                   </div>
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>+ NEW STATUS</span>
+                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>+ NEW STATUS</span>
                 </div>
 
               </div>
@@ -1010,10 +1022,10 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
             <div className="content-stretch flex items-start pb-[20px] pt-[8px] relative shrink-0 w-full">
               <button
                 onClick={onDelete}
-                className="bg-white flex flex-1 h-[41px] items-center justify-center relative rounded-[100px] cursor-pointer active:scale-95 transition-all"
-                style={{ border: '2px solid #ff0863' }}
+                className="btn-secondary bg-white flex flex-1 h-[41px] items-center justify-center relative rounded-full cursor-pointer active:scale-95 transition-all border-2"
+                style={{ borderColor: RED }}
               >
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#ff0863' }}>DELETE PLANT</span>
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: RED }}>DELETE PLANT</span>
               </button>
             </div>
 
@@ -1041,21 +1053,20 @@ function WateringScreen({ plants, todayIdx, onMarkWatered, onMarkAll }: {
   const waterNeedFills = (need: WaterNeed) => need === 'Light' ? 1 : need === 'Moderate' ? 2 : 3
 
   return (
-    <div className="flex flex-col h-full bg-[#efefef]">
+    <div className="flex flex-col h-full" style={{ background: BG }}>
       <StatusBar />
       {/* Batch header */}
       <div className="shrink-0 px-5 py-4">
-        <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#111', lineHeight: 1.2 }}>WATERING</p>
+        <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000', lineHeight: 1.2 }}>WATERING</p>
         <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#888' }}>{plants.length} PLANTS</p>
       </div>
       {/* Mark all button */}
       <div className="shrink-0 px-5 pb-4">
         <button onClick={onMarkAll}
-          className="relative w-full flex items-center justify-center rounded-[14px] drop-shadow-[4px_4px_0px_#111] cursor-pointer active:scale-95 transition-all"
+          className="btn-primary relative w-full flex items-center justify-center rounded-full border-2 border-black cursor-pointer active:scale-95 transition-all"
           style={{ background: GREEN, height: 48 }}
         >
-          <div className="absolute inset-0 rounded-[14px] border-2 border-[#111] pointer-events-none" />
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111' }}>
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
             MARK ALL {totalUnwatered} AS WATERED
           </span>
         </button>
@@ -1068,49 +1079,42 @@ function WateringScreen({ plants, todayIdx, onMarkWatered, onMarkAll }: {
           return (
             <div key={di} className="flex flex-col gap-[10px] px-5">
               <div className="shrink-0">
-                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#111' }}>{dayName} ROUTINE</p>
+                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>{dayName} ROUTINE</p>
                 {dayPlants.length === 0 && (
-                  <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111' }}>No plants assigned</p>
+                  <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>No plants assigned</p>
                 )}
               </div>
               {dayPlants.map((p) => {
                 const fills = waterNeedFills(p.waterNeed)
                 return (
-                  <div key={p.id} className="relative rounded-[16px] shrink-0 w-full"
-                    style={{ background: p.watered ? '#d1ffe8' : 'white' }}
+                  <div key={p.id} className="neo-plant-card relative rounded-2xl shrink-0 w-full overflow-hidden"
+                    style={{ background: p.watered ? WATERED_BG : 'white' }}
                   >
-                    <div className="absolute inset-0 rounded-[16px] border-2 border-[#111] pointer-events-none" />
-                    <div className="flex items-center gap-3 p-3">
-                      {/* Plant photo */}
-                      <div className="relative shrink-0 size-[54px]">
-                        <div className="relative rounded-[36px] shrink-0 size-[54px] overflow-hidden">
-                          <img alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none rounded-[36px]" src={p.photo} />
-                        </div>
+                    <div className="flex items-center gap-3 px-4 py-3 w-full">
+                      {/* Thumbnail */}
+                      <div className="shrink-0 size-[54px] rounded-full overflow-hidden border-2 border-black">
+                        <img alt="" className="w-full h-full object-cover" src={p.photo} />
                       </div>
-                      {/* Plant meta */}
-                      <div className="flex flex-col gap-1 flex-1 min-w-0">
-                        <p className="overflow-hidden text-ellipsis whitespace-nowrap"
-                          style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111' }}>
-                          {p.name.toUpperCase()}
+                      {/* Title + badges */}
+                      <div className="flex flex-1 flex-col gap-1 min-w-0">
+                        <p className="overflow-hidden text-ellipsis whitespace-nowrap uppercase"
+                          style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
+                          {p.name}
                         </p>
-                        {/* Tags */}
-                        <div className="flex gap-1 shrink-0">
-                          <div className="relative flex items-start px-[6px] py-[2px] rounded-[6px] bg-[#efefef] shrink-0">
-                            <div className="absolute inset-0 rounded-[6px] border border-[#111] pointer-events-none" />
-                            <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 9, color: '#111' }}>{p.room.toUpperCase()}</span>
+                        <div className="flex flex-wrap gap-1">
+                          <div className="badge px-1.5 py-0.5" style={{ background: BG }}>
+                            <span style={{ fontSize: 9, color: '#000' }}>{p.room.toUpperCase()}</span>
                           </div>
-                          <div className="relative flex items-start px-[6px] py-[2px] rounded-[6px] bg-[#00f078] shrink-0">
-                            <div className="absolute inset-0 rounded-[6px] border border-[#111] pointer-events-none" />
-                            <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 9, color: '#111' }}>{DAY_NAMES[di].toUpperCase()}</span>
+                          <div className="badge px-1.5 py-0.5" style={{ background: GREEN }}>
+                            <span style={{ fontSize: 9, color: '#000' }}>{DAY_NAMES[di].toUpperCase()}</span>
                           </div>
                         </div>
-                        {/* Droplets */}
-                        <div className="flex gap-[5px] h-4 items-end shrink-0">
+                        <div className="flex gap-[5px] h-4 items-end">
                           {[0, 1, 2].map((i) => (
                             <div key={i} className="flex items-center justify-center h-5 w-3 shrink-0">
                               {i < fills ? (
                                 <svg fill="none" height="20" viewBox="0 0 12 20" width="12">
-                                  <path d={svgBatch.p35497c00} fill="#00F078" stroke="#00F078" strokeLinecap="round" strokeWidth="2" />
+                                  <path d={svgBatch.p35497c00} fill={GREEN} stroke={GREEN} strokeLinecap="round" strokeWidth="2" />
                                 </svg>
                               ) : (
                                 <div className="h-5 w-3" />
@@ -1119,26 +1123,22 @@ function WateringScreen({ plants, todayIdx, onMarkWatered, onMarkAll }: {
                           ))}
                         </div>
                       </div>
-                      {/* Quick water button */}
-                      <button onClick={() => onMarkWatered(p.id)}
-                        className="relative flex items-center justify-center rounded-[100px] shrink-0 size-10 cursor-pointer active:scale-90 transition-all"
-                        style={{ background: p.watered ? 'white' : '#00f078' }}
+                      {/* Quick water — right-aligned */}
+                      <button
+                        type="button"
+                        onClick={() => onMarkWatered(p.id)}
+                        className="ml-auto shrink-0 flex items-center justify-center rounded-full size-10 cursor-pointer active:scale-90 transition-all border-2 border-black"
+                        style={{ background: p.watered ? 'white' : GREEN }}
+                        aria-label={p.watered ? 'Plant watered' : 'Mark as watered'}
                       >
-                        <div className="absolute inset-0 rounded-[100px] border-2 border-[#111] pointer-events-none" />
                         {p.watered ? (
-                          /* Filled green circle check for watered state */
-                          <div className="relative flex items-center justify-center size-[27px]">
-                            <svg fill="none" height="27" viewBox="0 0 27 27" width="27">
-                              <path d={svgBatch.p64f2600} fill="#00F078" stroke="black" strokeLinecap="round" strokeWidth="2" />
-                            </svg>
-                          </div>
+                          <svg fill="none" height="27" viewBox="0 0 27 27" width="27">
+                            <path d={svgBatch.p64f2600} fill={GREEN} stroke="black" strokeLinecap="round" strokeWidth="2" />
+                          </svg>
                         ) : (
-                          /* Stroke checkmark for unwatered */
-                          <div className="relative flex items-center justify-center size-[18px]">
-                            <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-                              <path d={svgBatch.p2afd9fa0} stroke="#111111" strokeLinecap="round" strokeWidth="2" />
-                            </svg>
-                          </div>
+                          <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
+                            <path d={svgBatch.p2afd9fa0} stroke={BLACK} strokeLinecap="round" strokeWidth="2" />
+                          </svg>
                         )}
                       </button>
                     </div>
@@ -1162,11 +1162,11 @@ function ProPaywallScreen({ onUnlock, onClose }: { onUnlock: () => void; onClose
     { title: '100% OFFLINE & PRIVATE', sub: 'All data stored strictly on your device' },
   ]
   return (
-    <div className="flex flex-col h-full bg-[#efefef]">
+    <div className="flex flex-col h-full" style={{ background: BG }}>
       {/* Scrollable content area */}
       <div className="flex-1 overflow-y-auto flex flex-col items-start shrink-0 w-full">
         {/* Hero collage */}
-        <div className="bg-[#00f078] h-[180px] relative shrink-0 w-full overflow-clip">
+        <div className="h-[180px] relative shrink-0 w-full overflow-clip" style={{ background: GREEN }}>
           <StatusBar />
           {/* Centered clover droplet illustration */}
           <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[160px] top-1/2">
@@ -1174,13 +1174,13 @@ function ProPaywallScreen({ onUnlock, onClose }: { onUnlock: () => void; onClose
               <path d={svgPro.p1e4fc7f0} fill="black" stroke="black" strokeLinecap="round" strokeWidth="2" />
             </svg>
           </div>
-          <div className="absolute border-[#111] border-b-2 inset-0 pointer-events-none" />
+          <div className="absolute border-black border-b-2 inset-0 pointer-events-none" />
         </div>
 
         {/* Intro text */}
         <div className="flex flex-col items-center w-full">
           <div className="flex flex-col gap-2 items-center pb-3 pt-5 px-6 w-full text-center">
-            <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#111', lineHeight: 1.2 }}>
+            <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000', lineHeight: 1.2 }}>
               NO SUBSCRIPTIONS. UNLIMITED JUNGLE.
             </p>
             <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#888' }}>
@@ -1192,22 +1192,20 @@ function ProPaywallScreen({ onUnlock, onClose }: { onUnlock: () => void; onClose
         {/* Value props list */}
         <div className="flex flex-col gap-3 px-6 w-full shrink-0">
           {props.map((p, i) => (
-            <div key={i} className="relative bg-white drop-shadow-[4px_4px_0px_#111] rounded-[16px] w-full">
-              <div className="absolute inset-0 rounded-[16px] border-2 border-[#111] pointer-events-none" />
+            <div key={i} className="neo-card relative rounded-2xl w-full">
               <div className="flex items-center gap-3 p-3">
                 {/* Badge icon */}
-                <div className="relative bg-[#00f078] flex items-center justify-center rounded-[100px] shrink-0 size-9">
-                  <div className="absolute inset-0 rounded-[100px] border-2 border-[#111] pointer-events-none" />
+                <div className="relative flex items-center justify-center rounded-full shrink-0 size-9 border-2 border-black" style={{ background: GREEN }}>
                   <svg fill="none" height="16" viewBox="0 0 16 16" width="16">
                     <clipPath id={`clip-${i}`}><rect fill="white" height="16" width="16" /></clipPath>
                     <g clipPath={`url(#clip-${i})`}>
-                      <path d={svgPro.p397b9d00} stroke="#111111" strokeLinecap="round" strokeWidth="2" />
+                      <path d={svgPro.p397b9d00} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
                     </g>
                   </svg>
                 </div>
                 {/* Text */}
                 <div className="flex flex-col gap-[2px] flex-1 min-w-0">
-                  <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#111' }}>{p.title}</p>
+                  <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{p.title}</p>
                   <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>{p.sub}</p>
                 </div>
               </div>
@@ -1219,15 +1217,14 @@ function ProPaywallScreen({ onUnlock, onClose }: { onUnlock: () => void; onClose
         <div className="flex flex-col items-center w-full">
           <div className="flex flex-col gap-[10px] items-center px-6 py-5 w-full">
             <button onClick={onUnlock}
-              className="relative bg-[#00f078] drop-shadow-[4px_4px_0px_#111] flex items-center justify-center rounded-[100px] shrink-0 w-full cursor-pointer active:scale-95 transition-all"
-              style={{ height: 58 }}
+              className="btn-primary relative flex items-center justify-center rounded-full shrink-0 w-full cursor-pointer active:scale-95 transition-all border-2 border-black"
+              style={{ background: GREEN, height: 58 }}
             >
-              <div className="absolute inset-0 rounded-[100px] border-2 border-[#111] pointer-events-none" />
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111' }}>
+              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
                 UNLOCK PRO FOREVER — $5.99
               </p>
             </button>
-            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 11, color: '#111', textAlign: 'center' }}>
+            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 11, color: '#000', textAlign: 'center' }}>
               One-time payment. No monthly fees. Yours forever.
             </p>
           </div>
@@ -1255,15 +1252,14 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
   const fillPct = Math.min(plantsUsed / plantsMax, 1)
 
   return (
-    <div className="flex flex-col h-full bg-[#efefef]">
+    <div className="flex flex-col h-full" style={{ background: BG }}>
       <StatusBar />
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 shrink-0">
-        <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#111' }}>SETTINGS</p>
+        <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000' }}>SETTINGS</p>
         <button onClick={onClose}
-          className="relative bg-[#111] flex items-center justify-center rounded-[100px] shrink-0 size-[38px] cursor-pointer active:scale-90 transition-all"
+          className="relative bg-black flex items-center justify-center rounded-full shrink-0 size-[38px] cursor-pointer active:scale-90 transition-all border-2 border-black"
         >
-          <div className="absolute inset-0 rounded-[100px] border-2 border-[#111] pointer-events-none" />
           <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
             <path clipRule="evenodd" d={svgSettings.p3b43000} fill="white" fillRule="evenodd" />
           </svg>
@@ -1273,31 +1269,30 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
       <div className="flex-1 overflow-y-auto flex flex-col gap-6 pb-6">
         {/* ── Notification Reminder & Routines ── */}
         <div className="flex flex-col gap-3 px-5">
-          <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 700, fontSize: 14, color: '#111', lineHeight: 0, textTransform: 'uppercase' }}>
+          <div className="section-header" style={{ fontSize: 14, lineHeight: 0 }}>
             <p style={{ lineHeight: 'normal', marginBottom: 0 }}>Notification</p>
             <p style={{ lineHeight: 'normal' }}>Reminder &amp; Routines</p>
           </div>
 
           {/* Weekly water schedule */}
           <div className="flex flex-col gap-2 py-3">
-            <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111' }}>WEEKLY WATER SCHEDULE</p>
-            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111' }}>Choose which days you&apos;d like to water</p>
+            <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>WEEKLY WATER SCHEDULE</p>
+            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Choose which days you&apos;d like to water</p>
             <div className="flex items-start justify-between w-full">
               {DAYS.map((d, i) => {
                 const on = s.wateringDays.includes(i)
                 return (
                   <button key={d} onClick={() => toggleDay(i)}
-                    className="relative flex flex-col gap-1 items-center py-[10px] rounded-[12px] shrink-0 w-[44px] cursor-pointer active:scale-95 transition-all"
+                    className="neo-pill relative flex flex-col gap-1 items-center py-[10px] shrink-0 w-[44px] cursor-pointer active:scale-95 transition-all"
                     style={{ background: on ? GREEN : 'white' }}
                   >
-                    <div className="absolute inset-0 rounded-[12px] border-2 border-[#111] pointer-events-none" />
-                    <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#111' }}>{d}</p>
+                    <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</p>
                     {on ? (
                       <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-                        <path d={svgSettings.p2c13d500} stroke="#111111" strokeLinecap="round" strokeWidth="2" />
+                        <path d={svgSettings.p2c13d500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
                       </svg>
                     ) : (
-                      <div className="size-[18px] rounded-[100px]" />
+                      <div className="size-[18px] rounded-full" />
                     )}
                   </button>
                 )
@@ -1308,8 +1303,8 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
           {/* Push notification */}
           <div className="flex gap-[25px] items-start py-3 w-full">
             <div className="flex flex-col gap-3 flex-1">
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111', textTransform: 'uppercase' }}>Push Notification</p>
-              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111' }}>Allow notifications for watering</p>
+              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Push Notification</p>
+              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Allow notifications for watering</p>
             </div>
             {/* Toggle */}
             <button onClick={() => setS((p) => ({ ...p, pushNotifications: !p.pushNotifications }))}
@@ -1317,7 +1312,7 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
               style={{ width: 66, height: 38 }}
             >
               <svg fill="none" height="38" viewBox="0 0 66 38" width="66">
-                <rect fill={s.pushNotifications ? '#00F078' : '#ccc'} height="36" rx="18" width="64" x="1" y="1" />
+                <rect fill={s.pushNotifications ? GREEN : '#ccc'} height="36" rx="18" width="64" x="1" y="1" />
                 <rect height="36" rx="18" stroke="black" strokeWidth="2" width="64" x="1" y="1" />
                 <circle cx={s.pushNotifications ? 46 : 20} cy="19" fill="white" r="13" stroke="black" strokeWidth="2" />
               </svg>
@@ -1327,15 +1322,15 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
           {/* Watering reminder time */}
           <div className="flex gap-[25px] items-start py-3 w-full">
             <div className="flex flex-col gap-3 flex-1">
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111', textTransform: 'uppercase' }}>Watering Reminder Time</p>
-              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111' }}>Alert at this time</p>
+              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Watering Reminder Time</p>
+              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Alert at this time</p>
             </div>
-            <div className="relative bg-white border-2 border-black flex gap-3 items-center px-[11px] py-[3px] rounded-[9px] shrink-0" style={{ height: 45, minWidth: 103 }}>
+            <div className="relative bg-white border-2 border-black flex gap-3 items-center px-[11px] py-[3px] rounded-full shrink-0" style={{ height: 45, minWidth: 103 }}>
               <input
                 type="time" value={s.reminderTime}
                 onChange={(e) => setS((p) => ({ ...p, reminderTime: e.target.value }))}
                 className="outline-none bg-transparent w-[56px]"
-                style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 16, color: '#111' }}
+                style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 16, color: '#000' }}
               />
               <svg fill="none" height="15" viewBox="0 0 16 15" width="16">
                 <path d={svgSettings.p3c709780} fill="black" />
@@ -1346,19 +1341,18 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
 
         {/* ── Data & Privacy ── */}
         <div className="flex flex-col gap-3 px-5">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 700, fontSize: 14, color: '#111', textTransform: 'uppercase' }}>Data &amp; Privacy</p>
-          <div className="bg-white relative rounded-[16px] w-full" style={{ height: 109 }}>
-            <div className="absolute inset-0 rounded-[16px] border-2 border-[#111] pointer-events-none" />
+          <p className="section-header" style={{ fontSize: 14 }}>Data &amp; Privacy</p>
+          <div className="neo-card relative rounded-2xl w-full" style={{ height: 109 }}>
             {/* Export row */}
             <p className="absolute font-['Unbounded:Black',sans-serif]"
-              style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#111', left: 14, top: 27 }}>
+              style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', left: 14, top: 27 }}>
               EXPORT JUNGLE DATA (JSON)
             </p>
             <button onClick={onExport}
-              className="absolute bg-white border-2 border-black flex gap-3 items-center px-[11px] py-[3px] rounded-[9px] cursor-pointer active:scale-95"
+              className="btn-primary absolute bg-white border-2 border-black flex gap-3 items-center px-[11px] py-[3px] rounded-full cursor-pointer active:scale-95"
               style={{ height: 35, right: 14, top: 15 }}
             >
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#111' }}>EXPORT</p>
+              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>EXPORT</p>
               <div className="flex-none rotate-180" style={{ width: 13.28, height: 14 }}>
                 <svg fill="none" height="14" viewBox="0 0 13.2793 14" width="13.2793">
                   <path d={svgSettings.p218111f0} fill="black" />
@@ -1367,62 +1361,59 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
             </button>
             {/* Reset row */}
             <p className="absolute"
-              style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#ff0863', left: 14, top: 71 }}>
+              style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: RED, left: 14, top: 71 }}>
               RESET APP DATA
             </p>
             <button onClick={onReset}
-              className="absolute bg-white border-2 border-[#ff0863] flex items-center px-[11px] py-[3px] rounded-[9px] cursor-pointer active:scale-95"
-              style={{ height: 35, right: 14, top: 59 }}
+              className="absolute bg-white flex items-center px-[11px] py-[3px] rounded-full cursor-pointer active:scale-95 border-2"
+              style={{ height: 35, right: 14, top: 59, borderColor: RED }}
             >
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#ff0863' }}>RESET</p>
+              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: RED }}>RESET</p>
             </button>
           </div>
         </div>
 
         {/* ── Send Feedback ── */}
         <div className="flex flex-col gap-3 px-5">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 700, fontSize: 14, color: '#111', textTransform: 'uppercase' }}>Send Feedback</p>
+          <p className="section-header" style={{ fontSize: 14 }}>Send Feedback</p>
           <div className="flex flex-col gap-2 pb-3 w-full">
-            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#111' }}>We&apos;d love to hear from you!</p>
+            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>We&apos;d love to hear from you!</p>
             {[
               { key: 'mind' as const, placeholder: "Tell us what's on your mind..." },
               { key: 'issue' as const, placeholder: 'What went wrong?" / "Describe the issue' },
               { key: 'feature' as const, placeholder: 'What would you like to see in the app?' },
             ].map(({ key, placeholder }) => (
-              <div key={key} className="relative bg-white rounded-[16px] w-full" style={{ height: 46 }}>
-                <div className="absolute inset-0 rounded-[16px] border-2 border-[#111] pointer-events-none" />
+              <div key={key} className="neo-input relative rounded-2xl w-full" style={{ height: 46 }}>
                 <input
                   value={feedback[key]} onChange={(e) => setFeedback((f) => ({ ...f, [key]: e.target.value }))}
                   placeholder={placeholder}
-                  className="absolute left-5 top-[14px] outline-none bg-transparent w-[calc(100%-40px)]"
+                  className="absolute left-5 top-[14px] outline-none bg-transparent w-[calc(100%-40px)] font-body"
                   style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#888' }}
                 />
               </div>
             ))}
-            <button className="relative bg-[#00f078] drop-shadow-[4px_4px_0px_#111] flex items-center justify-center rounded-[100px] w-full cursor-pointer active:scale-95 transition-all" style={{ height: 41 }}>
-              <div className="absolute inset-0 rounded-[100px] border-2 border-[#111] pointer-events-none" />
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111' }}>SEND</p>
+            <button className="btn-primary relative flex items-center justify-center rounded-full w-full cursor-pointer active:scale-95 transition-all border-2 border-black" style={{ background: GREEN, height: 41 }}>
+              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>SEND</p>
             </button>
           </div>
         </div>
 
         {/* ── MY JUNGLE PRO STATUS ── */}
         <div className="flex flex-col gap-3 px-5">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 700, fontSize: 14, color: '#111', textTransform: 'uppercase' }}>MY JUNGLE PRO STATUS</p>
+          <p className="section-header" style={{ fontSize: 14 }}>MY JUNGLE PRO STATUS</p>
           <div className="flex flex-col gap-2 py-3 w-full">
             {/* Free tier card */}
-            <div className="bg-white relative rounded-[16px] w-full" style={{ height: 109 }}>
-              <div className="absolute inset-0 rounded-[16px] border-2 border-[#111] pointer-events-none" />
-              <p className="absolute" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#111', left: 14, top: 27 }}>
+            <div className="neo-card relative rounded-2xl w-full" style={{ height: 109 }}>
+              <p className="absolute" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', left: 14, top: 27 }}>
                 {s.isPro ? 'PRO MEMBER' : 'FREE TIER'}
               </p>
               <p className="absolute" style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 11, color: '#888', right: 14, top: 27 }}>
                 {plantsUsed}/{plantsMax} PLANTS USED
               </p>
               {/* Progress bar background */}
-              <div className="absolute bg-[#efefef] border-2 border-black rounded-[20px]" style={{ height: 10, left: 14, top: 50, width: 326 }} />
+              <div className="absolute bg-[#F7F7F7] border-2 border-black rounded-full" style={{ height: 10, left: 14, top: 50, width: 326 }} />
               {/* Progress bar fill */}
-              <div className="absolute bg-[#00f078] border-2 border-black rounded-[20px]" style={{ height: 10, left: 14, top: 50, width: Math.round(326 * fillPct) }} />
+              <div className="absolute border-2 border-black rounded-full" style={{ background: GREEN, height: 10, left: 14, top: 50, width: Math.round(326 * fillPct) }} />
               <p className="absolute" style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888', left: 14, top: 70 }}>
                 {s.isPro ? 'Unlimited plants · All features unlocked.' : `${plantsMax - plantsUsed} plants slot remaining on free tier.`}
               </p>
@@ -1430,11 +1421,10 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
             {/* Unlock button */}
             {!s.isPro && (
               <button onClick={onShowPro}
-                className="relative bg-[#00f078] drop-shadow-[4px_4px_0px_#111] flex items-center justify-center rounded-[100px] w-full cursor-pointer active:scale-95 transition-all"
-                style={{ height: 58 }}
+                className="btn-primary relative flex items-center justify-center rounded-full w-full cursor-pointer active:scale-95 transition-all border-2 border-black"
+                style={{ background: GREEN, height: 58 }}
               >
-                <div className="absolute inset-0 rounded-[100px] border-2 border-[#111] pointer-events-none" />
-                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#111' }}>UNLOCK PRO FOREVER — $5.99 </p>
+                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>UNLOCK PRO FOREVER — $5.99</p>
               </button>
             )}
           </div>
@@ -1504,8 +1494,8 @@ export default function App() {
     content = <OnboardingScreen settings={settings} onSave={(s) => { handleSaveSettings(s); setScreen('main') }} />
   } else if (screen === 'pro') {
     content = (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-hidden">
+      <div className="flex flex-col h-full min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden">
           <ProPaywallScreen
             onUnlock={() => { setSettings((s) => ({ ...s, isPro: true })); setScreen('main') }}
             onClose={() => setScreen('main')}
@@ -1560,16 +1550,16 @@ export default function App() {
       )
     }
     content = (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-hidden">{tabContent}</div>
+      <div className="flex flex-col h-full min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden">{tabContent}</div>
         <TabBar active={tab} onChange={(t) => { setTab(t); setScreen('main') }} />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#111' }}>
-      <div style={{ width: 393, height: 852, background: 'white', overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: BLACK }}>
+      <div style={{ width: 393, height: 852, background: BG, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
         {content}
       </div>
     </div>

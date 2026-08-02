@@ -42,19 +42,143 @@
 @theme {
   --font-unbounded: 'Unbounded', sans-serif;
   --font-geist: 'Geist', sans-serif;
+  --font-display: 'Unbounded', sans-serif;
+  --color-neo-black: #000000;
+  --color-neo-green: #00ff66;
+  --color-neo-bg: #f7f7f7;
+  --color-neo-red: #ff2d55;
+  --color-neo-watered: #d9ffe8;
 }
 
-* {
-  -webkit-tap-highlight-color: transparent;
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-family: var(--font-geist);
+    background: #111;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-unbounded);
+    font-weight: 900;
+    text-transform: uppercase;
+    color: var(--color-neo-black);
+  }
+
+  button {
+    font-family: var(--font-unbounded);
+    font-weight: 900;
+  }
 }
 
-body {
-  font-family: 'Geist', sans-serif;
-  background: #111;
+@layer components {
+  .font-display {
+    font-family: var(--font-unbounded);
+    font-weight: 900;
+  }
+
+  .font-body {
+    font-family: var(--font-geist);
+  }
+
+  .heading {
+    font-family: var(--font-unbounded);
+    font-weight: 900;
+    text-transform: uppercase;
+    color: var(--color-neo-black);
+  }
+
+  .section-header {
+    font-family: var(--font-unbounded);
+    font-weight: 900;
+    text-transform: uppercase;
+    color: var(--color-neo-black);
+  }
+
+  .badge {
+    font-family: var(--font-unbounded);
+    font-weight: 900;
+    text-transform: uppercase;
+    border: 2px solid black;
+    border-radius: 9999px;
+  }
+
+  .btn-primary {
+    font-family: var(--font-unbounded);
+    font-weight: 900;
+    text-transform: uppercase;
+    border: 2px solid black;
+    border-radius: 9999px;
+    cursor: pointer;
+  }
+
+  .btn-secondary {
+    font-family: var(--font-unbounded);
+    font-weight: 900;
+    text-transform: uppercase;
+    border: 2px solid black;
+    border-radius: 9999px;
+    background: white;
+    cursor: pointer;
+  }
+
+  .neo-border {
+    border: 2px solid black;
+  }
+
+  .neo-card {
+    border: 2px solid black;
+    background: white;
+    border-radius: 1.5rem;
+  }
+
+  .neo-input {
+    border: 2px solid black;
+    background: white;
+    border-radius: 0.75rem;
+  }
+
+  .neo-pill {
+    border: 2px solid black;
+    border-radius: 9999px;
+  }
+
+  .neo-tab-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    flex-shrink: 0;
+    width: 100%;
+    border-top: 2px solid black;
+    background: var(--color-neo-bg);
+  }
+
+  .neo-plant-card {
+    border: 2px solid black;
+    border-radius: 1rem;
+  }
+}
+
+/* Neobrutalist depth: crisp borders only — no soft or offset shadows */
+[class*='drop-shadow'],
+[class*='shadow-'] {
+  box-shadow: none !important;
+  filter: none !important;
+  --tw-drop-shadow: none !important;
+  --tw-shadow: none !important;
+}
+
+html {
+  scrollbar-width: none;
 }
 
 ::-webkit-scrollbar {
   display: none;
 }
-
-scrollbar-width: none;
