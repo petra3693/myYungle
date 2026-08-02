@@ -12,9 +12,6 @@ import plantImg0 from '@/imports/MyjungleSettimgs-2/24c699409182c3e5d2a17cf3bf10
 import plantImg1 from '@/imports/MyjungleSettimgs-2/a629e756f91539ad0cd6c99c620a960b94d6a89d.png'
 import plantImg2 from '@/imports/MyjungleSettimgs-2/c1e26fe342a3e4cbf5b479e973ae60ebe8c1d81e.png'
 import plantImg3 from '@/imports/MyjungleSettimgs-2/f9057e3acb1771233585613c769e96893a7e8d76.png'
-import photoUploadImg from '@/imports/NewDesign2-1/06984fd808ab72dc75d1af5314ea222465c42869.png'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 type WaterNeed = 'Light' | 'Moderate' | 'Heavy'
 type Screen = 'splash' | 'onboarding' | 'main' | 'detail' | 'pro' | 'settings'
@@ -69,49 +66,19 @@ const DEFAULT_SETTINGS: AppSettings = {
   isPro: false,
 }
 
-// ─── Seed Data ────────────────────────────────────────────────────────────────
-
-const SEED_PLANTS: Plant[] = [
-  {
-    id: '1', name: 'Monstera Deliciosa', room: 'Living Room', careNote: 'Loves indirect light. Water when top 2 inches of soil are dry.',
-    wateringDays: [2, 4], waterNeed: 'Moderate', photo: plantImg0, lastWateredAt: '2026-07-28', previousWateredAt: null,
-    history: [
-      { id: 'h1', date: '2026-07-28', note: 'Watered and checked for new leaf growth.', photo: plantImg0 },
-      { id: 'h2', date: '2026-07-21', note: 'New aerial root spotted.', photo: plantImg0 },
-    ], isWateredToday: false,
-  },
-  {
-    id: '2', name: 'Ficus Leaf Fig', room: 'Office', careNote: 'Keep away from drafts. Rotate monthly for even growth.',
-    wateringDays: [3], waterNeed: 'Light', photo: plantImg1, lastWateredAt: '2026-07-29', previousWateredAt: null,
-    history: [{ id: 'h3', date: '2026-07-29', note: 'Light misting done.', photo: plantImg1 }],
-    isWateredToday: false,
-  },
-  {
-    id: '3', name: 'Snake Plant', room: 'Bedroom', careNote: 'Extremely drought tolerant.',
-    wateringDays: [5, 6], waterNeed: 'Light', photo: plantImg2, lastWateredAt: '2026-07-25', previousWateredAt: null,
-    history: [], isWateredToday: false,
-  },
-  {
-    id: '4', name: 'Calathea Ornata', room: 'Bathroom', careNote: 'Loves humidity. Mist leaves daily.',
-    wateringDays: [2, 5], waterNeed: 'Heavy', photo: plantImg3, lastWateredAt: '2026-07-30', previousWateredAt: null,
-    history: [{ id: 'h4', date: '2026-07-30', note: 'Looking lush and vibrant.', photo: plantImg3 }],
-    isWateredToday: true,
-  },
-]
-
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
 function loadPlants(): Plant[] {
   try {
     const r = localStorage.getItem('mj_plants')
-    const raw = r ? JSON.parse(r) : SEED_PLANTS
+    const raw = r ? JSON.parse(r) : []
     return (raw as Array<Plant & { watered?: boolean; lastWatered?: string | null }>).map((p) => ({
       ...p,
       isWateredToday: p.isWateredToday ?? p.watered ?? false,
       lastWateredAt: p.lastWateredAt ?? p.lastWatered ?? null,
       previousWateredAt: p.previousWateredAt ?? null,
     }))
-  } catch { return SEED_PLANTS }
+  } catch { return [] }
 }
 function savePlants(p: Plant[]) { localStorage.setItem('mj_plants', JSON.stringify(p)) }
 
@@ -681,6 +648,59 @@ function FreeTierCard({
   )
 }
 
+// ─── Photo Picker ─────────────────────────────────────────────────────────────
+
+function PhotoActionSheet({
+  onClose,
+  onTakePhoto,
+  onChooseLibrary,
+}: {
+  onClose: () => void
+  onTakePhoto: () => void
+  onChooseLibrary: () => void
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} aria-hidden />
+      <div
+        className="fixed inset-x-0 bottom-0 z-50 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Choose photo source"
+      >
+        <div className="flex flex-col gap-2 w-full max-w-lg mx-auto">
+          <div className="neo-card flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white">
+            <button
+              type="button"
+              onClick={onTakePhoto}
+              className="flex w-full items-center justify-center border-b-2 border-black px-4 py-4 cursor-pointer active:bg-[#F7F7F7]"
+              style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 16, color: '#000' }}
+            >
+              Take Photo
+            </button>
+            <button
+              type="button"
+              onClick={onChooseLibrary}
+              className="flex w-full items-center justify-center px-4 py-4 cursor-pointer active:bg-[#F7F7F7]"
+              style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 16, color: '#000' }}
+            >
+              Choose from Library
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="neo-card flex w-full items-center justify-center rounded-2xl border-2 border-black bg-white px-4 py-4 cursor-pointer active:bg-[#F7F7F7]"
+            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 16, color: '#000' }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Screen 5: Add New ───────────────────────────────────────────────────────
 
 function AddScreen({ plants, settings, onSave, onCancel, onUpgrade }: {
@@ -693,7 +713,25 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade }: {
   const [days, setDays] = useState<number[]>(globalIndices)
   const [extraDaysUnlocked, setExtraDaysUnlocked] = useState(false)
   const [waterNeed, setWaterNeed] = useState<WaterNeed>('Moderate')
+  const [photo, setPhoto] = useState<string | null>(null)
+  const [showPhotoPicker, setShowPhotoPicker] = useState(false)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const libraryInputRef = useRef<HTMLInputElement>(null)
   const canAdd = settings.isPro || plants.length < MAX_FREE_PLANTS
+
+  function handlePhotoFile(file: File) {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') setPhoto(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function handlePhotoInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) handlePhotoFile(file)
+    e.target.value = ''
+  }
 
   function toggleDay(i: number) {
     const inGlobal = globalIndices.includes(i)
@@ -705,7 +743,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade }: {
     if (!name.trim()) return
     onSave({
       id: Date.now().toString(), name: name.trim(), room: room || 'Unknown', careNote: note,
-      wateringDays: days, waterNeed, photo: PLANT_PHOTOS[Math.floor(Math.random() * PLANT_PHOTOS.length)],
+      wateringDays: days, waterNeed, photo: photo ?? PLANT_PHOTOS[Math.floor(Math.random() * PLANT_PHOTOS.length)],
       lastWateredAt: null, previousWateredAt: null, history: [], isWateredToday: false,
     })
   }
@@ -734,24 +772,65 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade }: {
 
           {/* Photo upload */}
           <div className="neo-card relative rounded-3xl w-full">
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handlePhotoInputChange}
+            />
+            <input
+              ref={libraryInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoInputChange}
+            />
             <div className="flex items-center gap-[16px] p-[16px]">
               {/* Photo placeholder */}
-              <div className="bg-[#F7F7F7] relative rounded-full shrink-0 size-[64px] overflow-hidden border-2 border-black">
-                <div className="absolute" style={{ left: 20, top: 20 }}>
-                  <svg fill="none" height="24" viewBox="0 0 24 24" width="24">
+              <div className="bg-[#F7F7F7] relative rounded-full shrink-0 size-[64px] overflow-hidden border-2 border-black flex items-center justify-center">
+                {photo ? (
+                  <img src={photo} alt="Selected plant" className="w-full h-full object-cover" />
+                ) : (
+                  <svg fill="none" height="24" viewBox="0 0 24 24" width="24" aria-hidden>
                     <path d={svgAdd.p22b7c700} fill="black" />
                   </svg>
-                </div>
+                )}
               </div>
               {/* Upload action */}
               <div className="flex flex-col gap-[6px] flex-1 min-w-0">
                 <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Your Plant&apos;s Photo</span>
-                <div className="relative inline-flex rounded-full border-2 border-black cursor-pointer btn-primary btn-green" style={{ background: GREEN }}>
-                  <span className="px-[12px] py-[6px]" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>+ TAKE PHOTO</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPhotoPicker(true)}
+                  className="btn-primary btn-green inline-flex items-center justify-center gap-1 rounded-full border-2 border-black cursor-pointer self-start px-3 py-1.5"
+                  style={{ background: GREEN, minHeight: 28 }}
+                >
+                  <svg fill="none" height="12" viewBox="0 0 20 20" width="12" aria-hidden className="shrink-0">
+                    <path d={svgAdd.p3e11a380} stroke="black" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                  </svg>
+                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', lineHeight: 1 }}>
+                    TAKE PHOTO
+                  </span>
+                </button>
               </div>
             </div>
           </div>
+
+          {showPhotoPicker && (
+            <PhotoActionSheet
+              onClose={() => setShowPhotoPicker(false)}
+              onTakePhoto={() => {
+                setShowPhotoPicker(false)
+                cameraInputRef.current?.click()
+              }}
+              onChooseLibrary={() => {
+                setShowPhotoPicker(false)
+                libraryInputRef.current?.click()
+              }}
+            />
+          )}
 
           {/* Inputs group */}
           <div className="flex flex-col gap-[12px] w-full">
@@ -1613,7 +1692,7 @@ export default function App() {
 
   function handleReset() {
     if (window.confirm('Reset all app data?')) {
-      localStorage.clear(); setPlants(SEED_PLANTS)
+      localStorage.clear(); setPlants([])
       setSettings({ ...DEFAULT_SETTINGS })
       setScreen('onboarding')
     }
