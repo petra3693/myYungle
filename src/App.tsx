@@ -96,8 +96,8 @@ function loadPlants(): Plant[] {
 }
 function savePlants(p: Plant[]) { localStorage.setItem('mj_plants', JSON.stringify(p)) }
 function loadSettings(): AppSettings {
-  try { const r = localStorage.getItem('mj_settings'); return r ? JSON.parse(r) : { wateringDays: [0, 2, 4], pushNotifications: true, reminderTime: '09:00', isPro: false } }
-  catch { return { wateringDays: [0, 2, 4], pushNotifications: true, reminderTime: '09:00', isPro: false } }
+  try { const r = localStorage.getItem('mj_settings'); return r ? JSON.parse(r) : { wateringDays: [], pushNotifications: true, reminderTime: '09:00', isPro: false } }
+  catch { return { wateringDays: [], pushNotifications: true, reminderTime: '09:00', isPro: false } }
 }
 function saveSettings(s: AppSettings) { localStorage.setItem('mj_settings', JSON.stringify(s)) }
 
@@ -109,27 +109,6 @@ function formatDate(iso: string) { return new Date(iso).toLocaleDateString('en-G
 
 // ─── Shared SVG components from import ───────────────────────────────────────
 
-function SvgSignal() {
-  return (
-    <svg className="block" fill="none" height="20" viewBox="0 0 20 20" width="20">
-      <path clipRule="evenodd" d={svgPaths.p2bb6eb80} fill="#000000" fillRule="evenodd" />
-    </svg>
-  )
-}
-function SvgWifi() {
-  return (
-    <svg className="block" fill="none" height="20" viewBox="0 0 20 20" width="20">
-      <path clipRule="evenodd" d={svgPaths.p646c5c0} fill="#000000" fillRule="evenodd" />
-    </svg>
-  )
-}
-function SvgBattery() {
-  return (
-    <svg className="block" fill="none" height="20" viewBox="0 0 28 20" width="28">
-      <path d={svgPaths.p66c9640} fill="#000000" />
-    </svg>
-  )
-}
 function SvgDrop() {
   return (
     <svg className="block" fill="none" height="116" viewBox="0 0 85 116" width="85">
@@ -194,28 +173,6 @@ function SvgCloverHero() {
     <svg className="block" fill="none" height="160" viewBox="0 0 160 160" width="160">
       <path d={svgPaths.p1e4fc7f0} fill="black" stroke="black" strokeLinecap="round" strokeWidth="2" />
     </svg>
-  )
-}
-
-// ─── Status Bar ───────────────────────────────────────────────────────────────
-
-function StatusBar({ light = false }: { light?: boolean }) {
-  const c = light ? '#fff' : BLACK
-  return (
-    <div className="flex items-center justify-between px-6 shrink-0" style={{ height: 44 }}>
-      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 700, fontSize: 12, color: c }}>9:41</span>
-      <div className="flex items-center gap-1.5">
-        <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
-          <path clipRule="evenodd" d={svgPaths.p2bb6eb80} fill={c} fillRule="evenodd" />
-        </svg>
-        <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
-          <path clipRule="evenodd" d={svgPaths.p646c5c0} fill={c} fillRule="evenodd" />
-        </svg>
-        <svg fill="none" height="20" viewBox="0 0 28 20" width="28">
-          <path d={svgPaths.p66c9640} fill={c} />
-        </svg>
-      </div>
-    </div>
   )
 }
 
@@ -299,14 +256,12 @@ function SplashScreen({ onNext }: { onNext: () => void }) {
 // ─── Screen 2: Onboarding ─────────────────────────────────────────────────────
 
 function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave: (s: AppSettings) => void }) {
-  const [s, setS] = useState(settings)
+  const [s, setS] = useState({ ...settings, wateringDays: [] as number[] })
   function toggleDay(i: number) {
     setS((p) => ({ ...p, wateringDays: p.wateringDays.includes(i) ? p.wateringDays.filter((x) => x !== i) : [...p.wateringDays, i] }))
   }
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
-      <StatusBar />
-
       {/* Drop art + brand */}
       <div className="flex flex-col items-center gap-[10px] py-[30px] shrink-0 w-full">
         <svg fill="none" height="116" viewBox="0 0 85 116" width="85">
@@ -384,8 +339,9 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
           {/* Start button — pill */}
           <div className="flex items-start pt-2 pb-5 w-full">
             <button
+              type="button"
               onClick={() => onSave(s)}
-              className="flex flex-1 items-center justify-center rounded-full border-2 border-black btn-primary cursor-pointer active:scale-[0.98] transition-all"
+              className="btn-primary btn-green flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer"
               style={{ background: GREEN, height: 56 }}
             >
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>START</span>
@@ -523,30 +479,29 @@ function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
 
 // ─── Screen 3 & 4: Home ───────────────────────────────────────────────────────
 
-function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPlant, onGoAdd, onSettings, todayIdx }: {
+function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPlant, onGoAdd, onSettings, onShowPro, todayIdx }: {
   plants: Plant[]; settings: AppSettings; onSelectPlant: (p: Plant) => void;
-  onDeletePlant: (id: string) => void; onWaterPlant: (id: string) => void; onGoAdd: () => void; onSettings: () => void; todayIdx: number
+  onDeletePlant: (id: string) => void; onWaterPlant: (id: string) => void; onGoAdd: () => void; onSettings: () => void; onShowPro: () => void; todayIdx: number
 }) {
   const needsWater = plants.filter((p) => p.wateringDays.includes(todayIdx) && !p.watered)
 
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
-      {/* Header */}
-      <div style={{ background: BG }}>
-        <StatusBar />
-        <div className="flex items-center justify-between px-5 pb-2">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 24, color: '#000' }}>MYJUNGLE</span>
-          <div className="flex items-center gap-2">
-            {/* PRO badge */}
-            <div className="badge flex items-center gap-1.5 px-2.5 py-1.5" style={{ background: GREEN }}>
-              <SvgLeaf />
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>PRO</span>
-            </div>
-            {/* Settings button */}
-            <button onClick={onSettings} className="flex items-center justify-center rounded-full border-2 border-black bg-white cursor-pointer active:scale-90 transition-all" style={{ width: 38, height: 38 }}>
-              <SvgSettings />
-            </button>
-          </div>
+      <div className="app-header" style={{ background: BG }}>
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 24, color: '#000' }}>MYJUNGLE</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onShowPro}
+            className="badge flex items-center gap-1.5 px-2.5 py-1.5 cursor-pointer"
+            style={{ background: GREEN }}
+          >
+            <SvgLeaf />
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>PRO</span>
+          </button>
+          <button type="button" onClick={onSettings} className="flex items-center justify-center rounded-full border-2 border-black bg-white cursor-pointer" style={{ width: 38, height: 38 }}>
+            <SvgSettings />
+          </button>
         </div>
       </div>
 
@@ -586,8 +541,8 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
           )}
 
           {/* Add plant button */}
-            <button onClick={onGoAdd}
-            className="btn-primary w-full flex items-center justify-center rounded-full border-2 border-black mb-4 cursor-pointer active:scale-95 transition-all"
+            <button type="button" onClick={onGoAdd}
+            className="btn-primary btn-green w-full flex items-center justify-center rounded-full border-2 border-black mb-4 cursor-pointer"
             style={{ background: GREEN, height: 56 }}
           >
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000' }}>+ ADD PLANT</span>
@@ -638,8 +593,6 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
 
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
-      <StatusBar />
-
       {/* Modal header */}
       <div className="flex flex-col items-center pb-[16px] pt-[8px] shrink-0 w-full">
         <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000' }}>ADD NEW </span>
@@ -662,7 +615,7 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
               {/* Upload action */}
               <div className="flex flex-col gap-[6px] flex-1 min-w-0">
                 <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Your Plant&apos;s Photo</span>
-                <div className="relative inline-flex rounded-full border-2 border-black cursor-pointer active:scale-95 transition-all btn-primary" style={{ background: GREEN }}>
+                <div className="relative inline-flex rounded-full border-2 border-black cursor-pointer btn-primary btn-green" style={{ background: GREEN }}>
                   <span className="px-[12px] py-[6px]" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>+ TAKE PHOTO</span>
                 </div>
               </div>
@@ -799,9 +752,10 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
           {/* Save button */}
           <div className="flex w-full pt-[8px]">
             <button
+              type="button"
               onClick={save}
               disabled={!name.trim() || !canAdd}
-              className="btn-primary flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer active:scale-95 transition-all disabled:opacity-40"
+              className="btn-primary btn-green flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer disabled:opacity-40"
               style={{ background: GREEN, height: 56 }}
             >
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>SAVE TO JUNGLE</span>
@@ -842,24 +796,18 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
     <div className="content-stretch flex flex-col items-start justify-between relative size-full" style={{ background: BG }}>
       {/* Sheet content */}
       <div className="content-stretch flex flex-col items-start relative shrink-0 w-full flex-1 min-h-0">
-        <StatusBar />
-
-        {/* Modal header */}
-        <div className="relative shrink-0 w-full">
-          <div className="flex flex-row items-center justify-center size-full">
-            <div className="content-stretch flex items-center justify-between pb-[36px] pt-[28px] px-[20px] relative size-full">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000', textTransform: 'uppercase' }}>Plant Details</span>
-              {/* × close button */}
-              <button
-                onClick={onBack}
-                className="bg-black content-stretch flex items-center justify-center relative rounded-full shrink-0 size-[38px] cursor-pointer active:scale-90 transition-all border-2 border-black"
-              >
-                <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-                  <path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-          </div>
+        <div className="app-header relative shrink-0 w-full">
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000', textTransform: 'uppercase' }}>Plant Details</span>
+          <button
+            type="button"
+            onClick={onBack}
+            className="bg-black flex items-center justify-center rounded-full shrink-0 cursor-pointer border-2 border-black"
+            style={{ width: 38, height: 38 }}
+          >
+            <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
+              <path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" />
+            </svg>
+          </button>
         </div>
 
         {/* Scrollable body */}
@@ -1054,16 +1002,15 @@ function WateringScreen({ plants, todayIdx, onMarkWatered, onMarkAll }: {
 
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
-      <StatusBar />
-      {/* Batch header */}
-      <div className="shrink-0 px-5 py-4">
-        <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000', lineHeight: 1.2 }}>WATERING</p>
-        <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#888' }}>{plants.length} PLANTS</p>
+      <div className="app-header shrink-0">
+        <div className="flex flex-col">
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000', lineHeight: 1.2 }}>WATERING</p>
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#888' }}>{plants.length} PLANTS</p>
+        </div>
       </div>
-      {/* Mark all button */}
       <div className="shrink-0 px-5 pb-4">
-        <button onClick={onMarkAll}
-          className="btn-primary relative w-full flex items-center justify-center rounded-full border-2 border-black cursor-pointer active:scale-95 transition-all"
+        <button type="button" onClick={onMarkAll}
+          className="btn-primary btn-green relative w-full flex items-center justify-center rounded-full border-2 border-black cursor-pointer"
           style={{ background: GREEN, height: 48 }}
         >
           <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
@@ -1167,7 +1114,6 @@ function ProPaywallScreen({ onUnlock, onClose }: { onUnlock: () => void; onClose
       <div className="flex-1 overflow-y-auto flex flex-col items-start shrink-0 w-full">
         {/* Hero collage */}
         <div className="h-[180px] relative shrink-0 w-full overflow-clip" style={{ background: GREEN }}>
-          <StatusBar />
           {/* Centered clover droplet illustration */}
           <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[160px] top-1/2">
             <svg className="absolute block inset-0 size-full" fill="none" height="160" preserveAspectRatio="none" viewBox="0 0 160 160" width="160">
@@ -1216,8 +1162,8 @@ function ProPaywallScreen({ onUnlock, onClose }: { onUnlock: () => void; onClose
         {/* Buy section */}
         <div className="flex flex-col items-center w-full">
           <div className="flex flex-col gap-[10px] items-center px-6 py-5 w-full">
-            <button onClick={onUnlock}
-              className="btn-primary relative flex items-center justify-center rounded-full shrink-0 w-full cursor-pointer active:scale-95 transition-all border-2 border-black"
+            <button type="button" onClick={onUnlock}
+              className="btn-primary btn-green relative flex items-center justify-center rounded-full shrink-0 w-full cursor-pointer border-2 border-black"
               style={{ background: GREEN, height: 58 }}
             >
               <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
@@ -1253,12 +1199,11 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
 
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
-      <StatusBar />
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 shrink-0">
+      <div className="app-header shrink-0">
         <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000' }}>SETTINGS</p>
-        <button onClick={onClose}
-          className="relative bg-black flex items-center justify-center rounded-full shrink-0 size-[38px] cursor-pointer active:scale-90 transition-all border-2 border-black"
+        <button type="button" onClick={onClose}
+          className="relative bg-black flex items-center justify-center rounded-full shrink-0 cursor-pointer border-2 border-black"
+          style={{ width: 38, height: 38 }}
         >
           <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
             <path clipRule="evenodd" d={svgSettings.p3b43000} fill="white" fillRule="evenodd" />
@@ -1348,8 +1293,8 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
               style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', left: 14, top: 27 }}>
               EXPORT JUNGLE DATA (JSON)
             </p>
-            <button onClick={onExport}
-              className="btn-primary absolute bg-white border-2 border-black flex gap-3 items-center px-[11px] py-[3px] rounded-full cursor-pointer active:scale-95"
+            <button type="button" onClick={onExport}
+              className="absolute bg-white border-2 border-black flex gap-3 items-center px-[11px] py-[3px] rounded-full cursor-pointer"
               style={{ height: 35, right: 14, top: 15 }}
             >
               <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>EXPORT</p>
@@ -1392,7 +1337,7 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
                 />
               </div>
             ))}
-            <button className="btn-primary relative flex items-center justify-center rounded-full w-full cursor-pointer active:scale-95 transition-all border-2 border-black" style={{ background: GREEN, height: 41 }}>
+            <button type="button" className="btn-primary btn-green relative flex items-center justify-center rounded-full w-full cursor-pointer border-2 border-black" style={{ background: GREEN, height: 41 }}>
               <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>SEND</p>
             </button>
           </div>
@@ -1420,8 +1365,8 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
             </div>
             {/* Unlock button */}
             {!s.isPro && (
-              <button onClick={onShowPro}
-                className="btn-primary relative flex items-center justify-center rounded-full w-full cursor-pointer active:scale-95 transition-all border-2 border-black"
+              <button type="button" onClick={onShowPro}
+                className="btn-primary btn-green relative flex items-center justify-center rounded-full w-full cursor-pointer border-2 border-black"
                 style={{ background: GREEN, height: 58 }}
               >
                 <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>UNLOCK PRO FOREVER — $5.99</p>
@@ -1481,7 +1426,7 @@ export default function App() {
   function handleReset() {
     if (window.confirm('Reset all app data?')) {
       localStorage.clear(); setPlants(SEED_PLANTS)
-      setSettings({ wateringDays: [0, 2, 4], pushNotifications: true, reminderTime: '09:00', isPro: false })
+      setSettings({ wateringDays: [], pushNotifications: true, reminderTime: '09:00', isPro: false })
     }
   }
 
@@ -1494,8 +1439,8 @@ export default function App() {
     content = <OnboardingScreen settings={settings} onSave={(s) => { handleSaveSettings(s); setScreen('main') }} />
   } else if (screen === 'pro') {
     content = (
-      <div className="flex flex-col h-full min-h-0">
-        <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="relative flex flex-col h-full min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden pb-[72px]">
           <ProPaywallScreen
             onUnlock={() => { setSettings((s) => ({ ...s, isPro: true })); setScreen('main') }}
             onClose={() => setScreen('main')}
@@ -1535,6 +1480,7 @@ export default function App() {
           onWaterPlant={handleWaterPlant}
           onGoAdd={() => setTab('add')}
           onSettings={() => setScreen('settings')}
+          onShowPro={() => { setTab('settings'); setScreen('main') }}
         />
       )
     } else if (tab === 'add') {
@@ -1550,8 +1496,8 @@ export default function App() {
       )
     }
     content = (
-      <div className="flex flex-col h-full min-h-0">
-        <div className="flex-1 min-h-0 overflow-hidden">{tabContent}</div>
+      <div className="relative flex flex-col h-full min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden pb-[72px]">{tabContent}</div>
         <TabBar active={tab} onChange={(t) => { setTab(t); setScreen('main') }} />
       </div>
     )
@@ -1559,7 +1505,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: BLACK }}>
-      <div style={{ width: 393, height: 852, background: BG, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <div className="relative h-dvh w-full max-w-[393px] max-h-[852px] overflow-hidden flex flex-col" style={{ background: BG }}>
         {content}
       </div>
     </div>

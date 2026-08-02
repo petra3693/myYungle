@@ -55,6 +55,15 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior-y: none;
+    touch-action: manipulation;
+  }
+
   body {
     font-family: var(--font-geist);
     background: #111;
@@ -151,28 +160,40 @@
   }
 
   .neo-tab-bar {
-    position: sticky;
+    position: absolute;
     bottom: 0;
-    z-index: 20;
+    left: 0;
+    right: 0;
+    z-index: 50;
     flex-shrink: 0;
     width: 100%;
     border-top: 2px solid black;
     background: var(--color-neo-bg);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .neo-plant-card {
     border: 2px solid black;
     border-radius: 1rem;
   }
-}
 
-/* Neobrutalist depth: crisp borders only — no soft or offset shadows */
-[class*='drop-shadow'],
-[class*='shadow-'] {
-  box-shadow: none !important;
-  filter: none !important;
-  --tw-drop-shadow: none !important;
-  --tw-shadow: none !important;
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px 8px;
+    flex-shrink: 0;
+  }
+
+  .btn-green {
+    box-shadow: 4px 4px 0px #111111;
+    transition: transform 0.05s ease, box-shadow 0.05s ease;
+  }
+
+  .btn-green:active:not(:disabled) {
+    transform: translate(4px, 4px);
+    box-shadow: none;
+  }
 }
 
 html {
