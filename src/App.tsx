@@ -64,7 +64,7 @@ const BG = '#F7F7F7'
 const BLACK = '#000000'
 const RED = '#FF2D55'
 const WATERED_BG = '#D9FFE8'
-const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const
+const DAYS: DayCode[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const
 const DAY_OF_WEEK: DayOfWeek[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
 const MAX_FREE_PLANTS = 5
@@ -93,8 +93,10 @@ function loadPlants(): Plant[] {
 }
 function savePlants(p: Plant[]) { localStorage.setItem('mj_plants', JSON.stringify(p)) }
 
-function sortSchedule(schedule: string[]): string[] {
-  return [...schedule].sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b))
+function sortSchedule(schedule: readonly string[]): DayCode[] {
+  return [...schedule]
+    .filter((d): d is DayCode => (DAYS as readonly string[]).includes(d))
+    .sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b))
 }
 
 function scheduleToIndices(schedule: string[]): number[] {
@@ -102,7 +104,7 @@ function scheduleToIndices(schedule: string[]): number[] {
 }
 
 function indicesToSchedule(indices: number[]): DayCode[] {
-  return sortSchedule([...indices].sort((a, b) => a - b).map((i) => DAYS[i])) as DayCode[]
+  return sortSchedule(indices.map((i) => DAYS[i]).filter(Boolean))
 }
 
 function scheduleIndicesFromPlant(plant: Pick<Plant, 'wateringDays' | 'scheduleDays'>): number[] {
