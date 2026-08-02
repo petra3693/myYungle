@@ -1504,8 +1504,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: BLACK }}>
-      <div className="relative h-dvh w-full max-w-[393px] max-h-[852px] overflow-hidden flex flex-col" style={{ background: BG }}>
+    <div className="relative min-h-dvh h-dvh w-full overflow-hidden flex flex-col" style={{ background: BG }}>
+      <div className="flex flex-col flex-1 min-h-0 pt-[env(safe-area-inset-top)]">
         {content}
       </div>
     </div>
