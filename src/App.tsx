@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Camera } from 'lucide-react'
 import { submitFeedback } from '@/lib/submitFeedback'
 import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, type StorageResult } from '@/lib/plantStorage'
 import { clearAllPhotos, deletePlantPhotos, getPhotoBlob } from '@/lib/photoStore'
@@ -1672,18 +1673,9 @@ function PhotoTimelineStrip({
     <div className="flex flex-col gap-3 w-full">
       <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>Photo Timeline</span>
       <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
-        <button
-          type="button"
-          onClick={onNewSnapshot}
-          className="detail-snapshot-new cursor-pointer active:opacity-80 flex flex-col items-center justify-center gap-1.5 p-4 text-center h-full w-full"
-        >
-          <svg fill="none" height="22" viewBox="0 0 24 24" width="22" aria-hidden className="shrink-0">
-            <path d={svgDetail.p1a54b00} fill={GREEN} />
-          </svg>
-          <span
-            className="flex flex-col leading-tight text-center text-black"
-            style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, textTransform: 'uppercase' }}
-          >
+        <button type="button" onClick={onNewSnapshot} className="detail-snapshot-new cursor-pointer active:opacity-80">
+          <Camera size={22} strokeWidth={2.5} className="shrink-0 text-black" aria-hidden />
+          <span className="detail-snapshot-new-label">
             <span>NEW</span>
             <span>SNAPSHOT</span>
           </span>
@@ -1926,20 +1918,6 @@ function HealthTrackerSection({
   )
 }
 
-function WaterDropletIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg fill="none" height="20" viewBox="0 0 12 20" width="12">
-      <path
-        d={svgDetail.p35497c00}
-        fill={filled ? DETAIL_BLUE : DETAIL_BLUE_LIGHT}
-        stroke={filled ? DETAIL_BLUE : '#93C5FD'}
-        strokeLinecap="round"
-        strokeWidth="2"
-      />
-    </svg>
-  )
-}
-
 // ─── Screen 6: Plant Details ─────────────────────────────────────────────────
 
 function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete, onUpdate, onMarkWatered, onShowPro, onEditGlobalSchedule, todayIdx }: {
@@ -2164,7 +2142,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                     <div className="flex flex-col gap-1.5 min-w-0">
                       <div className="flex gap-1 items-end">
                         {[0, 1, 2].map((i) => (
-                          <WaterDropletIcon key={i} filled={i < waterFills} />
+                          <SvgDropSmall key={i} color={GREEN} filled={i < waterFills} />
                         ))}
                       </div>
                       <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000', lineHeight: 1.2 }}>
