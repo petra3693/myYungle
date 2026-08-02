@@ -186,11 +186,7 @@ function TabBar({ active, onChange }: { active: TabScreen; onChange: (t: TabScre
     { id: 'settings', label: 'PRO', path: svgPaths2.p1eebb470, stroke: false },
   ]
   return (
-    <nav
-      className="neo-tab-bar flex items-stretch"
-      style={{ height: 72 }}
-      aria-label="Main navigation"
-    >
+    <nav className="neo-tab-bar" aria-label="Main navigation">
       {tabs.map((t) => {
         const on = t.id === active
         return (
@@ -198,8 +194,8 @@ function TabBar({ active, onChange }: { active: TabScreen; onChange: (t: TabScre
             key={t.id}
             type="button"
             onClick={() => onChange(t.id)}
-            className="flex flex-1 flex-col items-center justify-center gap-1 min-w-0 cursor-pointer transition-colors"
-            style={{ background: on ? GREEN : 'transparent', paddingTop: 4, paddingBottom: 4 }}
+            className="flex flex-col items-center justify-center gap-1 min-w-0 cursor-pointer transition-colors py-2"
+            style={{ background: on ? GREEN : 'transparent' }}
           >
             <div className="flex items-center justify-center" style={{ width: 20, height: 20 }}>
               <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
@@ -226,7 +222,7 @@ function SplashScreen({ onNext }: { onNext: () => void }) {
   }, [onNext])
 
   return (
-    <div className="flex flex-col items-center justify-center h-full relative overflow-hidden" style={{ background: GREEN }}>
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center min-h-dvh h-dvh w-full overflow-hidden" style={{ background: GREEN }}>
       {/* White flash ring on impact */}
       <div className="splash-ring absolute rounded-full border-4 border-white pointer-events-none"
         style={{ width: 90, height: 90 }} />
@@ -261,55 +257,50 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
     setS((p) => ({ ...p, wateringDays: p.wateringDays.includes(i) ? p.wateringDays.filter((x) => x !== i) : [...p.wateringDays, i] }))
   }
   return (
-    <div className="flex flex-col h-full" style={{ background: BG }}>
-      {/* Drop art + brand */}
-      <div className="flex flex-col items-center gap-[10px] py-[30px] shrink-0 w-full">
-        <svg fill="none" height="116" viewBox="0 0 85 116" width="85">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden" style={{ background: BG }}>
+      <div className="flex flex-col items-center shrink-0 pt-2 pb-1 gap-1 w-full">
+        <svg className="h-12 w-auto max-h-14 shrink-0" fill="none" viewBox="0 0 85 116">
           <path d={svgPaths.p1cd02a80} fill="black" stroke="black" strokeLinecap="round" strokeWidth="2" />
         </svg>
-        <div className="flex items-center justify-center px-5 py-4 w-full">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 24, color: '#000' }}>MYJUNGLE</span>
-        </div>
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000' }}>MYJUNGLE</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* Weekly strip */}
-        <div className="flex flex-col gap-2 px-5 py-3">
-        <span className="section-header" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>WEEKLY WATER SCHEDULE</span>
-          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Choose which days you&apos;d like to water</span>
-          {/* Day cards — full-width vertical list, gap-[7px] */}
-          <div className="flex flex-col" style={{ gap: 7, marginTop: 4 }}>
-            {DAYS.map((d, i) => {
-              const on = s.wateringDays.includes(i)
-              return (
-                <button
-                  key={d}
-                  onClick={() => toggleDay(i)}
-                  className="neo-pill relative flex items-center justify-between w-full cursor-pointer active:scale-[0.98] transition-all"
-                  style={{ background: on ? GREEN : 'white', paddingLeft: 20, paddingRight: 20, paddingTop: 6, paddingBottom: 6 }}
-                >
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</span>
-                  {on ? (
-                    <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-                      <path d={svgPaths.p2c13d500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
-                    </svg>
-                  ) : (
-                    <div style={{ width: 18, height: 18 }} />
-                  )}
-                </button>
-              )
-            })}
-          </div>
+      <div className="flex flex-col flex-1 min-h-0 px-5 overflow-hidden">
+        <div className="flex flex-col gap-1 shrink-0">
+          <span className="section-header" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>WEEKLY WATER SCHEDULE</span>
+          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Choose which days you&apos;d like to water</span>
         </div>
 
-        {/* Push notification */}
-        <div className="flex flex-col px-5" style={{ paddingTop: 52, paddingBottom: 12, gap: 12 }}>
-          <div className="flex items-start justify-between w-full" style={{ gap: 25 }}>
-            <div className="flex flex-col" style={{ gap: 12 }}>
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Push Notification</span>
-              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Allow notifications for watering</span>
+        <div className="flex flex-col gap-1.5 flex-1 min-h-0 justify-center py-1">
+          {DAYS.map((d, i) => {
+            const on = s.wateringDays.includes(i)
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() => toggleDay(i)}
+                className="neo-pill relative flex items-center justify-between w-full cursor-pointer shrink-0"
+                style={{ background: on ? GREEN : 'white', paddingLeft: 16, paddingRight: 16, paddingTop: 5, paddingBottom: 5 }}
+              >
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</span>
+                {on ? (
+                  <svg fill="none" height="16" viewBox="0 0 18 18" width="16">
+                    <path d={svgPaths.p2c13d500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
+                  </svg>
+                ) : (
+                  <div style={{ width: 16, height: 16 }} />
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex flex-col shrink-0 gap-2 pt-2 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-start justify-between w-full gap-4">
+            <div className="flex flex-col gap-1 flex-1 min-w-0">
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Push Notification</span>
+              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Allow notifications for watering</span>
             </div>
-            {/* Toggle — 66×38, rounded-[18px] pill */}
             <div
               onClick={() => setS((p) => ({ ...p, pushNotifications: !p.pushNotifications }))}
               className="relative cursor-pointer shrink-0"
@@ -336,17 +327,14 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
             </div>
           </div>
 
-          {/* Start button — pill */}
-          <div className="flex items-start pt-2 pb-5 w-full">
-            <button
-              type="button"
-              onClick={() => onSave(s)}
-              className="btn-primary btn-green flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer"
-              style={{ background: GREEN, height: 56 }}
-            >
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>START</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => onSave(s)}
+            className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
+            style={{ background: GREEN, height: 52 }}
+          >
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>START</span>
+          </button>
         </div>
       </div>
     </div>
@@ -811,7 +799,7 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto w-full">
+        <div className="flex-1 overflow-y-auto w-full pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
           <div className="content-stretch flex flex-col gap-[16px] items-start px-[20px] pb-[20px] relative w-full">
 
             {/* Hero photo */}
@@ -1392,6 +1380,13 @@ export default function App() {
   useEffect(() => { savePlants(plants) }, [plants])
   useEffect(() => { saveSettings(settings) }, [settings])
 
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', screen === 'splash' ? GREEN : BG)
+    document.documentElement.style.backgroundColor = screen === 'splash' ? GREEN : BG
+    document.body.style.backgroundColor = screen === 'splash' ? GREEN : BG
+  }, [screen])
+
   function handleSaveSettings(s: AppSettings) { setSettings(s) }
 
   function handleAddPlant(p: Plant) { setPlants((prev) => [...prev, p]); setTab('home') }
@@ -1440,7 +1435,7 @@ export default function App() {
   } else if (screen === 'pro') {
     content = (
       <div className="relative flex flex-col h-full min-h-0">
-        <div className="flex-1 min-h-0 overflow-hidden pb-[72px]">
+        <div className="flex-1 min-h-0 overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
           <ProPaywallScreen
             onUnlock={() => { setSettings((s) => ({ ...s, isPro: true })); setScreen('main') }}
             onClose={() => setScreen('main')}
@@ -1497,15 +1492,17 @@ export default function App() {
     }
     content = (
       <div className="relative flex flex-col h-full min-h-0">
-        <div className="flex-1 min-h-0 overflow-hidden pb-[72px]">{tabContent}</div>
+        <div className="flex-1 min-h-0 overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))]">{tabContent}</div>
         <TabBar active={tab} onChange={(t) => { setTab(t); setScreen('main') }} />
       </div>
     )
   }
 
+  const isSplash = screen === 'splash'
+
   return (
-    <div className="relative min-h-dvh h-dvh w-full overflow-hidden flex flex-col" style={{ background: BG }}>
-      <div className="flex flex-col flex-1 min-h-0 pt-[env(safe-area-inset-top)]">
+    <div className="relative min-h-dvh h-dvh w-full overflow-hidden flex flex-col" style={{ background: isSplash ? GREEN : BG }}>
+      <div className={`flex flex-col flex-1 min-h-0 ${isSplash ? '' : 'pt-[env(safe-area-inset-top)]'}`}>
         {content}
       </div>
     </div>
