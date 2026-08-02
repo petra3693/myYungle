@@ -260,7 +260,7 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
   }
   return (
     <div
-      className="flex flex-col justify-between h-[100dvh] p-4 overflow-hidden box-border"
+      className="flex flex-col h-[100dvh] p-4 overflow-hidden box-border"
       style={{
         background: BG,
         paddingTop: 'calc(1rem + env(safe-area-inset-top, 0px))',
@@ -273,78 +273,74 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
         <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000' }}>MYJUNGLE</span>
       </div>
 
-      <div className="flex flex-col flex-1 min-h-0 w-full">
-        <div className="flex flex-col gap-1 shrink-0">
-          <span className="section-header" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>WEEKLY WATER SCHEDULE</span>
-          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Choose which days you&apos;d like to water</span>
-        </div>
-
-        <div className="flex flex-col gap-1.5 mt-5 mb-6 flex-1 min-h-0 justify-center">
-          {DAYS.map((d, i) => {
-            const on = s.wateringDays.includes(i)
-            return (
-              <button
-                key={d}
-                type="button"
-                onClick={() => toggleDay(i)}
-                className="neo-pill relative flex items-center justify-between w-full cursor-pointer shrink-0"
-                style={{ background: on ? GREEN : 'white', paddingLeft: 16, paddingRight: 16, paddingTop: 5, paddingBottom: 5 }}
-              >
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</span>
-                {on ? (
-                  <svg fill="none" height="16" viewBox="0 0 18 18" width="16">
-                    <path d={svgPaths.p2c13d500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
-                  </svg>
-                ) : (
-                  <div style={{ width: 16, height: 16 }} />
-                )}
-              </button>
-            )
-          })}
-        </div>
+      <div className="text-center my-[20px] shrink-0 flex flex-col gap-1 w-full">
+        <span className="section-header" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>WEEKLY WATER SCHEDULE</span>
+        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Choose which days you&apos;d like to water</span>
       </div>
 
-      <div className="flex flex-col shrink-0 gap-3 w-full">
-        <div className="flex items-start justify-between w-full gap-4">
-          <div className="flex flex-col gap-1 flex-1 min-w-0">
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Push Notification</span>
-            <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Allow notifications for watering</span>
-          </div>
-          <div
-            onClick={() => setS((p) => ({ ...p, pushNotifications: !p.pushNotifications }))}
-            className="relative cursor-pointer shrink-0"
-            style={{ width: 66, height: 38 }}
-          >
-            <div style={{
-              width: 64, height: 36, borderRadius: 18,
-              background: s.pushNotifications ? GREEN : 'white',
-              border: '2px solid black',
-              position: 'relative', margin: '1px',
-              transition: 'background .2s',
-            }}>
-              <div style={{
-                position: 'absolute',
-                top: 2,
-                left: s.pushNotifications ? 30 : 2,
-                width: 26, height: 26,
-                borderRadius: 13,
-                background: s.pushNotifications ? BLACK : '#D9D9D9',
-                border: '2px solid black',
-                transition: 'left .2s',
-              }} />
-            </div>
-          </div>
-        </div>
+      <div className="flex flex-col gap-1.5 flex-1 min-h-0 justify-center w-full">
+        {DAYS.map((d, i) => {
+          const on = s.wateringDays.includes(i)
+          return (
+            <button
+              key={d}
+              type="button"
+              onClick={() => toggleDay(i)}
+              className="neo-pill relative flex items-center justify-between w-full cursor-pointer shrink-0"
+              style={{ background: on ? GREEN : 'white', paddingLeft: 16, paddingRight: 16, paddingTop: 5, paddingBottom: 5 }}
+            >
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</span>
+              {on ? (
+                <svg fill="none" height="16" viewBox="0 0 18 18" width="16">
+                  <path d={svgPaths.p2c13d500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
+                </svg>
+              ) : (
+                <div style={{ width: 16, height: 16 }} />
+              )}
+            </button>
+          )
+        })}
+      </div>
 
-        <button
-          type="button"
-          onClick={() => onSave(s)}
-          className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
-          style={{ background: GREEN, height: 52 }}
+      <div className="my-[20px] shrink-0 flex flex-row items-center justify-between w-full gap-4">
+        <div className="flex flex-col gap-1 flex-1 min-w-0 text-left">
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Push Notification</span>
+          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Allow notifications for watering</span>
+        </div>
+        <div
+          onClick={() => setS((p) => ({ ...p, pushNotifications: !p.pushNotifications }))}
+          className="relative cursor-pointer shrink-0"
+          style={{ width: 66, height: 38 }}
         >
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>START</span>
-        </button>
+          <div style={{
+            width: 64, height: 36, borderRadius: 18,
+            background: s.pushNotifications ? GREEN : 'white',
+            border: '2px solid black',
+            position: 'relative', margin: '1px',
+            transition: 'background .2s',
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 2,
+              left: s.pushNotifications ? 30 : 2,
+              width: 26, height: 26,
+              borderRadius: 13,
+              background: s.pushNotifications ? BLACK : '#D9D9D9',
+              border: '2px solid black',
+              transition: 'left .2s',
+            }} />
+          </div>
+        </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => onSave(s)}
+        className="btn-primary btn-green flex w-full shrink-0 items-center justify-center rounded-full border-2 border-black cursor-pointer"
+        style={{ background: GREEN, height: 52 }}
+      >
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>START</span>
+      </button>
     </div>
   )
 }
