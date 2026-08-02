@@ -132,12 +132,14 @@ function loadSettings(): AppSettings {
         : []
     const hasCompletedOnboarding = parsed.hasCompletedOnboarding ?? globalWaterSchedule.length > 0
     const timezone = parsed.timezone || getDeviceTimezone()
+    const reminderTime = formatReminderTime(parsed.reminderTime ?? DEFAULT_SETTINGS.reminderTime)
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
       globalWaterSchedule,
       hasCompletedOnboarding,
       timezone,
+      reminderTime,
     }
   } catch {
     return DEFAULT_SETTINGS
@@ -2552,11 +2554,20 @@ function NotificationSettingsPanel({
   function openTimePicker() {
     const input = timeInputRef.current
     if (!input) return
-    if (typeof input.showPicker === 'function') {
-      input.showPicker()
-    } else {
-      input.click()
+    input.focus()
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker()
+        return
+      }
+    } catch {
+      // showPicker requires a user gesture and may throw in some browsers
     }
+    input.click()
+  }
+
+  function handleReminderTimeChange(e: React.ChangeEvent<HTMLInputElement>) {
+    onChange({ reminderTime: formatReminderTime(e.target.value) })
   }
 
   function handleTestNotification() {
@@ -2605,27 +2616,27 @@ function NotificationSettingsPanel({
           <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Watering Reminder Time</p>
           <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Alert at this time ({effectiveTz})</p>
         </div>
-        <button
-          type="button"
+        <label
+          htmlFor="watering-reminder-time"
           onClick={openTimePicker}
-          className="relative bg-white border-2 border-black flex items-center justify-center gap-2 min-w-[100px] px-4 py-2 rounded-full shrink-0 h-11 whitespace-nowrap cursor-pointer active:scale-[0.98]"
+          className="relative bg-white border-2 border-black flex items-center justify-center gap-2 min-w-[100px] min-h-[44px] px-4 py-2 rounded-full shrink-0 h-11 whitespace-nowrap cursor-pointer active:scale-[0.98]"
         >
-          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 16, color: '#000' }}>
+          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 16, color: '#000' }} aria-hidden>
             {formatReminderTime(settings.reminderTime)}
           </span>
-          <svg fill="none" height="15" viewBox="0 0 16 15" width="16" aria-hidden className="shrink-0">
+          <svg fill="none" height="15" viewBox="0 0 16 15" width="16" aria-hidden className="shrink-0 pointer-events-none">
             <path d={svgSettings.p3c709780} fill="black" />
           </svg>
           <input
+            id="watering-reminder-time"
             ref={timeInputRef}
             type="time"
-            value={settings.reminderTime}
-            onChange={(e) => onChange({ reminderTime: e.target.value })}
-            className="absolute opacity-0 pointer-events-none w-0 h-0"
-            tabIndex={-1}
-            aria-hidden
+            value={formatReminderTime(settings.reminderTime)}
+            onChange={handleReminderTimeChange}
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            aria-label="Watering reminder time"
           />
-        </button>
+        </label>
       </div>
 
       {/* Device timezone sync */}
