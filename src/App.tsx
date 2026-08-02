@@ -35,13 +35,15 @@ interface Plant {
   wateringDays: number[]
   waterNeed: WaterNeed
   photo: string
-  lastWatered: string | null
+  lastWateredAt: string | null
+  previousWateredAt: string | null
   history: HistoryEntry[]
-  watered: boolean
+  isWateredToday: boolean
 }
 
 interface AppSettings {
-  wateringDays: number[]
+  globalWaterSchedule: string[]
+  hasCompletedOnboarding: boolean
   pushNotifications: boolean
   reminderTime: string
   isPro: boolean
@@ -56,48 +58,95 @@ const RED = '#FF2D55'
 const WATERED_BG = '#D9FFE8'
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-const FREE_LIMIT = 5
+const MAX_FREE_PLANTS = 5
 const PLANT_PHOTOS = [plantImg0, plantImg1, plantImg2, plantImg3]
+
+const DEFAULT_SETTINGS: AppSettings = {
+  globalWaterSchedule: [],
+  hasCompletedOnboarding: false,
+  pushNotifications: true,
+  reminderTime: '09:00',
+  isPro: false,
+}
 
 // ─── Seed Data ────────────────────────────────────────────────────────────────
 
 const SEED_PLANTS: Plant[] = [
   {
     id: '1', name: 'Monstera Deliciosa', room: 'Living Room', careNote: 'Loves indirect light. Water when top 2 inches of soil are dry.',
-    wateringDays: [2, 4], waterNeed: 'Moderate', photo: plantImg0, lastWatered: '2026-07-28',
+    wateringDays: [2, 4], waterNeed: 'Moderate', photo: plantImg0, lastWateredAt: '2026-07-28', previousWateredAt: null,
     history: [
       { id: 'h1', date: '2026-07-28', note: 'Watered and checked for new leaf growth.', photo: plantImg0 },
       { id: 'h2', date: '2026-07-21', note: 'New aerial root spotted.', photo: plantImg0 },
-    ], watered: false,
+    ], isWateredToday: false,
   },
   {
     id: '2', name: 'Ficus Leaf Fig', room: 'Office', careNote: 'Keep away from drafts. Rotate monthly for even growth.',
-    wateringDays: [3], waterNeed: 'Light', photo: plantImg1, lastWatered: '2026-07-29',
+    wateringDays: [3], waterNeed: 'Light', photo: plantImg1, lastWateredAt: '2026-07-29', previousWateredAt: null,
     history: [{ id: 'h3', date: '2026-07-29', note: 'Light misting done.', photo: plantImg1 }],
-    watered: false,
+    isWateredToday: false,
   },
   {
     id: '3', name: 'Snake Plant', room: 'Bedroom', careNote: 'Extremely drought tolerant.',
-    wateringDays: [5, 6], waterNeed: 'Light', photo: plantImg2, lastWatered: '2026-07-25',
-    history: [], watered: false,
+    wateringDays: [5, 6], waterNeed: 'Light', photo: plantImg2, lastWateredAt: '2026-07-25', previousWateredAt: null,
+    history: [], isWateredToday: false,
   },
   {
     id: '4', name: 'Calathea Ornata', room: 'Bathroom', careNote: 'Loves humidity. Mist leaves daily.',
-    wateringDays: [2, 5], waterNeed: 'Heavy', photo: plantImg3, lastWatered: '2026-07-30',
+    wateringDays: [2, 5], waterNeed: 'Heavy', photo: plantImg3, lastWateredAt: '2026-07-30', previousWateredAt: null,
     history: [{ id: 'h4', date: '2026-07-30', note: 'Looking lush and vibrant.', photo: plantImg3 }],
-    watered: true,
+    isWateredToday: true,
   },
 ]
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
 function loadPlants(): Plant[] {
-  try { const r = localStorage.getItem('mj_plants'); return r ? JSON.parse(r) : SEED_PLANTS } catch { return SEED_PLANTS }
+  try {
+    const r = localStorage.getItem('mj_plants')
+    const raw = r ? JSON.parse(r) : SEED_PLANTS
+    return (raw as Array<Plant & { watered?: boolean; lastWatered?: string | null }>).map((p) => ({
+      ...p,
+      isWateredToday: p.isWateredToday ?? p.watered ?? false,
+      lastWateredAt: p.lastWateredAt ?? p.lastWatered ?? null,
+      previousWateredAt: p.previousWateredAt ?? null,
+    }))
+  } catch { return SEED_PLANTS }
 }
 function savePlants(p: Plant[]) { localStorage.setItem('mj_plants', JSON.stringify(p)) }
+
+function sortSchedule(schedule: string[]): string[] {
+  return [...schedule].sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b))
+}
+
+function scheduleToIndices(schedule: string[]): number[] {
+  return sortSchedule(schedule).map((d) => DAYS.indexOf(d)).filter((i) => i >= 0)
+}
+
+function indicesToSchedule(indices: number[]): string[] {
+  return sortSchedule([...indices].sort((a, b) => a - b).map((i) => DAYS[i]))
+}
+
 function loadSettings(): AppSettings {
-  try { const r = localStorage.getItem('mj_settings'); return r ? JSON.parse(r) : { wateringDays: [], pushNotifications: true, reminderTime: '09:00', isPro: false } }
-  catch { return { wateringDays: [], pushNotifications: true, reminderTime: '09:00', isPro: false } }
+  try {
+    const r = localStorage.getItem('mj_settings')
+    if (!r) return DEFAULT_SETTINGS
+    const parsed = JSON.parse(r) as Partial<AppSettings> & { wateringDays?: number[] }
+    const globalWaterSchedule = parsed.globalWaterSchedule?.length
+      ? sortSchedule(parsed.globalWaterSchedule)
+      : parsed.wateringDays?.length
+        ? indicesToSchedule(parsed.wateringDays)
+        : []
+    const hasCompletedOnboarding = parsed.hasCompletedOnboarding ?? globalWaterSchedule.length > 0
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      globalWaterSchedule,
+      hasCompletedOnboarding,
+    }
+  } catch {
+    return DEFAULT_SETTINGS
+  }
 }
 function saveSettings(s: AppSettings) { localStorage.setItem('mj_settings', JSON.stringify(s)) }
 
@@ -254,9 +303,20 @@ function SplashScreen({ onNext }: { onNext: () => void }) {
 // ─── Screen 2: Onboarding ─────────────────────────────────────────────────────
 
 function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave: (s: AppSettings) => void }) {
-  const [s, setS] = useState({ ...settings, wateringDays: [] as number[] })
+  const [selectedDays, setSelectedDays] = useState<number[]>([])
+  const [pushNotifications, setPushNotifications] = useState(settings.pushNotifications)
+
   function toggleDay(i: number) {
-    setS((p) => ({ ...p, wateringDays: p.wateringDays.includes(i) ? p.wateringDays.filter((x) => x !== i) : [...p.wateringDays, i] }))
+    setSelectedDays((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]))
+  }
+
+  function handleStart() {
+    onSave({
+      ...settings,
+      globalWaterSchedule: indicesToSchedule(selectedDays),
+      hasCompletedOnboarding: true,
+      pushNotifications,
+    })
   }
   return (
     <div
@@ -280,7 +340,7 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
 
       <div className="flex flex-col gap-1.5 flex-1 min-h-0 justify-center w-full">
         {DAYS.map((d, i) => {
-          const on = s.wateringDays.includes(i)
+          const on = selectedDays.includes(i)
           return (
             <button
               key={d}
@@ -308,13 +368,13 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
           <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Allow notifications for watering</span>
         </div>
         <div
-          onClick={() => setS((p) => ({ ...p, pushNotifications: !p.pushNotifications }))}
+          onClick={() => setPushNotifications((p) => !p)}
           className="relative cursor-pointer shrink-0"
           style={{ width: 66, height: 38 }}
         >
           <div style={{
             width: 64, height: 36, borderRadius: 18,
-            background: s.pushNotifications ? GREEN : 'white',
+            background: pushNotifications ? GREEN : 'white',
             border: '2px solid black',
             position: 'relative', margin: '1px',
             transition: 'background .2s',
@@ -322,10 +382,10 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
             <div style={{
               position: 'absolute',
               top: 2,
-              left: s.pushNotifications ? 30 : 2,
+              left: pushNotifications ? 30 : 2,
               width: 26, height: 26,
               borderRadius: 13,
-              background: s.pushNotifications ? BLACK : '#D9D9D9',
+              background: pushNotifications ? BLACK : '#D9D9D9',
               border: '2px solid black',
               transition: 'left .2s',
             }} />
@@ -335,7 +395,7 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
 
       <button
         type="button"
-        onClick={() => onSave(s)}
+        onClick={handleStart}
         className="btn-primary btn-green flex w-full shrink-0 items-center justify-center rounded-full border-2 border-black cursor-pointer"
         style={{ background: GREEN, height: 52 }}
       >
@@ -397,9 +457,9 @@ function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
   const startX = useRef(0)
   const [swiped, setSwiped] = useState(false)
   const waterNeedCount = plant.waterNeed === 'Heavy' ? 3 : plant.waterNeed === 'Moderate' ? 2 : 1
-  // watered: mint-green card bg + white btn + green droplet
-  // unwatered: white card bg + green btn + black checkmark
-  const cardBg = plant.watered ? WATERED_BG : 'white'
+  // isWateredToday: mint-green card bg + white btn + green droplet
+  // unisWateredToday: white card bg + green btn + black checkmark
+  const cardBg = plant.isWateredToday ? WATERED_BG : 'white'
 
   return (
     <div className="neo-plant-card relative rounded-2xl overflow-hidden shrink-0">
@@ -451,10 +511,10 @@ function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
           type="button"
           onClick={(e) => { e.stopPropagation(); onWater() }}
           className="ml-auto shrink-0 flex items-center justify-center rounded-full border-2 border-black size-10 cursor-pointer active:scale-90 transition-all"
-          style={{ background: plant.watered ? 'white' : GREEN }}
-          aria-label={plant.watered ? 'Plant watered' : 'Mark as watered'}
+          style={{ background: plant.isWateredToday ? 'white' : GREEN }}
+          aria-label={plant.isWateredToday ? 'Plant watered' : 'Mark as watered'}
         >
-          {plant.watered ? (
+          {plant.isWateredToday ? (
             <svg fill="none" height="18" viewBox="7 5.5 14 18" width="14">
               <path d={svgPaths2.p64f2600} fill={GREEN} />
             </svg>
@@ -475,7 +535,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
   plants: Plant[]; settings: AppSettings; onSelectPlant: (p: Plant) => void;
   onDeletePlant: (id: string) => void; onWaterPlant: (id: string) => void; onGoAdd: () => void; onSettings: () => void; onShowPro: () => void; todayIdx: number
 }) {
-  const needsWater = plants.filter((p) => p.wateringDays.includes(todayIdx) && !p.watered)
+  const needsWater = plants.filter((p) => p.wateringDays.includes(todayIdx) && !p.isWateredToday)
 
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
@@ -545,21 +605,100 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
   )
 }
 
+// ─── Free Tier Card ───────────────────────────────────────────────────────────
+
+function AddPlantForm({
+  currentPlantCount,
+  onUpgrade,
+}: {
+  currentPlantCount: number
+  onUpgrade: () => void
+}) {
+  const isLimitReached = currentPlantCount >= MAX_FREE_PLANTS
+  const remainingSlots = Math.max(0, MAX_FREE_PLANTS - currentPlantCount)
+  const progressPercentage = (currentPlantCount / MAX_FREE_PLANTS) * 100
+
+  return (
+    <div className="free-tier-card w-full">
+      <div className="free-tier-header">
+        <span className="font-display font-bold" style={{ fontSize: 10, color: '#000' }}>FREE TIER</span>
+        <div className="plants-used-badge">
+          {currentPlantCount}/{MAX_FREE_PLANTS} PLANTS USED
+        </div>
+      </div>
+
+      <div className="progress-bar-track">
+        <div
+          className="progress-bar-fill"
+          style={{ width: `${progressPercentage}%` }}
+        />
+      </div>
+
+      <p className="text-sm text-gray-500" style={{ fontFamily: 'Geist, sans-serif' }}>
+        {isLimitReached ? (
+          <span className="font-bold" style={{ color: RED }}>Limit reached. </span>
+        ) : (
+          `${remainingSlots} slots remaining. `
+        )}
+        <button
+          type="button"
+          onClick={onUpgrade}
+          className="underline font-bold text-black cursor-pointer bg-transparent border-0 p-0"
+          style={{ fontFamily: 'Geist, sans-serif', fontSize: 'inherit' }}
+        >
+          Upgrade to add unlimited plants
+        </button>
+      </p>
+    </div>
+  )
+}
+
+function FreeTierCard({
+  title,
+  plantsUsed,
+  plantsMax,
+  footer,
+}: {
+  title: string
+  plantsUsed: number
+  plantsMax: number
+  footer: React.ReactNode
+}) {
+  const fillPct = Math.min(plantsUsed / plantsMax, 1)
+  return (
+    <div className="free-tier-card w-full">
+      <div className="free-tier-header">
+        <span className="font-display" style={{ fontSize: 10, color: '#000' }}>{title}</span>
+        <span className="plants-used-badge">{plantsUsed}/{plantsMax} PLANTS USED</span>
+      </div>
+      <div className="progress-bar-track">
+        <div className="progress-bar-fill" style={{ width: `${fillPct * 100}%` }} />
+      </div>
+      <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>
+        {footer}
+      </div>
+    </div>
+  )
+}
+
 // ─── Screen 5: Add New ───────────────────────────────────────────────────────
 
-function AddScreen({ plants, settings, onSave, onCancel }: {
-  plants: Plant[]; settings: AppSettings; onSave: (p: Plant) => void; onCancel: () => void
+function AddScreen({ plants, settings, onSave, onCancel, onUpgrade }: {
+  plants: Plant[]; settings: AppSettings; onSave: (p: Plant) => void; onCancel: () => void; onUpgrade: () => void
 }) {
+  const globalIndices = scheduleToIndices(settings.globalWaterSchedule)
   const [name, setName] = useState('')
   const [room, setRoom] = useState('')
   const [note, setNote] = useState('')
-  const [days, setDays] = useState<number[]>([0, 3])
+  const [days, setDays] = useState<number[]>(globalIndices)
+  const [extraDaysUnlocked, setExtraDaysUnlocked] = useState(false)
   const [waterNeed, setWaterNeed] = useState<WaterNeed>('Moderate')
-  const canAdd = settings.isPro || plants.length < FREE_LIMIT
-  const slotsLeft = FREE_LIMIT - plants.length
+  const canAdd = settings.isPro || plants.length < MAX_FREE_PLANTS
 
   function toggleDay(i: number) {
-    setDays((p) => p.includes(i) ? p.filter((x) => x !== i) : [...p, i])
+    const inGlobal = globalIndices.includes(i)
+    if (!extraDaysUnlocked && !inGlobal) return
+    setDays((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]))
   }
 
   function save() {
@@ -567,7 +706,7 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
     onSave({
       id: Date.now().toString(), name: name.trim(), room: room || 'Unknown', careNote: note,
       wateringDays: days, waterNeed, photo: PLANT_PHOTOS[Math.floor(Math.random() * PLANT_PHOTOS.length)],
-      lastWatered: null, history: [], watered: false,
+      lastWateredAt: null, previousWateredAt: null, history: [], isWateredToday: false,
     })
   }
 
@@ -664,12 +803,16 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
             <div className="flex flex-col gap-[7px] w-full">
               {DAYS.map((d, i) => {
                 const on = days.includes(i)
+                const inGlobal = globalIndices.includes(i)
+                const disabled = !extraDaysUnlocked && !inGlobal
                 return (
                   <button
                     key={d}
+                    type="button"
                     onClick={() => toggleDay(i)}
-                    className="neo-pill relative w-full cursor-pointer active:scale-[0.99] transition-all"
-                    style={{ background: on ? GREEN : 'white' }}
+                    disabled={disabled}
+                    className={`neo-pill relative w-full transition-all ${disabled ? 'opacity-40 cursor-not-allowed bg-gray-200' : 'cursor-pointer active:scale-[0.99]'}`}
+                    style={{ background: on ? GREEN : disabled ? undefined : 'white' }}
                   >
                     <div className="flex items-center justify-between px-[20px] py-[6px]">
                       <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</span>
@@ -685,6 +828,14 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
                 )
               })}
             </div>
+            <button
+              type="button"
+              onClick={() => setExtraDaysUnlocked(true)}
+              className="text-left cursor-pointer underline"
+              style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#000' }}
+            >
+              Modify schedule / Enable extra days for this plant
+            </button>
           </div>
 
           {/* Water needs segmented */}
@@ -723,22 +874,10 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
 
           {/* Free tier bar */}
           {!settings.isPro && (
-            <div className="overflow-clip relative rounded-2xl w-full border-2 border-black" style={{ height: 109 }}>
-              <span className="font-display" style={{ fontSize: 10, color: '#000', position: 'absolute', left: 14, top: 27 }}>FREE TIER</span>
-              <span className="badge" style={{ fontSize: 11, color: '#888', position: 'absolute', right: 14, top: 27 }}>{plants.length}/{FREE_LIMIT} PLANTS USED</span>
-              {/* Progress track */}
-              <div className="absolute rounded-full" style={{ background: BG, border: '2px solid black', height: 10, left: 14, top: 50, width: 326 }} />
-              {/* Progress fill */}
-              <div className="absolute rounded-full" style={{ background: GREEN, border: '2px solid black', height: 10, left: 14, top: 50, width: Math.round((plants.length / FREE_LIMIT) * 326) }} />
-              {/* Slots remaining text */}
-              <div style={{ position: 'absolute', left: 14, top: 70 }}>
-                <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>{slotsLeft} slots remaining. </span>
-                <span
-                  onClick={() => {}}
-                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 11, color: '#040404', textDecoration: 'underline', cursor: 'pointer' }}
-                >Upgrade to add unlimited plants</span>
-              </div>
-            </div>
+            <AddPlantForm
+              currentPlantCount={plants.length}
+              onUpgrade={onUpgrade}
+            />
           )}
 
           {/* Save button */}
@@ -776,7 +915,7 @@ function AddScreen({ plants, settings, onSave, onCancel }: {
 function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }: {
   plant: Plant; onBack: () => void; onDelete: () => void; onMarkWatered: () => void; todayIdx: number
 }) {
-  const needsWater = plant.wateringDays.includes(todayIdx) && !plant.watered
+  const needsWater = plant.wateringDays.includes(todayIdx) && !plant.isWateredToday
   const waterFills = plant.waterNeed === 'Heavy' ? 3 : plant.waterNeed === 'Moderate' ? 2 : 1
 
   function formatDetailDate(iso: string) {
@@ -870,7 +1009,7 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
                 <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
                   <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Last Watered</span>
                   <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>
-                    {plant.lastWatered ? formatDetailDate(plant.lastWatered) : 'Never'}
+                    {plant.lastWateredAt ? formatDetailDate(plant.lastWateredAt) : 'Never'}
                   </span>
                 </div>
 
@@ -981,14 +1120,14 @@ function PlantDetailScreen({ plant, onBack, onDelete, onMarkWatered, todayIdx }:
 
 // ─── Screen 7: Watering ───────────────────────────────────────────────────────
 
-function WateringScreen({ plants, todayIdx, onMarkWatered, onMarkAll }: {
-  plants: Plant[]; todayIdx: number; onMarkWatered: (id: string) => void; onMarkAll: () => void
+function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, onMarkAll }: {
+  plants: Plant[]; globalWaterSchedule: string[]; todayIdx: number; onMarkWatered: (id: string) => void; onMarkAll: () => void
 }) {
-  const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
+  const scheduleDays = scheduleToIndices(globalWaterSchedule)
   const grouped: Record<number, Plant[]> = {}
   plants.forEach((p) => p.wateringDays.forEach((d) => { if (!grouped[d]) grouped[d] = []; grouped[d].push(p) }))
 
-  const totalUnwatered = Object.values(grouped).flat().filter((p) => !p.watered).length
+  const totalUnwatered = Object.values(grouped).flat().filter((p) => !p.isWateredToday).length
 
   const waterNeedFills = (need: WaterNeed) => need === 'Light' ? 1 : need === 'Moderate' ? 2 : 3
 
@@ -1012,7 +1151,7 @@ function WateringScreen({ plants, todayIdx, onMarkWatered, onMarkAll }: {
       </div>
       {/* Scrollable list */}
       <div className="flex-1 overflow-y-auto pb-4 flex flex-col gap-5">
-        {ALL_DAYS.map((di) => {
+        {scheduleDays.map((di) => {
           const dayPlants = grouped[di] || []
           const dayName = DAY_NAMES[di].toUpperCase()
           return (
@@ -1027,7 +1166,7 @@ function WateringScreen({ plants, todayIdx, onMarkWatered, onMarkAll }: {
                 const fills = waterNeedFills(p.waterNeed)
                 return (
                   <div key={p.id} className="neo-plant-card relative rounded-2xl shrink-0 w-full overflow-hidden"
-                    style={{ background: p.watered ? WATERED_BG : 'white' }}
+                    style={{ background: p.isWateredToday ? WATERED_BG : 'white' }}
                   >
                     <div className="flex items-center gap-3 px-4 py-3 w-full">
                       {/* Thumbnail */}
@@ -1067,10 +1206,10 @@ function WateringScreen({ plants, todayIdx, onMarkWatered, onMarkAll }: {
                         type="button"
                         onClick={() => onMarkWatered(p.id)}
                         className="ml-auto shrink-0 flex items-center justify-center rounded-full size-10 cursor-pointer active:scale-90 transition-all border-2 border-black"
-                        style={{ background: p.watered ? 'white' : GREEN }}
-                        aria-label={p.watered ? 'Plant watered' : 'Mark as watered'}
+                        style={{ background: p.isWateredToday ? 'white' : GREEN }}
+                        aria-label={p.isWateredToday ? 'Plant watered' : 'Mark as watered'}
                       >
-                        {p.watered ? (
+                        {p.isWateredToday ? (
                           <svg fill="none" height="27" viewBox="0 0 27 27" width="27">
                             <path d={svgBatch.p64f2600} fill={GREEN} stroke="black" strokeLinecap="round" strokeWidth="2" />
                           </svg>
@@ -1182,12 +1321,19 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
   useEffect(() => { onSave(s) }, [s])
 
   function toggleDay(i: number) {
-    setS((p) => ({ ...p, wateringDays: p.wateringDays.includes(i) ? p.wateringDays.filter((x) => x !== i) : [...p.wateringDays, i] }))
+    const day = DAYS[i]
+    setS((p) => ({
+      ...p,
+      globalWaterSchedule: sortSchedule(
+        p.globalWaterSchedule.includes(day)
+          ? p.globalWaterSchedule.filter((d) => d !== day)
+          : [...p.globalWaterSchedule, day]
+      ),
+    }))
   }
 
   const plantsUsed = plants.length
-  const plantsMax = 5
-  const fillPct = Math.min(plantsUsed / plantsMax, 1)
+  const plantsMax = MAX_FREE_PLANTS
 
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
@@ -1217,7 +1363,7 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
             <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Choose which days you&apos;d like to water</p>
             <div className="flex items-start justify-between w-full">
               {DAYS.map((d, i) => {
-                const on = s.wateringDays.includes(i)
+                const on = s.globalWaterSchedule.includes(d)
                 return (
                   <button key={d} onClick={() => toggleDay(i)}
                     className="neo-pill relative flex flex-col gap-1 items-center py-[10px] shrink-0 w-[44px] cursor-pointer active:scale-95 transition-all"
@@ -1340,21 +1486,16 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
           <p className="section-header" style={{ fontSize: 14 }}>MY JUNGLE PRO STATUS</p>
           <div className="flex flex-col gap-2 py-3 w-full">
             {/* Free tier card */}
-            <div className="neo-card relative rounded-2xl w-full" style={{ height: 109 }}>
-              <p className="absolute" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', left: 14, top: 27 }}>
-                {s.isPro ? 'PRO MEMBER' : 'FREE TIER'}
-              </p>
-              <p className="absolute" style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 11, color: '#888', right: 14, top: 27 }}>
-                {plantsUsed}/{plantsMax} PLANTS USED
-              </p>
-              {/* Progress bar background */}
-              <div className="absolute bg-[#F7F7F7] border-2 border-black rounded-full" style={{ height: 10, left: 14, top: 50, width: 326 }} />
-              {/* Progress bar fill */}
-              <div className="absolute border-2 border-black rounded-full" style={{ background: GREEN, height: 10, left: 14, top: 50, width: Math.round(326 * fillPct) }} />
-              <p className="absolute" style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888', left: 14, top: 70 }}>
-                {s.isPro ? 'Unlimited plants · All features unlocked.' : `${plantsMax - plantsUsed} plants slot remaining on free tier.`}
-              </p>
-            </div>
+            <FreeTierCard
+              title={s.isPro ? 'PRO MEMBER' : 'FREE TIER'}
+              plantsUsed={plantsUsed}
+              plantsMax={plantsMax}
+              footer={
+                s.isPro
+                  ? 'Unlimited plants · All features unlocked.'
+                  : `${plantsMax - plantsUsed} plants slot remaining on free tier.`
+              }
+            />
             {/* Unlock button */}
             {!s.isPro && (
               <button type="button" onClick={onShowPro}
@@ -1400,19 +1541,67 @@ export default function App() {
     setScreen('main'); setSelectedPlant(null)
   }
 
-  function handleWaterPlant(id: string) {
-    const iso = todayISO()
-    setPlants((prev) => prev.map((p) =>
-      p.id === id ? { ...p, watered: true, lastWatered: iso, history: [{ id: Date.now().toString(), date: iso, note: 'Watered.', photo: p.photo }, ...p.history] } : p
-    ))
-    if (selectedPlant?.id === id) setSelectedPlant((p) => p ? { ...p, watered: true, lastWatered: iso } : p)
+  function handleWaterToggle(plantId: string) {
+    setPlants((prevPlants) =>
+      prevPlants.map((plant) => {
+        if (plant.id !== plantId) return plant
+
+        if (plant.isWateredToday) {
+          const wateredAt = plant.lastWateredAt
+          const history = wateredAt && plant.history[0]?.date === wateredAt && plant.history[0]?.note === 'Watered.'
+            ? plant.history.slice(1)
+            : plant.history
+          return {
+            ...plant,
+            isWateredToday: false,
+            lastWateredAt: plant.previousWateredAt,
+            previousWateredAt: null,
+            history,
+          }
+        }
+
+        const now = new Date().toISOString()
+        return {
+          ...plant,
+          isWateredToday: true,
+          previousWateredAt: plant.lastWateredAt,
+          lastWateredAt: now,
+          history: [{ id: Date.now().toString(), date: now, note: 'Watered.', photo: plant.photo }, ...plant.history],
+        }
+      })
+    )
+    setSelectedPlant((p) => {
+      if (!p || p.id !== plantId) return p
+      if (p.isWateredToday) {
+        const wateredAt = p.lastWateredAt
+        const history = wateredAt && p.history[0]?.date === wateredAt && p.history[0]?.note === 'Watered.'
+          ? p.history.slice(1)
+          : p.history
+        return { ...p, isWateredToday: false, lastWateredAt: p.previousWateredAt, previousWateredAt: null, history }
+      }
+      const now = new Date().toISOString()
+      return {
+        ...p,
+        isWateredToday: true,
+        previousWateredAt: p.lastWateredAt,
+        lastWateredAt: now,
+        history: [{ id: Date.now().toString(), date: now, note: 'Watered.', photo: p.photo }, ...p.history],
+      }
+    })
   }
 
   function handleMarkAll() {
-    const iso = todayISO()
-    setPlants((prev) => prev.map((p) =>
-      p.wateringDays.includes(todayIdx) ? { ...p, watered: true, lastWatered: iso, history: [{ id: Date.now().toString(), date: iso, note: 'Watered.', photo: p.photo }, ...p.history] } : p
-    ))
+    setPlants((prev) => prev.map((p) => {
+      if (!p.wateringDays.includes(todayIdx) || p.isWateredToday) return p
+      const now = new Date().toISOString()
+      return {
+        ...p,
+        isWateredToday: true,
+        previousWateredAt: p.lastWateredAt,
+        lastWateredAt: now,
+        history: [{ id: Date.now().toString(), date: now, note: 'Watered.', photo: p.photo }, ...p.history],
+      }
+    }))
   }
 
   function handleExport() {
@@ -1425,7 +1614,8 @@ export default function App() {
   function handleReset() {
     if (window.confirm('Reset all app data?')) {
       localStorage.clear(); setPlants(SEED_PLANTS)
-      setSettings({ wateringDays: [], pushNotifications: true, reminderTime: '09:00', isPro: false })
+      setSettings({ ...DEFAULT_SETTINGS })
+      setScreen('onboarding')
     }
   }
 
@@ -1433,7 +1623,7 @@ export default function App() {
   let content: React.ReactNode
 
   if (screen === 'splash') {
-    content = <SplashScreen onNext={() => setScreen('onboarding')} />
+    content = <SplashScreen onNext={() => setScreen(settings.hasCompletedOnboarding ? 'main' : 'onboarding')} />
   } else if (screen === 'onboarding') {
     content = <OnboardingScreen settings={settings} onSave={(s) => { handleSaveSettings(s); setScreen('main') }} />
   } else if (screen === 'pro') {
@@ -1464,7 +1654,7 @@ export default function App() {
         plant={live} todayIdx={todayIdx}
         onBack={() => { setScreen('main'); setSelectedPlant(null) }}
         onDelete={() => handleDeletePlant(live.id)}
-        onMarkWatered={() => handleWaterPlant(live.id)}
+        onMarkWatered={() => handleWaterToggle(live.id)}
       />
     )
   } else {
@@ -1476,16 +1666,16 @@ export default function App() {
           plants={plants} settings={settings} todayIdx={todayIdx}
           onSelectPlant={(p) => { setSelectedPlant(p); setScreen('detail') }}
           onDeletePlant={handleDeletePlant}
-          onWaterPlant={handleWaterPlant}
+          onWaterPlant={handleWaterToggle}
           onGoAdd={() => setTab('add')}
           onSettings={() => setScreen('settings')}
           onShowPro={() => { setTab('settings'); setScreen('main') }}
         />
       )
     } else if (tab === 'add') {
-      tabContent = <AddScreen plants={plants} settings={settings} onSave={handleAddPlant} onCancel={() => setTab('home')} />
+      tabContent = <AddScreen plants={plants} settings={settings} onSave={handleAddPlant} onCancel={() => setTab('home')} onUpgrade={() => setScreen('pro')} />
     } else if (tab === 'watering') {
-      tabContent = <WateringScreen plants={plants} todayIdx={todayIdx} onMarkWatered={handleWaterPlant} onMarkAll={handleMarkAll} />
+      tabContent = <WateringScreen plants={plants} globalWaterSchedule={settings.globalWaterSchedule} todayIdx={todayIdx} onMarkWatered={handleWaterToggle} onMarkAll={handleMarkAll} />
     } else {
       tabContent = (
         <ProPaywallScreen
