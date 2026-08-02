@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { submitFeedback } from '@/lib/submitFeedback'
+import { compressImageDataUrl, loadPlantsFromStorage, savePlantsToStorage } from '@/lib/plantStorage'
+import type { AppSettings, DayCode, DayOfWeek, HistoryEntry, Plant, WaterNeed } from '@/types/plant'
 import svgPaths from '@/imports/NewDesign2-1/svg-cm3nd9oy62'
 import svgPaths2 from '@/imports/MyjungleSettimgs-2/svg-u9kpmn74e6'
 import svgAdd from '@/imports/MyjungleAddPlant/svg-fer892chf7'
@@ -14,48 +16,8 @@ import plantImg1 from '@/imports/MyjungleSettimgs-2/a629e756f91539ad0cd6c99c620a
 import plantImg2 from '@/imports/MyjungleSettimgs-2/c1e26fe342a3e4cbf5b479e973ae60ebe8c1d81e.png'
 import plantImg3 from '@/imports/MyjungleSettimgs-2/f9057e3acb1771233585613c769e96893a7e8d76.png'
 
-type WaterNeed = 'Light' | 'Moderate' | 'Heavy'
 type Screen = 'splash' | 'onboarding' | 'main' | 'detail' | 'pro' | 'settings'
 type TabScreen = 'home' | 'add' | 'watering' | 'settings'
-
-interface HistoryEntry {
-  id: string
-  date: string
-  note: string
-  photo: string
-  heightCm?: number
-}
-
-type DayCode = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN'
-type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'
-
-interface Plant {
-  id: string
-  name: string
-  room: string
-  careNote: string
-  wateringDays: number[]
-  isCustomSchedule: boolean
-  scheduleDays: DayCode[]
-  waterNeed: WaterNeed
-  photo: string
-  lastWateredAt: string | null
-  previousWateredAt: string | null
-  history: HistoryEntry[]
-  isWateredToday: boolean
-}
-
-interface AppSettings {
-  globalWaterSchedule: string[]
-  hasCompletedOnboarding: boolean
-  pushNotifications: boolean
-  reminderTime: string
-  soundAlerts: boolean
-  hapticFeedback: boolean
-  timezoneAutoSync: boolean
-  timezone: string
-  isPro: boolean
-}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -85,13 +47,24 @@ const DEFAULT_SETTINGS: AppSettings = {
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
 function loadPlants(): Plant[] {
-  try {
-    const r = localStorage.getItem('mj_plants')
-    const raw = r ? JSON.parse(r) : []
-    return (raw as Array<Plant & { watered?: boolean; lastWatered?: string | null }>).map(normalizePlant)
-  } catch { return [] }
+  return loadPlantsFromStorage(normalizePlant)
 }
-function savePlants(p: Plant[]) { localStorage.setItem('mj_plants', JSON.stringify(p)) }
+
+function savePlants(p: Plant[]): ReturnType<typeof savePlantsToStorage> {
+  return savePlantsToStorage(p)
+}
+
+function saveSettings(s: AppSettings) {
+  try {
+    localStorage.setItem('mj_settings', JSON.stringify(s))
+  } catch (error) {
+    console.error('[myJungle] Failed to save settings:', error)
+  }
+}
+
+function plantHistory(plant: Plant): HistoryEntry[] {
+  return Array.isArray(plant.history) ? plant.history : []
+}
 
 function sortSchedule(schedule: readonly string[]): DayCode[] {
   return [...schedule]
@@ -114,15 +87,26 @@ function scheduleIndicesFromPlant(plant: Pick<Plant, 'wateringDays' | 'scheduleD
 
 function normalizePlant(raw: Plant & { watered?: boolean; lastWatered?: string | null; isCustomSchedule?: boolean; scheduleDays?: DayCode[] }): Plant {
   const wateringDays = [...(raw.wateringDays ?? [])].sort((a, b) => a - b)
-  const scheduleDays = raw.scheduleDays?.length ? sortSchedule(raw.scheduleDays) as DayCode[] : indicesToSchedule(wateringDays)
+  const scheduleDays = raw.scheduleDays?.length ? sortSchedule(raw.scheduleDays) : indicesToSchedule(wateringDays)
+  const waterNeed: WaterNeed = raw.waterNeed === 'Light' || raw.waterNeed === 'Heavy' ? raw.waterNeed : 'Moderate'
+  const photo = typeof raw.photo === 'string' && raw.photo.length > 0
+    ? raw.photo
+    : PLANT_PHOTOS[Math.floor(Math.random() * PLANT_PHOTOS.length)]
+
   return {
-    ...raw,
+    id: String(raw.id ?? Date.now()),
+    name: raw.name?.trim() || 'Unnamed Plant',
+    room: raw.room?.trim() || 'Unknown',
+    careNote: raw.careNote ?? '',
     wateringDays: scheduleToIndices(scheduleDays),
     scheduleDays,
     isCustomSchedule: raw.isCustomSchedule ?? false,
-    isWateredToday: raw.isWateredToday ?? raw.watered ?? false,
+    waterNeed,
+    photo,
     lastWateredAt: raw.lastWateredAt ?? raw.lastWatered ?? null,
     previousWateredAt: raw.previousWateredAt ?? null,
+    history: Array.isArray(raw.history) ? raw.history : [],
+    isWateredToday: raw.isWateredToday ?? raw.watered ?? false,
   }
 }
 
@@ -149,7 +133,6 @@ function loadSettings(): AppSettings {
     return DEFAULT_SETTINGS
   }
 }
-function saveSettings(s: AppSettings) { localStorage.setItem('mj_settings', JSON.stringify(s)) }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
@@ -568,7 +551,7 @@ function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
           <div className="flex flex-wrap gap-1">
             <span className="badge px-1.5 py-0.5" style={{ background: BG, fontSize: 9, color: '#000' }}>{plant.room}</span>
             <span className="badge px-1.5 py-0.5" style={{ background: GREEN, fontSize: 9, color: '#000' }}>
-              {plant.wateringDays.map((d) => DAYS[d]).join(' & ')}
+              {plant.wateringDays.map((d) => DAYS[d]).filter(Boolean).join(' & ') || '—'}
             </span>
           </div>
           <div className="flex gap-1 items-end" style={{ height: 16 }}>
@@ -656,7 +639,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
               <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', marginTop: 12 }}>No plants yet. Tap below to add one!</div>
             </div>
           ) : (
-            <div className="flex flex-col gap-2 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 w-full">
               {plants.map((p) => (
                 <PlantCard key={p.id} plant={p} onTap={() => onSelectPlant(p)} onDelete={() => onDeletePlant(p.id)} onWater={() => onWaterPlant(p.id)} todayIdx={todayIdx} />
               ))}
@@ -1031,6 +1014,8 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   const [waterNeed, setWaterNeed] = useState<WaterNeed>('Moderate')
   const [photo, setPhoto] = useState<string | null>(null)
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const canAdd = settings.isPro || plants.length < MAX_FREE_PLANTS
@@ -1083,15 +1068,41 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     setShowScheduleModal(false)
   }
 
-  function save() {
-    if (!name.trim() || days.length === 0) return
-    const scheduleDays = indicesToSchedule(days)
-    onSave({
-      id: Date.now().toString(), name: name.trim(), room: room || 'Unknown', careNote: note,
-      wateringDays: scheduleToIndices(scheduleDays), scheduleDays, isCustomSchedule,
-      waterNeed, photo: photo ?? PLANT_PHOTOS[Math.floor(Math.random() * PLANT_PHOTOS.length)],
-      lastWateredAt: null, previousWateredAt: null, history: [], isWateredToday: false,
-    })
+  async function save() {
+    if (!name.trim() || days.length === 0 || !canAdd || saving) return
+    setSaveError(null)
+    setSaving(true)
+
+    try {
+      let photoUrl = photo ?? PLANT_PHOTOS[Math.floor(Math.random() * PLANT_PHOTOS.length)]
+      if (photo?.startsWith('data:')) {
+        photoUrl = await compressImageDataUrl(photo)
+      }
+
+      const scheduleDays = indicesToSchedule(days)
+      const newPlant: Plant = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        name: name.trim(),
+        room: room.trim() || 'Unknown',
+        careNote: note,
+        wateringDays: scheduleToIndices(scheduleDays),
+        scheduleDays,
+        isCustomSchedule,
+        waterNeed,
+        photo: photoUrl,
+        lastWateredAt: null,
+        previousWateredAt: null,
+        history: [],
+        isWateredToday: false,
+      }
+
+      onSave(newPlant)
+    } catch (error) {
+      console.error('[myJungle] Save plant failed:', error)
+      setSaveError('Could not save this plant. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const dropletPath = svgAdd.p13e3d5f0
@@ -1281,15 +1292,22 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
           )}
 
           {/* Save button */}
-          <div className="flex w-full pt-[8px]">
+          <div className="flex flex-col gap-2 w-full pt-[8px]">
+            {saveError && (
+              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: RED }} role="alert">
+                {saveError}
+              </p>
+            )}
             <button
               type="button"
-              onClick={save}
-              disabled={!name.trim() || !canAdd || days.length === 0}
+              onClick={() => { void save() }}
+              disabled={!name.trim() || !canAdd || days.length === 0 || saving}
               className="btn-primary btn-green flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer disabled:opacity-40"
               style={{ background: GREEN, height: 56 }}
             >
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>SAVE TO JUNGLE</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
+                {saving ? 'SAVING…' : 'SAVE TO JUNGLE'}
+              </span>
             </button>
           </div>
 
@@ -1351,7 +1369,7 @@ function getPlantAgeDays(plant: Plant): number {
 }
 
 function getWateringCount(plant: Plant): number {
-  return plant.history.filter((h) => h.note.toLowerCase().includes('water')).length
+  return plantHistory(plant).filter((h) => h.note.toLowerCase().includes('water')).length
 }
 
 function getConsistencyScore(plant: Plant): number {
@@ -1364,7 +1382,7 @@ function getConsistencyScore(plant: Plant): number {
 }
 
 function getGrowthHeights(plant: Plant): { start: number; current: number; delta: number } {
-  const withHeight = [...plant.history]
+  const withHeight = plantHistory(plant)
     .filter((h) => h.heightCm != null)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   if (withHeight.length >= 1) {
@@ -1373,13 +1391,13 @@ function getGrowthHeights(plant: Plant): { start: number; current: number; delta
     return { start, current, delta: Math.round((current - start) * 10) / 10 }
   }
   const base = 12
-  const growth = Math.max(plant.history.length, 1) * 0.8
+  const growth = Math.max(plantHistory(plant).length, 1) * 0.8
   const current = Math.round((base + growth) * 10) / 10
   return { start: base, current, delta: Math.round((current - base) * 10) / 10 }
 }
 
 function getGrowthTimeline(plant: Plant) {
-  const sorted = [...plant.history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  const sorted = [...plantHistory(plant)].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   const baseHeight = getGrowthHeights(plant).current
   return sorted.map((entry, idx) => ({
     ...entry,
@@ -1413,7 +1431,7 @@ function getHealthScore(plant: Plant, todayIdx: number): number {
   if (plant.isWateredToday || !plant.wateringDays.includes(todayIdx)) score += 14
   if (plant.lastWateredAt) score += 8
   if (plant.careNote.trim()) score += 5
-  if (plant.history.length > 0) score += 5
+  if (plantHistory(plant).length > 0) score += 5
   return Math.min(92, score)
 }
 
@@ -1888,7 +1906,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
             note: growthNote.trim() || 'Growth snapshot logged.',
             photo: reader.result,
             heightCm: height,
-          }, ...plant.history],
+          }, ...plantHistory(plant)],
         })
         setGrowthNote('')
         setGrowthHeight('')
@@ -1902,7 +1920,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
             note: 'New growth snapshot.',
             photo: reader.result,
             heightCm: growthHeight ? Number(growthHeight) : getGrowthHeights(plant).current,
-          }, ...plant.history],
+          }, ...plantHistory(plant)],
         })
         setShowPhotoPicker(false)
       } else {
@@ -1981,7 +1999,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
         note: growthNote.trim() || 'Growth check logged.',
         photo: plant.photo,
         heightCm: growthHeight ? Number(growthHeight) : getGrowthHeights(plant).current,
-      }, ...plant.history],
+      }, ...plantHistory(plant)],
     })
     setGrowthNote('')
     setGrowthHeight('')
@@ -1996,7 +2014,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
         date: new Date().toISOString(),
         note: 'Health check recorded.',
         photo: plant.photo,
-      }, ...plant.history],
+      }, ...plantHistory(plant)],
     })
     setShowRecordHealth(false)
   }
@@ -2880,10 +2898,15 @@ export default function App() {
   const [plants, setPlants] = useState<Plant[]>(loadPlants)
   const [settings, setSettings] = useState<AppSettings>(loadSettings)
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null)
+  const [storageError, setStorageError] = useState<string | null>(null)
   const todayIdx = useTodayDayIndex()
   const todayIdxSafe = todayIdx ?? -1
 
-  useEffect(() => { savePlants(plants) }, [plants])
+  useEffect(() => {
+    const result = savePlants(plants)
+    if (!result.ok) setStorageError(result.error)
+    else setStorageError(null)
+  }, [plants])
   useEffect(() => { saveSettings(settings) }, [settings])
 
   useEffect(() => {
@@ -2895,7 +2918,21 @@ export default function App() {
 
   function handleSaveSettings(s: AppSettings) { setSettings(s) }
 
-  function handleAddPlant(p: Plant) { setPlants((prev) => [...prev, p]); setTab('home') }
+  function handleAddPlant(p: Plant) {
+    try {
+      if (!settings.isPro && plants.length >= MAX_FREE_PLANTS) {
+        console.error('[myJungle] Free tier plant limit reached')
+        setStorageError('Free tier limit reached. Upgrade to Pro to add more plants.')
+        return
+      }
+      const normalized = normalizePlant(p)
+      setPlants((prev) => [...prev, normalized])
+      setTab('home')
+    } catch (error) {
+      console.error('[myJungle] handleAddPlant failed:', error)
+      setStorageError('Could not add plant. Please try again.')
+    }
+  }
 
   function handleDeletePlant(id: string) {
     setPlants((prev) => prev.filter((p) => p.id !== id))
@@ -2914,9 +2951,10 @@ export default function App() {
 
         if (plant.isWateredToday) {
           const wateredAt = plant.lastWateredAt
-          const history = wateredAt && plant.history[0]?.date === wateredAt && plant.history[0]?.note === 'Watered.'
-            ? plant.history.slice(1)
-            : plant.history
+          const existingHistory = plantHistory(plant)
+          const history = wateredAt && existingHistory[0]?.date === wateredAt && existingHistory[0]?.note === 'Watered.'
+            ? existingHistory.slice(1)
+            : existingHistory
           return {
             ...plant,
             isWateredToday: false,
@@ -2932,7 +2970,7 @@ export default function App() {
           isWateredToday: true,
           previousWateredAt: plant.lastWateredAt,
           lastWateredAt: now,
-          history: [{ id: Date.now().toString(), date: now, note: 'Watered.', photo: plant.photo }, ...plant.history],
+          history: [{ id: Date.now().toString(), date: now, note: 'Watered.', photo: plant.photo }, ...plantHistory(plant)],
         }
       })
     )
@@ -2940,9 +2978,10 @@ export default function App() {
       if (!p || p.id !== plantId) return p
       if (p.isWateredToday) {
         const wateredAt = p.lastWateredAt
-        const history = wateredAt && p.history[0]?.date === wateredAt && p.history[0]?.note === 'Watered.'
-          ? p.history.slice(1)
-          : p.history
+        const existingHistory = plantHistory(p)
+        const history = wateredAt && existingHistory[0]?.date === wateredAt && existingHistory[0]?.note === 'Watered.'
+          ? existingHistory.slice(1)
+          : existingHistory
         return { ...p, isWateredToday: false, lastWateredAt: p.previousWateredAt, previousWateredAt: null, history }
       }
       const now = new Date().toISOString()
@@ -2951,7 +2990,7 @@ export default function App() {
         isWateredToday: true,
         previousWateredAt: p.lastWateredAt,
         lastWateredAt: now,
-        history: [{ id: Date.now().toString(), date: now, note: 'Watered.', photo: p.photo }, ...p.history],
+        history: [{ id: Date.now().toString(), date: now, note: 'Watered.', photo: p.photo }, ...plantHistory(p)],
       }
     })
   }
@@ -2966,7 +3005,7 @@ export default function App() {
         isWateredToday: true,
         previousWateredAt: p.lastWateredAt,
         lastWateredAt: now,
-        history: [{ id: Date.now().toString(), date: now, note: 'Watered.', photo: p.photo }, ...p.history],
+        history: [{ id: Date.now().toString(), date: now, note: 'Watered.', photo: p.photo }, ...plantHistory(p)],
       }
     }))
   }
@@ -3069,6 +3108,11 @@ export default function App() {
 
   return (
     <div className="relative min-h-dvh max-h-dvh h-dvh w-full overflow-hidden flex flex-col" style={{ background: isSplash ? GREEN : BG }}>
+      {storageError && !isSplash && (
+        <div className="shrink-0 px-4 py-2 border-b-2 border-black text-center" style={{ background: RED, fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#fff' }} role="alert">
+          {storageError}
+        </div>
+      )}
       <div className={`flex flex-col flex-1 min-h-0 ${skipTopSafeArea ? '' : 'pt-[env(safe-area-inset-top)]'}`}>
         {content}
       </div>
