@@ -1,4 +1,16 @@
-import type { Plant } from '@/types/plant'
+import {
+  compressImageDataUrl,
+  isInlinePhoto,
+  PHOTO_JPEG_QUALITY,
+  PHOTO_MAX_DIMENSION,
+} from '@/lib/imageCompress'
+import {
+  historyPhotoKey,
+  isIndexedPhotoRef,
+  plantPhotoKey,
+  storePhotoBlob,
+} from '@/lib/photoStore'
+import type { HistoryEntry, Plant } from '@/types/plant'
 
 const PLANTS_KEY = 'mj_plants'
 
@@ -11,13 +23,37 @@ function isQuotaError(error: unknown): boolean {
   )
 }
 
-/** Strip heavy inline photos from history entries for a lighter localStorage payload. */
+async function offloadInlinePhoto(key: string, value: string): Promise<string> {
+  if (isIndexedPhotoRef(value)) return value
+  if (!isInlinePhoto(value)) return value
+  const compressed = await compressImageDataUrl(value, PHOTO_MAX_DIMENSION, PHOTO_JPEG_QUALITY)
+  return storePhotoBlob(key, compressed)
+}
+
+/** Move inline base64 photos to IndexedDB; localStorage keeps only tiny idb:// refs. */
+export async function preparePlantsForStorage(plants: Plant[]): Promise<Plant[]> {
+  return Promise.all(
+    plants.map(async (plant) => {
+      const photo = await offloadInlinePhoto(plantPhotoKey(plant.id), plant.photo)
+      const history = await Promise.all(
+        (plant.history ?? []).map(async (entry: HistoryEntry) => ({
+          ...entry,
+          photo: await offloadInlinePhoto(historyPhotoKey(plant.id, entry.id), entry.photo),
+        })),
+      )
+      return { ...plant, photo, history }
+    }),
+  )
+}
+
+/** Last-resort payload when localStorage is still full — drop any stray inline data. */
 function plantsForLiteStorage(plants: Plant[]): Plant[] {
   return plants.map((plant) => ({
     ...plant,
+    photo: isIndexedPhotoRef(plant.photo) || !isInlinePhoto(plant.photo) ? plant.photo : '',
     history: (plant.history ?? []).map((entry) => ({
       ...entry,
-      photo: entry.photo?.startsWith('data:') ? plant.photo : entry.photo,
+      photo: isIndexedPhotoRef(entry.photo) || !isInlinePhoto(entry.photo) ? entry.photo : plant.photo,
     })),
   }))
 }
@@ -37,9 +73,10 @@ export function loadPlantsFromStorage(
   }
 }
 
-export function savePlantsToStorage(plants: Plant[]): StorageResult {
+export async function savePlantsToStorage(plants: Plant[]): Promise<StorageResult> {
   try {
-    localStorage.setItem(PLANTS_KEY, JSON.stringify(plants))
+    const prepared = await preparePlantsForStorage(plants)
+    localStorage.setItem(PLANTS_KEY, JSON.stringify(prepared))
     return { ok: true }
   } catch (error) {
     console.error('[myJungle] Failed to save plants:', error)
@@ -48,51 +85,17 @@ export function savePlantsToStorage(plants: Plant[]): StorageResult {
     }
 
     try {
-      localStorage.setItem(PLANTS_KEY, JSON.stringify(plantsForLiteStorage(plants)))
+      const prepared = await preparePlantsForStorage(plants)
+      localStorage.setItem(PLANTS_KEY, JSON.stringify(plantsForLiteStorage(prepared)))
       return { ok: true }
     } catch (retryError) {
       console.error('[myJungle] Lite plant save also failed:', retryError)
       return {
         ok: false,
-        error: 'Storage is full. Try removing a plant photo or exporting then resetting data.',
+        error: 'Storage is full. Try removing a plant or exporting then resetting data.',
       }
     }
   }
 }
 
-export async function compressImageDataUrl(
-  dataUrl: string,
-  maxSize = 960,
-  quality = 0.75,
-): Promise<string> {
-  if (!dataUrl.startsWith('data:image/')) return dataUrl
-
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.onload = () => {
-      try {
-        const scale = Math.min(1, maxSize / Math.max(img.width, img.height, 1))
-        const width = Math.max(1, Math.round(img.width * scale))
-        const height = Math.max(1, Math.round(img.height * scale))
-        const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          resolve(dataUrl)
-          return
-        }
-        ctx.drawImage(img, 0, 0, width, height)
-        resolve(canvas.toDataURL('image/jpeg', quality))
-      } catch (error) {
-        console.error('[myJungle] Image compression failed:', error)
-        resolve(dataUrl)
-      }
-    }
-    img.onerror = () => {
-      console.error('[myJungle] Could not load image for compression')
-      resolve(dataUrl)
-    }
-    img.src = dataUrl
-  })
-}
+export { compressImageDataUrl, readAndCompressPhotoFile } from '@/lib/imageCompress'

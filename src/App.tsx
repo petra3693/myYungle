@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { submitFeedback } from '@/lib/submitFeedback'
-import { compressImageDataUrl, loadPlantsFromStorage, savePlantsToStorage } from '@/lib/plantStorage'
+import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, type StorageResult } from '@/lib/plantStorage'
+import { clearAllPhotos, deletePlantPhotos, getPhotoBlob } from '@/lib/photoStore'
+import PlantPhoto from '@/components/PlantPhoto'
 import type { AppSettings, DayCode, DayOfWeek, HistoryEntry, Plant, WaterNeed } from '@/types/plant'
 import svgPaths from '@/imports/NewDesign2-1/svg-cm3nd9oy62'
 import svgPaths2 from '@/imports/MyjungleSettimgs-2/svg-u9kpmn74e6'
@@ -50,7 +52,7 @@ function loadPlants(): Plant[] {
   return loadPlantsFromStorage(normalizePlant)
 }
 
-function savePlants(p: Plant[]): ReturnType<typeof savePlantsToStorage> {
+function savePlants(p: Plant[]): Promise<StorageResult> {
   return savePlantsToStorage(p)
 }
 
@@ -541,7 +543,7 @@ function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
       >
         {/* Thumbnail */}
         <div className="shrink-0 size-[54px] rounded-full overflow-hidden border-2 border-black">
-          <img src={plant.photo} alt={plant.name} className="w-full h-full object-cover" />
+          <PlantPhoto photo={plant.photo} alt={plant.name} className="w-full h-full object-cover" />
         </div>
         {/* Title + badges */}
         <div className="flex flex-1 flex-col gap-1 min-w-0">
@@ -1024,12 +1026,13 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     if (!isCustomSchedule) setDays(scheduleToIndices(settings.globalWaterSchedule))
   }, [settings.globalWaterSchedule.join(','), isCustomSchedule, settings.globalWaterSchedule])
 
-  function handlePhotoFile(file: File) {
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === 'string') setPhoto(reader.result)
+  async function handlePhotoFile(file: File) {
+    try {
+      const compressed = await readAndCompressPhotoFile(file)
+      setPhoto(compressed)
+    } catch (error) {
+      console.error('[myJungle] Photo processing failed:', error)
     }
-    reader.readAsDataURL(file)
   }
 
   function handlePhotoInputChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1074,10 +1077,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     setSaving(true)
 
     try {
-      let photoUrl = photo ?? PLANT_PHOTOS[Math.floor(Math.random() * PLANT_PHOTOS.length)]
-      if (photo?.startsWith('data:')) {
-        photoUrl = await compressImageDataUrl(photo)
-      }
+      const photoUrl = photo ?? PLANT_PHOTOS[Math.floor(Math.random() * PLANT_PHOTOS.length)]
 
       const scheduleDays = indicesToSchedule(days)
       const newPlant: Plant = {
@@ -1615,9 +1615,9 @@ function PhotoTimelineStrip({
             key={entry.id}
             type="button"
             onClick={() => onPhotoClick(entry.photo)}
-            className="detail-snapshot-thumb cursor-pointer active:scale-[0.98] transition-transform"
+            className="detail-snapshot-thumb relative cursor-pointer active:scale-[0.98] transition-transform"
           >
-            <img alt="" src={entry.photo} className="w-full h-full object-cover" />
+            <PlantPhoto photo={entry.photo} alt="" className="w-full h-full object-cover" />
             <div className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1.5">
               <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 10, color: '#fff' }}>
                 {formatTimelineChip(entry.date)} · {entry.heightCm}cm
@@ -1891,20 +1891,19 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
   const primaryDay = plant.wateringDays[0]
   const onSchedule = !needsWater
 
-  function handlePhotoFile(file: File, asGrowthLog = false) {
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') return
+  async function handlePhotoFile(file: File, asGrowthLog = false) {
+    try {
+      const compressed = await readAndCompressPhotoFile(file)
       if (asGrowthLog && isPro) {
         const height = growthHeight ? Number(growthHeight) : undefined
         onUpdate({
           ...plant,
-          photo: reader.result,
+          photo: compressed,
           history: [{
             id: Date.now().toString(),
             date: new Date().toISOString(),
             note: growthNote.trim() || 'Growth snapshot logged.',
-            photo: reader.result,
+            photo: compressed,
             heightCm: height,
           }, ...plantHistory(plant)],
         })
@@ -1918,16 +1917,17 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
             id: Date.now().toString(),
             date: new Date().toISOString(),
             note: 'New growth snapshot.',
-            photo: reader.result,
+            photo: compressed,
             heightCm: growthHeight ? Number(growthHeight) : getGrowthHeights(plant).current,
           }, ...plantHistory(plant)],
         })
         setShowPhotoPicker(false)
       } else {
-        onUpdate({ ...plant, photo: reader.result })
+        onUpdate({ ...plant, photo: compressed })
       }
+    } catch (error) {
+      console.error('[myJungle] Photo processing failed:', error)
     }
-    reader.readAsDataURL(file)
   }
 
   function handlePhotoInputChange(e: React.ChangeEvent<HTMLInputElement>, asGrowthLog = false) {
@@ -2019,6 +2019,10 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
     setShowRecordHealth(false)
   }
 
+  function openLightbox(photo: string) {
+    void getPhotoBlob(photo).then((resolved) => setLightboxPhoto(resolved ?? photo))
+  }
+
   return (
     <div className="content-stretch flex flex-col items-start justify-between relative size-full" style={{ background: BG }}>
       <div className="content-stretch flex flex-col items-start relative shrink-0 w-full flex-1 min-h-0">
@@ -2042,7 +2046,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
 
             {/* Hero photo + species tag */}
             <div className="h-[219px] relative rounded-3xl shrink-0 w-full overflow-hidden border-2 border-black">
-              <img alt={plant.name} src={plant.photo} className="absolute inset-0 w-full h-full object-cover" />
+              <PlantPhoto photo={plant.photo} alt={plant.name} className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute bottom-3 left-3">
                 <span className="detail-tag detail-tag-filled">{plant.name}</span>
               </div>
@@ -2125,7 +2129,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
               onUpgrade={onShowPro}
               onLogGrowth={() => (isPro ? setShowLogGrowth(true) : onShowPro())}
               onNewSnapshot={() => (isPro ? setShowPhotoPicker(true) : onShowPro())}
-              onPhotoClick={setLightboxPhoto}
+              onPhotoClick={openLightbox}
             />
 
             <HealthTrackerSection
@@ -2339,7 +2343,7 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
                   >
                     <div className="flex items-center gap-3 px-4 py-3 w-full">
                       <div className="shrink-0 size-[54px] rounded-full overflow-hidden border-2 border-black">
-                        <img alt="" className="w-full h-full object-cover" src={p.photo} />
+                        <PlantPhoto alt="" photo={p.photo} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex flex-1 flex-col gap-1 min-w-0">
                         <p
@@ -2903,9 +2907,13 @@ export default function App() {
   const todayIdxSafe = todayIdx ?? -1
 
   useEffect(() => {
-    const result = savePlants(plants)
-    if (!result.ok) setStorageError(result.error)
-    else setStorageError(null)
+    let cancelled = false
+    void savePlants(plants).then((result) => {
+      if (cancelled) return
+      if (!result.ok) setStorageError(result.error)
+      else setStorageError(null)
+    })
+    return () => { cancelled = true }
   }, [plants])
   useEffect(() => { saveSettings(settings) }, [settings])
 
@@ -2935,6 +2943,8 @@ export default function App() {
   }
 
   function handleDeletePlant(id: string) {
+    const removed = plants.find((p) => p.id === id)
+    if (removed) void deletePlantPhotos(removed.id, plantHistory(removed))
     setPlants((prev) => prev.filter((p) => p.id !== id))
     setScreen('main'); setSelectedPlant(null)
   }
@@ -3019,6 +3029,7 @@ export default function App() {
 
   function handleReset() {
     if (window.confirm('Reset all app data?')) {
+      void clearAllPhotos()
       localStorage.clear(); setPlants([])
       setSettings({ ...DEFAULT_SETTINGS })
       setScreen('onboarding')
