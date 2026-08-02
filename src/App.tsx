@@ -186,7 +186,8 @@ function TabBar({ active, onChange }: { active: TabScreen; onChange: (t: TabScre
     { id: 'settings', label: 'PRO', path: svgPaths2.p1eebb470, stroke: false },
   ]
   return (
-    <nav className="neo-tab-bar" aria-label="Main navigation">
+    <nav className="neo-tab-bar fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-black" aria-label="Main navigation">
+      <div className="neo-tab-bar-inner">
       {tabs.map((t) => {
         const on = t.id === active
         return (
@@ -209,6 +210,7 @@ function TabBar({ active, onChange }: { active: TabScreen; onChange: (t: TabScre
           </button>
         )
       })}
+      </div>
     </nav>
   )
 }
@@ -257,21 +259,27 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
     setS((p) => ({ ...p, wateringDays: p.wateringDays.includes(i) ? p.wateringDays.filter((x) => x !== i) : [...p.wateringDays, i] }))
   }
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden" style={{ background: BG }}>
-      <div className="flex flex-col items-center shrink-0 pt-2 pb-1 gap-1 w-full">
+    <div
+      className="flex flex-col justify-between h-[100dvh] p-4 overflow-hidden box-border"
+      style={{
+        background: BG,
+        paddingTop: 'calc(1rem + env(safe-area-inset-top, 0px))',
+      }}
+    >
+      <div className="flex flex-col items-center shrink-0 gap-1 w-full">
         <svg className="h-12 w-auto max-h-14 shrink-0" fill="none" viewBox="0 0 85 116">
           <path d={svgPaths.p1cd02a80} fill="black" stroke="black" strokeLinecap="round" strokeWidth="2" />
         </svg>
         <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000' }}>MYJUNGLE</span>
       </div>
 
-      <div className="flex flex-col flex-1 min-h-0 px-5 overflow-hidden">
+      <div className="flex flex-col flex-1 min-h-0 w-full">
         <div className="flex flex-col gap-1 shrink-0">
           <span className="section-header" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>WEEKLY WATER SCHEDULE</span>
           <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Choose which days you&apos;d like to water</span>
         </div>
 
-        <div className="flex flex-col gap-1.5 flex-1 min-h-0 justify-center py-1">
+        <div className="flex flex-col gap-1.5 mt-5 mb-6 flex-1 min-h-0 justify-center">
           {DAYS.map((d, i) => {
             const on = s.wateringDays.includes(i)
             return (
@@ -294,48 +302,48 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
             )
           })}
         </div>
+      </div>
 
-        <div className="flex flex-col shrink-0 gap-2 pt-2 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-          <div className="flex items-start justify-between w-full gap-4">
-            <div className="flex flex-col gap-1 flex-1 min-w-0">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Push Notification</span>
-              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Allow notifications for watering</span>
-            </div>
-            <div
-              onClick={() => setS((p) => ({ ...p, pushNotifications: !p.pushNotifications }))}
-              className="relative cursor-pointer shrink-0"
-              style={{ width: 66, height: 38 }}
-            >
+      <div className="flex flex-col shrink-0 gap-3 w-full">
+        <div className="flex items-start justify-between w-full gap-4">
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Push Notification</span>
+            <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Allow notifications for watering</span>
+          </div>
+          <div
+            onClick={() => setS((p) => ({ ...p, pushNotifications: !p.pushNotifications }))}
+            className="relative cursor-pointer shrink-0"
+            style={{ width: 66, height: 38 }}
+          >
+            <div style={{
+              width: 64, height: 36, borderRadius: 18,
+              background: s.pushNotifications ? GREEN : 'white',
+              border: '2px solid black',
+              position: 'relative', margin: '1px',
+              transition: 'background .2s',
+            }}>
               <div style={{
-                width: 64, height: 36, borderRadius: 18,
-                background: s.pushNotifications ? GREEN : 'white',
+                position: 'absolute',
+                top: 2,
+                left: s.pushNotifications ? 30 : 2,
+                width: 26, height: 26,
+                borderRadius: 13,
+                background: s.pushNotifications ? BLACK : '#D9D9D9',
                 border: '2px solid black',
-                position: 'relative', margin: '1px',
-                transition: 'background .2s',
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  top: 2,
-                  left: s.pushNotifications ? 30 : 2,
-                  width: 26, height: 26,
-                  borderRadius: 13,
-                  background: s.pushNotifications ? BLACK : '#D9D9D9',
-                  border: '2px solid black',
-                  transition: 'left .2s',
-                }} />
-              </div>
+                transition: 'left .2s',
+              }} />
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => onSave(s)}
-            className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
-            style={{ background: GREEN, height: 52 }}
-          >
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>START</span>
-          </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => onSave(s)}
+          className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
+          style={{ background: GREEN, height: 52 }}
+        >
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>START</span>
+        </button>
       </div>
     </div>
   )
@@ -1499,10 +1507,12 @@ export default function App() {
   }
 
   const isSplash = screen === 'splash'
+  const isOnboarding = screen === 'onboarding'
+  const skipTopSafeArea = isSplash || isOnboarding
 
   return (
-    <div className="relative min-h-dvh h-dvh w-full overflow-hidden flex flex-col" style={{ background: isSplash ? GREEN : BG }}>
-      <div className={`flex flex-col flex-1 min-h-0 ${isSplash ? '' : 'pt-[env(safe-area-inset-top)]'}`}>
+    <div className="relative min-h-dvh max-h-dvh h-dvh w-full overflow-hidden flex flex-col" style={{ background: isSplash ? GREEN : BG }}>
+      <div className={`flex flex-col flex-1 min-h-0 ${skipTopSafeArea ? '' : 'pt-[env(safe-area-inset-top)]'}`}>
         {content}
       </div>
     </div>
