@@ -1580,15 +1580,17 @@ function DetailModal({
   return (
     <>
       <div className="fixed inset-0 z-[60] bg-black/40" onClick={onClose} aria-hidden />
-      <div className="fixed inset-x-4 top-1/2 z-[70] -translate-y-1/2 mx-auto max-w-md">
-        <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
+      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
+        <div className="neo-card rounded-2xl border-2 border-black bg-white px-4 pt-4 pb-6 flex flex-col gap-4 w-full max-w-md max-h-[90vh] min-h-0 overflow-hidden pointer-events-auto">
+          <div className="flex items-center justify-between shrink-0">
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000', textTransform: 'uppercase' }}>{title}</span>
             <button type="button" onClick={onClose} className="flex items-center justify-center size-8 rounded-full border-2 border-black bg-black cursor-pointer">
               <svg fill="none" height="14" viewBox="0 0 18 18" width="14"><path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" /></svg>
             </button>
           </div>
-          {children}
+          <div className="flex flex-col flex-1 min-h-0 min-w-0">
+            {children}
+          </div>
         </div>
       </div>
     </>
@@ -2216,30 +2218,34 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
 
       {showEdit && (
         <DetailModal title="Edit Plant" onClose={() => setShowEdit(false)}>
-          <div className="flex flex-col gap-3 max-h-[70dvh] overflow-y-auto">
-            <label className="flex flex-col gap-1">
-              <span className="detail-stat-label">Plant Name</span>
-              <input value={editName} onChange={(e) => setEditName(e.target.value)} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="detail-stat-label">Room</span>
-              <input value={editRoom} onChange={(e) => setEditRoom(e.target.value)} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="detail-stat-label">Care Note</span>
-              <textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={3} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full resize-none" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
-            </label>
-            <WateringScheduleSection
-              days={editDays}
-              isCustomSchedule={editIsCustomSchedule}
-              globalIndices={globalIndices}
-              onToggleDay={toggleEditDay}
-              onOpenCustomModal={() => setShowScheduleModal(true)}
-              onResetToDefault={resetEditToGeneralSchedule}
-            />
-            <button type="button" onClick={saveEdit} disabled={editDays.length === 0} className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer disabled:opacity-40" style={{ background: GREEN, height: 48 }}>
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>SAVE CHANGES</span>
-            </button>
+          <div className="flex flex-col flex-1 min-h-0 gap-3">
+            <div className="flex flex-col gap-3 overflow-y-auto flex-1 min-h-0">
+              <label className="flex flex-col gap-1">
+                <span className="detail-stat-label">Plant Name</span>
+                <input value={editName} onChange={(e) => setEditName(e.target.value)} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="detail-stat-label">Room</span>
+                <input value={editRoom} onChange={(e) => setEditRoom(e.target.value)} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="detail-stat-label">Care Note</span>
+                <textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={3} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full resize-none" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
+              </label>
+              <WateringScheduleSection
+                days={editDays}
+                isCustomSchedule={editIsCustomSchedule}
+                globalIndices={globalIndices}
+                onToggleDay={toggleEditDay}
+                onOpenCustomModal={() => setShowScheduleModal(true)}
+                onResetToDefault={resetEditToGeneralSchedule}
+              />
+            </div>
+            <div className="shrink-0 mt-4">
+              <button type="button" onClick={saveEdit} disabled={editDays.length === 0} className="btn-primary btn-green flex w-full shrink-0 items-center justify-center rounded-full border-2 border-black cursor-pointer disabled:opacity-40" style={{ background: GREEN, minHeight: 48, height: 48 }}>
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>SAVE CHANGES</span>
+              </button>
+            </div>
           </div>
         </DetailModal>
       )}
