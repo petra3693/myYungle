@@ -1,4 +1,16 @@
-import type { CheckInLog, LeafStatus, PestStatus, SoilStatus } from '@/types/plant'
+import type {
+  HealthCheckIn,
+  HumidityReaction,
+  LeafColor,
+  LegacyCheckInLog,
+  LightStress,
+  NewGrowth,
+  PestCheck,
+  PlantHealthMetrics8P,
+  SoilMoisture,
+  SoilSurface,
+  StemHealth,
+} from '@/types/plant'
 
 export type HealthStatusText = 'Thriving' | 'Needs Attention' | 'Out of Date'
 
@@ -10,40 +22,178 @@ export interface HealthScoreResult {
   isOutOfDate: boolean
 }
 
-const LEAF_SCORES: Record<LeafStatus, number> = {
-  lush: 100,
+export const PARAMETER_WEIGHTS = {
+  leafColor: 0.2,
+  newGrowth: 0.1,
+  stemHealth: 0.15,
+  soilMoisture: 0.15,
+  soilSurface: 0.05,
+  pestCheck: 0.15,
+  lightStress: 0.1,
+  humidityReaction: 0.1,
+} as const satisfies Record<keyof Omit<PlantHealthMetrics8P, 'note' | 'timestamp'>, number>
+
+const LEAF_COLOR_SCORES: Record<LeafColor, number> = {
+  healthy: 100,
   brown_tips: 70,
   yellowing: 40,
-  drooping: 20,
+  brown_spots: 10,
 }
 
-const SOIL_SCORES: Record<SoilStatus, number> = {
-  moist: 100,
+const NEW_GROWTH_SCORES: Record<NewGrowth, number> = {
+  thriving: 100,
+  stagnant: 50,
+  dead_shoots: 0,
+}
+
+const STEM_HEALTH_SCORES: Record<StemHealth, number> = {
+  firm: 100,
+  drooping: 50,
+  soft_rotting: 0,
+}
+
+const SOIL_MOISTURE_SCORES: Record<SoilMoisture, number> = {
+  optimal: 100,
   dry: 40,
-  saturated: 20,
+  waterlogged: 20,
 }
 
-const PEST_SCORES: Record<PestStatus, number> = {
+const SOIL_SURFACE_SCORES: Record<SoilSurface, number> = {
+  clean: 100,
+  mold_salt: 50,
+  foul_odor: 0,
+}
+
+const PEST_CHECK_SCORES: Record<PestCheck, number> = {
   clean: 100,
   pests_detected: 0,
 }
 
-export const LEAF_LABELS: Record<LeafStatus, string> = {
-  lush: 'Lush & Vibrant',
+const LIGHT_STRESS_SCORES: Record<LightStress, number> = {
+  ideal: 100,
+  etiolated: 50,
+  sunburn: 10,
+}
+
+const HUMIDITY_REACTION_SCORES: Record<HumidityReaction, number> = {
+  normal: 100,
+  curling: 50,
+  crispy_edges: 20,
+}
+
+export const LEAF_COLOR_LABELS: Record<LeafColor, string> = {
+  healthy: 'Healthy & Vibrant',
   brown_tips: 'Brown Tips',
   yellowing: 'Yellowing',
+  brown_spots: 'Brown Spots',
+}
+
+export const NEW_GROWTH_LABELS: Record<NewGrowth, string> = {
+  thriving: 'Thriving',
+  stagnant: 'Stagnant',
+  dead_shoots: 'Dead Shoots',
+}
+
+export const STEM_HEALTH_LABELS: Record<StemHealth, string> = {
+  firm: 'Firm & Upright',
   drooping: 'Drooping',
+  soft_rotting: 'Soft / Rotting',
 }
 
-export const SOIL_LABELS: Record<SoilStatus, string> = {
-  moist: 'Moist & Balanced',
+export const SOIL_MOISTURE_LABELS: Record<SoilMoisture, string> = {
+  optimal: 'Optimal Moisture',
   dry: 'Dry',
-  saturated: 'Saturated',
+  waterlogged: 'Waterlogged',
 }
 
-export const PEST_LABELS: Record<PestStatus, string> = {
+export const SOIL_SURFACE_LABELS: Record<SoilSurface, string> = {
+  clean: 'Clean Surface',
+  mold_salt: 'Mold / Salt Buildup',
+  foul_odor: 'Foul Odor',
+}
+
+export const PEST_CHECK_LABELS: Record<PestCheck, string> = {
   clean: 'Clean & Clear',
   pests_detected: 'Pests Detected',
+}
+
+export const LIGHT_STRESS_LABELS: Record<LightStress, string> = {
+  ideal: 'Ideal Light',
+  etiolated: 'Etiolated / Leggy',
+  sunburn: 'Sunburn',
+}
+
+export const HUMIDITY_REACTION_LABELS: Record<HumidityReaction, string> = {
+  normal: 'Normal',
+  curling: 'Leaf Curling',
+  crispy_edges: 'Crispy Edges',
+}
+
+/** Smart defaults applied to hidden parameters during Quick Check */
+export const HEALTH_SMART_DEFAULTS: Omit<PlantHealthMetrics8P, 'timestamp' | 'note'> = {
+  leafColor: 'healthy',
+  newGrowth: 'thriving',
+  stemHealth: 'firm',
+  soilMoisture: 'optimal',
+  soilSurface: 'clean',
+  pestCheck: 'clean',
+  lightStress: 'ideal',
+  humidityReaction: 'normal',
+}
+
+export function getParameterScore(
+  key: keyof typeof PARAMETER_WEIGHTS,
+  metrics: PlantHealthMetrics8P,
+): number {
+  switch (key) {
+    case 'leafColor':
+      return LEAF_COLOR_SCORES[metrics.leafColor]
+    case 'newGrowth':
+      return NEW_GROWTH_SCORES[metrics.newGrowth]
+    case 'stemHealth':
+      return STEM_HEALTH_SCORES[metrics.stemHealth]
+    case 'soilMoisture':
+      return SOIL_MOISTURE_SCORES[metrics.soilMoisture]
+    case 'soilSurface':
+      return SOIL_SURFACE_SCORES[metrics.soilSurface]
+    case 'pestCheck':
+      return PEST_CHECK_SCORES[metrics.pestCheck]
+    case 'lightStress':
+      return LIGHT_STRESS_SCORES[metrics.lightStress]
+    case 'humidityReaction':
+      return HUMIDITY_REACTION_SCORES[metrics.humidityReaction]
+  }
+}
+
+export function getParameterLabel(
+  key: keyof typeof PARAMETER_WEIGHTS,
+  metrics: PlantHealthMetrics8P,
+): string {
+  switch (key) {
+    case 'leafColor':
+      return LEAF_COLOR_LABELS[metrics.leafColor]
+    case 'newGrowth':
+      return NEW_GROWTH_LABELS[metrics.newGrowth]
+    case 'stemHealth':
+      return STEM_HEALTH_LABELS[metrics.stemHealth]
+    case 'soilMoisture':
+      return SOIL_MOISTURE_LABELS[metrics.soilMoisture]
+    case 'soilSurface':
+      return SOIL_SURFACE_LABELS[metrics.soilSurface]
+    case 'pestCheck':
+      return PEST_CHECK_LABELS[metrics.pestCheck]
+    case 'lightStress':
+      return LIGHT_STRESS_LABELS[metrics.lightStress]
+    case 'humidityReaction':
+      return HUMIDITY_REACTION_LABELS[metrics.humidityReaction]
+  }
+}
+
+export function calculateBaseScore(metrics: PlantHealthMetrics8P): number {
+  return (Object.keys(PARAMETER_WEIGHTS) as (keyof typeof PARAMETER_WEIGHTS)[]).reduce(
+    (sum, key) => sum + getParameterScore(key, metrics) * PARAMETER_WEIGHTS[key],
+    0,
+  )
 }
 
 export function daysSinceTimestamp(timestamp: string): number {
@@ -51,14 +201,7 @@ export function daysSinceTimestamp(timestamp: string): number {
   return Math.max(0, Math.floor(diff / 86400000))
 }
 
-export function calculateBaseScore(checkIn: CheckInLog): number {
-  const leaf = LEAF_SCORES[checkIn.leafStatus]
-  const soil = SOIL_SCORES[checkIn.soilStatus]
-  const pest = PEST_SCORES[checkIn.pestStatus]
-  return leaf * 0.4 + soil * 0.3 + pest * 0.3
-}
-
-export function calculateHealthScore(lastCheckIn: CheckInLog | null): HealthScoreResult {
+export function calculateHealthScore(lastCheckIn: HealthCheckIn | null): HealthScoreResult {
   if (!lastCheckIn) {
     return {
       score: 0,
@@ -94,13 +237,16 @@ export function calculateHealthScore(lastCheckIn: CheckInLog | null): HealthScor
     statusText = 'Needs Attention'
   }
 
-  const checkInLabel = formatCheckInBadge(lastCheckIn)
-  const summary = getHealthSummary(statusText)
-
-  return { score, statusText, checkInLabel, summary, isOutOfDate }
+  return {
+    score,
+    statusText,
+    checkInLabel: formatCheckInBadge(lastCheckIn),
+    summary: getHealthSummary(statusText),
+    isOutOfDate,
+  }
 }
 
-export function formatCheckInBadge(lastCheckIn: CheckInLog | null): string {
+export function formatCheckInBadge(lastCheckIn: HealthCheckIn | null): string {
   if (!lastCheckIn) return '⚠️ Checkup Due'
   const days = daysSinceTimestamp(lastCheckIn.timestamp)
   if (days >= 14) return '⚠️ Checkup Due'
@@ -126,7 +272,7 @@ function getHealthSummary(statusText: HealthStatusText): string {
   }
 }
 
-export function getLatestCheckIn(checkIns: CheckInLog[]): CheckInLog | null {
+export function getLatestCheckIn(checkIns: HealthCheckIn[]): HealthCheckIn | null {
   if (!checkIns.length) return null
   return [...checkIns].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
@@ -134,49 +280,149 @@ export function getLatestCheckIn(checkIns: CheckInLog[]): CheckInLog | null {
 }
 
 export interface HealthMetricRow {
-  id: string
+  id: keyof typeof PARAMETER_WEIGHTS
   emoji: string
   label: string
   value: string
   timeAgo: string
   isWarning: boolean
+  score: number
 }
 
-export function getHealthMetricRows(lastCheckIn: CheckInLog | null): HealthMetricRow[] {
+const METRIC_META: Record<keyof typeof PARAMETER_WEIGHTS, { emoji: string; label: string }> = {
+  leafColor: { emoji: '🍃', label: 'Leaf Color' },
+  newGrowth: { emoji: '🌱', label: 'New Growth' },
+  stemHealth: { emoji: '🪴', label: 'Stem Health' },
+  soilMoisture: { emoji: '💧', label: 'Soil Moisture' },
+  soilSurface: { emoji: '🪨', label: 'Soil Surface' },
+  pestCheck: { emoji: '🐛', label: 'Pest Check' },
+  lightStress: { emoji: '☀️', label: 'Light Stress' },
+  humidityReaction: { emoji: '💨', label: 'Humidity' },
+}
+
+export function getHealthMetricRows(lastCheckIn: HealthCheckIn | null, limit = 3): HealthMetricRow[] {
   if (!lastCheckIn) {
     return [
-      { id: 'leaf', emoji: '🍃', label: 'Leaf Vitality', value: 'Not checked yet', timeAgo: '—', isWarning: true },
-      { id: 'soil', emoji: '💧', label: 'Soil Condition', value: 'Not checked yet', timeAgo: '—', isWarning: true },
-      { id: 'pest', emoji: '🐛', label: 'Pest Status', value: 'Not checked yet', timeAgo: '—', isWarning: true },
+      { id: 'leafColor', emoji: '🍃', label: 'Leaf Color', value: 'Not checked yet', timeAgo: '—', isWarning: true, score: 0 },
+      { id: 'soilMoisture', emoji: '💧', label: 'Soil Moisture', value: 'Not checked yet', timeAgo: '—', isWarning: true, score: 0 },
+      { id: 'pestCheck', emoji: '🐛', label: 'Pest Check', value: 'Not checked yet', timeAgo: '—', isWarning: true, score: 0 },
     ]
   }
 
   const timeAgo = formatRelativeCheckInTime(lastCheckIn.timestamp)
+  const rows = (Object.keys(PARAMETER_WEIGHTS) as (keyof typeof PARAMETER_WEIGHTS)[]).map((key) => {
+    const score = getParameterScore(key, lastCheckIn)
+    const meta = METRIC_META[key]
+    return {
+      id: key,
+      emoji: meta.emoji,
+      label: meta.label,
+      value: getParameterLabel(key, lastCheckIn),
+      timeAgo,
+      isWarning: score < 70,
+      score,
+    }
+  })
 
-  return [
-    {
-      id: 'leaf',
-      emoji: '🍃',
-      label: 'Leaf Vitality',
-      value: LEAF_LABELS[lastCheckIn.leafStatus],
-      timeAgo,
-      isWarning: lastCheckIn.leafStatus === 'yellowing' || lastCheckIn.leafStatus === 'drooping',
-    },
-    {
-      id: 'soil',
-      emoji: '💧',
-      label: 'Soil Condition',
-      value: SOIL_LABELS[lastCheckIn.soilStatus],
-      timeAgo,
-      isWarning: lastCheckIn.soilStatus === 'dry' || lastCheckIn.soilStatus === 'saturated',
-    },
-    {
-      id: 'pest',
-      emoji: '🐛',
-      label: 'Pest Status',
-      value: PEST_LABELS[lastCheckIn.pestStatus],
-      timeAgo,
-      isWarning: lastCheckIn.pestStatus === 'pests_detected',
-    },
-  ]
+  return rows.sort((a, b) => a.score - b.score).slice(0, limit)
+}
+
+export interface HealthActionCta {
+  id: string
+  label: string
+  variant: 'primary' | 'warning'
+}
+
+export function getHealthActionCtas(metrics: PlantHealthMetrics8P): HealthActionCta[] {
+  const ctas: HealthActionCta[] = []
+
+  if (metrics.soilMoisture === 'dry') {
+    ctas.push({ id: 'water', label: '💧 Record Watering', variant: 'primary' })
+  }
+  if (metrics.soilMoisture === 'waterlogged') {
+    ctas.push({ id: 'drainage', label: '💧 Check Drainage', variant: 'warning' })
+  }
+  if (metrics.pestCheck === 'pests_detected') {
+    ctas.push({ id: 'quarantine', label: '⚠️ Quarantine & Treat', variant: 'warning' })
+  }
+  if (metrics.stemHealth === 'soft_rotting') {
+    ctas.push({ id: 'roots', label: '⚠️ Inspect Roots', variant: 'warning' })
+  }
+
+  return ctas
+}
+
+export function isFullyHealthy(metrics: PlantHealthMetrics8P): boolean {
+  return getHealthActionCtas(metrics).length === 0
+    && metrics.leafColor === 'healthy'
+    && metrics.newGrowth === 'thriving'
+    && metrics.stemHealth === 'firm'
+    && metrics.soilMoisture === 'optimal'
+    && metrics.soilSurface === 'clean'
+    && metrics.pestCheck === 'clean'
+    && metrics.lightStress === 'ideal'
+    && metrics.humidityReaction === 'normal'
+}
+
+export function buildCheckInMetrics(
+  partial: Partial<Omit<PlantHealthMetrics8P, 'timestamp'>>,
+  lastCheckIn: HealthCheckIn | null,
+): Omit<PlantHealthMetrics8P, 'timestamp'> {
+  const base = lastCheckIn ?? HEALTH_SMART_DEFAULTS
+  return {
+    leafColor: partial.leafColor ?? base.leafColor,
+    newGrowth: partial.newGrowth ?? base.newGrowth,
+    stemHealth: partial.stemHealth ?? base.stemHealth,
+    soilMoisture: partial.soilMoisture ?? base.soilMoisture,
+    soilSurface: partial.soilSurface ?? base.soilSurface,
+    pestCheck: partial.pestCheck ?? base.pestCheck,
+    lightStress: partial.lightStress ?? base.lightStress,
+    humidityReaction: partial.humidityReaction ?? base.humidityReaction,
+    note: partial.note ?? lastCheckIn?.note,
+  }
+}
+
+/** Migrate legacy 3-parameter check-ins to the 8-parameter model */
+export function migrateLegacyCheckIn(raw: unknown): HealthCheckIn | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+
+  if (
+    'leafColor' in r
+    && typeof r.id === 'string'
+    && typeof r.timestamp === 'string'
+    && typeof r.leafColor === 'string'
+  ) {
+    return r as unknown as HealthCheckIn
+  }
+
+  if (typeof r.id !== 'string' || typeof r.timestamp !== 'string') return null
+
+  const legacy = raw as LegacyCheckInLog
+  const leafMap: Record<string, LeafColor> = {
+    lush: 'healthy',
+    brown_tips: 'brown_tips',
+    yellowing: 'yellowing',
+    drooping: 'yellowing',
+  }
+  const soilMap: Record<string, SoilMoisture> = {
+    moist: 'optimal',
+    dry: 'dry',
+    saturated: 'waterlogged',
+  }
+
+  return {
+    id: legacy.id,
+    timestamp: legacy.timestamp,
+    mode: 'quick',
+    leafColor: leafMap[legacy.leafStatus ?? ''] ?? 'healthy',
+    newGrowth: 'thriving',
+    stemHealth: legacy.leafStatus === 'drooping' ? 'drooping' : 'firm',
+    soilMoisture: soilMap[legacy.soilStatus ?? ''] ?? 'optimal',
+    soilSurface: 'clean',
+    pestCheck: legacy.pestStatus ?? 'clean',
+    lightStress: 'ideal',
+    humidityReaction: 'normal',
+    note: legacy.note,
+  }
 }

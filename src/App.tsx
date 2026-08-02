@@ -5,7 +5,9 @@ import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, t
 import { clearAllPhotos, deletePlantPhotos, getPhotoBlob } from '@/lib/photoStore'
 import PlantPhoto from '@/components/PlantPhoto'
 import PlantHealthTracker from '@/components/plant-health-tracker'
-import type { AppSettings, CheckInLog, DayCode, DayOfWeek, HistoryEntry, Plant, WaterNeed } from '@/types/plant'
+import type { CheckInSubmitData } from '@/components/check-in-sheet'
+import { migrateLegacyCheckIn } from '@/lib/health-calculator'
+import type { AppSettings, DayCode, DayOfWeek, HealthCheckIn, HistoryEntry, Plant, WaterNeed } from '@/types/plant'
 import svgPaths from '@/imports/NewDesign2-1/svg-cm3nd9oy62'
 import svgPaths2 from '@/imports/MyjungleSettimgs-2/svg-u9kpmn74e6'
 import svgAdd from '@/imports/MyjungleAddPlant/svg-fer892chf7'
@@ -118,7 +120,9 @@ function normalizePlant(raw: Plant & { watered?: boolean; lastWatered?: string |
     lastWateredAt: raw.lastWateredAt ?? raw.lastWatered ?? null,
     previousWateredAt: raw.previousWateredAt ?? null,
     history: Array.isArray(raw.history) ? raw.history : [],
-    checkIns: Array.isArray(raw.checkIns) ? raw.checkIns : [],
+    checkIns: Array.isArray(raw.checkIns)
+      ? raw.checkIns.map(migrateLegacyCheckIn).filter((c): c is HealthCheckIn => c != null)
+      : [],
     isWateredToday: raw.isWateredToday ?? raw.watered ?? false,
   }
 }
@@ -1887,9 +1891,9 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
     setShowLogGrowth(false)
   }
 
-  function saveCheckIn(data: Pick<CheckInLog, 'leafStatus' | 'soilStatus' | 'pestStatus' | 'note'>) {
+  function saveCheckIn(data: CheckInSubmitData) {
     const timestamp = new Date().toISOString()
-    const checkIn: CheckInLog = {
+    const checkIn: HealthCheckIn = {
       id: Date.now().toString(),
       timestamp,
       ...data,
@@ -1900,7 +1904,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
       history: [{
         id: `${Date.now()}-health`,
         date: timestamp,
-        note: data.note?.trim() || 'Health check recorded.',
+        note: data.note?.trim() || `Health check (${data.mode}): ${data.leafColor}, ${data.soilMoisture}, ${data.pestCheck}`,
         photo: plant.photo,
       }, ...plantHistory(plant)],
     })

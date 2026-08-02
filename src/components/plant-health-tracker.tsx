@@ -1,22 +1,30 @@
 import { useState } from 'react'
-import CheckInSheet from '@/components/check-in-sheet'
+import CheckInSheet, { type CheckInSubmitData } from '@/components/check-in-sheet'
 import {
   calculateHealthScore,
+  getHealthActionCtas,
   getHealthMetricRows,
   getLatestCheckIn,
+  isFullyHealthy,
 } from '@/lib/health-calculator'
-import type { CheckInLog, Plant } from '@/types/plant'
+import type { HealthCheckIn, Plant } from '@/types/plant'
 
 const GREEN = '#00FF66'
 const AMBER = '#FFB020'
 const DETAIL_MINT_LIGHT = '#D9FFE8'
 
-const PREVIEW_CHECK_IN: CheckInLog = {
+const PREVIEW_CHECK_IN: HealthCheckIn = {
   id: 'preview-check-in',
   timestamp: new Date().toISOString(),
-  leafStatus: 'lush',
-  soilStatus: 'moist',
-  pestStatus: 'clean',
+  mode: 'deep',
+  leafColor: 'healthy',
+  newGrowth: 'thriving',
+  stemHealth: 'firm',
+  soilMoisture: 'optimal',
+  soilSurface: 'clean',
+  pestCheck: 'clean',
+  lightStress: 'ideal',
+  humidityReaction: 'normal',
 }
 
 function LockIcon({ size = 28 }: { size?: number }) {
@@ -40,7 +48,7 @@ function ProSectionLock({ onUpgrade }: { onUpgrade: () => void }) {
           PRO FEATURE
         </span>
         <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 14, color: '#000', lineHeight: 1.4 }}>
-          PRO Feature: Unlock History &amp; Tracking
+          PRO Feature: Unlock 8-Parameter Diagnostics
         </p>
         <button
           type="button"
@@ -79,7 +87,7 @@ interface PlantHealthTrackerProps {
   plant: Plant
   isPro: boolean
   onUpgrade: () => void
-  onSaveCheckIn: (data: Pick<CheckInLog, 'leafStatus' | 'soilStatus' | 'pestStatus' | 'note'>) => void
+  onSaveCheckIn: (data: CheckInSubmitData) => void
   onRecordWatering?: () => void
 }
 
@@ -96,14 +104,17 @@ function HealthTrackerBody({
 }) {
   const lastCheckIn = previewMode ? PREVIEW_CHECK_IN : getLatestCheckIn(plant.checkIns)
   const health = calculateHealthScore(lastCheckIn)
-  const metrics = getHealthMetricRows(lastCheckIn)
+  const metrics = getHealthMetricRows(lastCheckIn, 3)
+  const actionCtas = lastCheckIn ? getHealthActionCtas(lastCheckIn) : []
+  const allHealthy = lastCheckIn ? isFullyHealthy(lastCheckIn) : false
 
-  const showWateringCta = lastCheckIn?.soilStatus === 'dry'
-  const showPestCta = lastCheckIn?.pestStatus === 'pests_detected'
-  const allHealthy = lastCheckIn && !showWateringCta && !showPestCta
-    && lastCheckIn.leafStatus === 'lush'
-    && lastCheckIn.soilStatus === 'moist'
-    && lastCheckIn.pestStatus === 'clean'
+  function handleCtaClick(id: string) {
+    if (id === 'water') {
+      onRecordWatering?.()
+      return
+    }
+    onOpenCheckIn()
+  }
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -122,37 +133,43 @@ function HealthTrackerBody({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 w-full">
-        {metrics.map((item) => (
-          <div key={item.id} className="flex items-start gap-3 w-full min-w-0">
-            <div
-              className="flex items-center justify-center shrink-0 size-7 rounded-full border-2 border-black text-sm"
-              style={{ background: item.isWarning ? AMBER : GREEN }}
-              aria-hidden
-            >
-              {item.emoji}
+      <div className="flex flex-col gap-1">
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, color: '#888', textTransform: 'uppercase' }}>
+          Priority Metrics
+        </span>
+        <div className="flex flex-col gap-3 w-full">
+          {metrics.map((item) => (
+            <div key={item.id} className="flex items-start gap-3 w-full min-w-0">
+              <div
+                className="flex items-center justify-center shrink-0 size-7 rounded-full border-2 border-black text-sm"
+                style={{ background: item.isWarning ? AMBER : GREEN }}
+                aria-hidden
+              >
+                {item.emoji}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#000', lineHeight: 1.35 }}>
+                  {item.label}: {item.value}
+                </p>
+              </div>
+              <span className="shrink-0" style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>
+                {item.timeAgo}
+              </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#000', lineHeight: 1.35 }}>
-                {item.label}: {item.value}
-              </p>
-            </div>
-            <span className="shrink-0" style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>
-              {item.timeAgo}
-            </span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {!allHealthy && (showWateringCta || showPestCta) && (
+      {!allHealthy && actionCtas.length > 0 && (
         <div className="flex flex-col gap-2 w-full">
-          {showWateringCta && (
+          {actionCtas.map((cta) => (
             <button
+              key={cta.id}
               type="button"
-              onClick={onRecordWatering}
+              onClick={() => handleCtaClick(cta.id)}
               className="flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer active:scale-[0.98] transition-transform min-h-[44px] px-4 py-2"
               style={{
-                background: GREEN,
+                background: cta.variant === 'primary' ? GREEN : '#FFF4E5',
                 fontFamily: 'Unbounded, sans-serif',
                 fontWeight: 900,
                 fontSize: 11,
@@ -160,26 +177,9 @@ function HealthTrackerBody({
                 boxShadow: '2px 2px 0px 0px rgba(0,0,0,1)',
               }}
             >
-              💧 Record Watering
+              {cta.label}
             </button>
-          )}
-          {showPestCta && (
-            <button
-              type="button"
-              onClick={onOpenCheckIn}
-              className="flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer active:scale-[0.98] transition-transform min-h-[44px] px-4 py-2"
-              style={{
-                background: '#FFF4E5',
-                fontFamily: 'Unbounded, sans-serif',
-                fontWeight: 900,
-                fontSize: 11,
-                color: '#000',
-                boxShadow: '2px 2px 0px 0px rgba(0,0,0,1)',
-              }}
-            >
-              ⚠️ Quarantine &amp; Treat
-            </button>
-          )}
+          ))}
         </div>
       )}
 
@@ -196,7 +196,7 @@ function HealthTrackerBody({
         type="button"
         onClick={onOpenCheckIn}
         className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
-        style={{ background: GREEN, height: 52 }}
+        style={{ background: GREEN, height: 52, boxShadow: '2px 2px 0px 0px rgba(0,0,0,1)' }}
       >
         <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
           Record Health Check
@@ -226,7 +226,7 @@ export default function PlantHealthTracker({
     setShowCheckIn(true)
   }
 
-  function handleSubmitCheckIn(data: Pick<CheckInLog, 'leafStatus' | 'soilStatus' | 'pestStatus' | 'note'>) {
+  function handleSubmitCheckIn(data: CheckInSubmitData) {
     onSaveCheckIn(data)
     setShowCheckIn(false)
   }
@@ -277,6 +277,7 @@ export default function PlantHealthTracker({
       {showCheckIn && isPro && (
         <CheckInSheet
           plantName={plant.name}
+          lastCheckIn={getLatestCheckIn(plant.checkIns)}
           onClose={() => setShowCheckIn(false)}
           onSubmit={handleSubmitCheckIn}
         />
