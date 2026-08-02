@@ -1,0 +1,10 @@
+{
+  "description": "Track and manage your plant watering schedule offline with reminders, growth logs, and easy plant care organization for thriving indoor gardens.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
