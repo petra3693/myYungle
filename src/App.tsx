@@ -196,6 +196,15 @@ function formatReminderTime(value: string): string {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function getWaterNeedFills(need: WaterNeed): number {
+  return need === 'Heavy' ? 3 : need === 'Moderate' ? 2 : 1
+}
+
+function formatWaterLevelLabel(need: WaterNeed): string {
+  const fills = getWaterNeedFills(need)
+  return `${need} · ${fills}/3`
+}
+
 function getTodayDayIndex(): number { return (new Date().getDay() + 6) % 7 }
 
 function getDayOfWeek(index: number): DayOfWeek {
@@ -1663,11 +1672,21 @@ function PhotoTimelineStrip({
     <div className="flex flex-col gap-3 w-full">
       <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>Photo Timeline</span>
       <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
-        <button type="button" onClick={onNewSnapshot} className="detail-snapshot-new cursor-pointer active:opacity-80">
-          <svg fill="none" height="22" viewBox="0 0 24 24" width="22" aria-hidden>
+        <button
+          type="button"
+          onClick={onNewSnapshot}
+          className="detail-snapshot-new cursor-pointer active:opacity-80 flex flex-col items-center justify-center gap-1.5 p-4 text-center h-full w-full"
+        >
+          <svg fill="none" height="22" viewBox="0 0 24 24" width="22" aria-hidden className="shrink-0">
             <path d={svgDetail.p1a54b00} fill={GREEN} />
           </svg>
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, color: GREEN, textTransform: 'uppercase' }}>New Snapshot</span>
+          <span
+            className="flex flex-col leading-tight text-center text-black"
+            style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, textTransform: 'uppercase' }}
+          >
+            <span>NEW</span>
+            <span>SNAPSHOT</span>
+          </span>
         </button>
         {entries.map((entry) => (
           <button
@@ -1946,7 +1965,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
   const libraryInputRef = useRef<HTMLInputElement>(null)
 
   const needsWater = plant.wateringDays.includes(todayIdx) && !plant.isWateredToday
-  const waterFills = plant.waterNeed === 'Heavy' ? 3 : plant.waterNeed === 'Moderate' ? 2 : 1
+  const waterFills = getWaterNeedFills(plant.waterNeed)
   const primaryDay = plant.wateringDays[0]
   const onSchedule = !needsWater
 
@@ -2140,15 +2159,20 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 w-full">
-                  <div className="detail-mini-card" style={{ background: DETAIL_BLUE_LIGHT }}>
+                  <div className="detail-mini-card bg-white">
                     <span className="detail-stat-label">Water Level</span>
-                    <div className="flex gap-1 items-end">
-                      {[0, 1, 2].map((i) => (
-                        <WaterDropletIcon key={i} filled={i < waterFills} />
-                      ))}
+                    <div className="flex flex-col gap-1.5 min-w-0">
+                      <div className="flex gap-1 items-end">
+                        {[0, 1, 2].map((i) => (
+                          <WaterDropletIcon key={i} filled={i < waterFills} />
+                        ))}
+                      </div>
+                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000', lineHeight: 1.2 }}>
+                        {formatWaterLevelLabel(plant.waterNeed)}
+                      </span>
                     </div>
                   </div>
-                  <div className="detail-mini-card" style={{ background: DETAIL_ORANGE_LIGHT }}>
+                  <div className="detail-mini-card bg-white">
                     <span className="detail-stat-label">Last Watered</span>
                     <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
                       {daysSinceLabel(plant.lastWateredAt)}
