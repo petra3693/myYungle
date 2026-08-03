@@ -259,6 +259,28 @@ function formatWaterLevelLabel(need: WaterNeed): string {
   return `${need} · ${fills}/3`
 }
 
+function getLightNeedFills(need: LightNeed): number {
+  return need === 'High' ? 3 : need === 'Medium' ? 2 : 1
+}
+
+function formatLightLevelLabel(need: LightNeed): string {
+  if (need === 'Low') return 'Low Light'
+  if (need === 'High') return 'High Light'
+  return 'Medium Light'
+}
+
+function DetailSunIcon({ filled, size = 12 }: { filled: boolean; size?: number }) {
+  return (
+    <Sun
+      size={size}
+      strokeWidth={2.25}
+      aria-hidden
+      className={filled ? 'text-black shrink-0' : 'text-[#00FF66] shrink-0'}
+      fill={filled ? 'black' : 'none'}
+    />
+  )
+}
+
 function getTodayDayIndex(): number { return (new Date().getDay() + 6) % 7 }
 
 function getDayOfWeek(index: number): DayOfWeek {
@@ -2119,6 +2141,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
 
   const needsWater = isPlantDueToday(plant, todayIdx) && !plant.isWateredToday
   const waterFills = getWaterNeedFills(plant.waterNeed)
+  const lightFills = getLightNeedFills(plant.lightNeed ?? 'Medium')
   const primaryDay = plant.wateringDays[0]
   const onSchedule = !needsWater
 
@@ -2341,6 +2364,19 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                     </div>
                   </div>
                   <div className="detail-mini-card bg-white">
+                    <span className="detail-stat-label">Light Level</span>
+                    <div className="flex flex-col gap-1.5 min-w-0">
+                      <div className="flex gap-1 items-end">
+                        {[0, 1, 2].map((i) => (
+                          <DetailSunIcon key={i} filled={i < lightFills} />
+                        ))}
+                      </div>
+                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000', lineHeight: 1.2 }}>
+                        {formatLightLevelLabel(plant.lightNeed ?? 'Medium')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="detail-mini-card bg-white col-span-2">
                     <span className="detail-stat-label">Last Watered</span>
                     <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
                       {daysSinceLabel(plant.lastWateredAt)}
