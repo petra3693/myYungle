@@ -11,10 +11,9 @@ interface VercelResponse {
 }
 
 interface AnalyzePlantHealthResult {
+  healthScore: number
   diagnosis: string
-  severity: 'low' | 'medium' | 'high'
   treatmentNotes: string
-  isHealthy: boolean
 }
 
 const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'] as const
@@ -22,26 +21,20 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-lates
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
+    healthScore: {
+      type: SchemaType.NUMBER,
+      description: 'Overall plant health percentage from 0 to 100',
+    },
     diagnosis: {
       type: SchemaType.STRING,
-      description: 'Short name of the issue, disease, pest, or "Healthy" if no issues',
-    },
-    severity: {
-      type: SchemaType.STRING,
-      format: 'enum',
-      enum: ['low', 'medium', 'high'],
-      description: 'Severity of the health issue',
+      description: 'Short issue name such as Healthy, Overwatered, or Leaf spot',
     },
     treatmentNotes: {
       type: SchemaType.STRING,
-      description: 'Practical treatment steps (max 400 characters)',
-    },
-    isHealthy: {
-      type: SchemaType.BOOLEAN,
-      description: 'True if the plant appears healthy with no significant issues',
+      description: 'Short actionable care advice (max 400 characters)',
     },
   },
-  required: ['diagnosis', 'severity', 'treatmentNotes', 'isHealthy'],
+  required: ['healthScore', 'diagnosis', 'treatmentNotes'],
 }
 
 function getRequestBody(req: VercelRequest): { imageBase64?: string; mimeType?: string } {
@@ -49,6 +42,10 @@ function getRequestBody(req: VercelRequest): { imageBase64?: string; mimeType?: 
     return req.body as { imageBase64?: string; mimeType?: string }
   }
   return {}
+}
+
+function clampHealthScore(score: number): number {
+  return Math.max(0, Math.min(100, Math.round(score)))
 }
 
 async function generateHealthAnalysis(
@@ -105,9 +102,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const prompt =
-      'Analyze this plant photo for diseases, pests, nutrient deficiencies, or other health issues. ' +
-      'If the plant looks healthy, set diagnosis to "Healthy", isHealthy to true, severity to "low", ' +
-      'and treatmentNotes to brief maintenance tips. Keep treatmentNotes under 400 characters.'
+      'Analyze this plant photo for diseases, pests, nutrient deficiencies, watering issues, or other health problems. ' +
+      'Return healthScore as an integer from 0 to 100 (100 = perfectly healthy). ' +
+      'Set diagnosis to a short label like "Healthy", "Overwatered", "Spider mites", or "Leaf spot". ' +
+      'Provide brief, actionable treatmentNotes under 400 characters.'
 
     const text = await generateHealthAnalysis(genAI, prompt, imagePart)
 
@@ -118,20 +116,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to parse AI health analysis response.' })
     }
 
-    if (!healthData.diagnosis || !healthData.treatmentNotes || healthData.isHealthy === undefined) {
+    if (!healthData.diagnosis || !healthData.treatmentNotes || healthData.healthScore == null) {
       return res.status(500).json({ error: 'Incomplete health analysis result from AI.' })
     }
 
-    const severity = String(healthData.severity).toLowerCase()
-    if (severity !== 'low' && severity !== 'medium' && severity !== 'high') {
-      return res.status(500).json({ error: 'Invalid severity in AI response.' })
-    }
-
     return res.status(200).json({
+      healthScore: clampHealthScore(Number(healthData.healthScore)),
       diagnosis: healthData.diagnosis.trim(),
-      severity,
       treatmentNotes: healthData.treatmentNotes.trim().slice(0, 400),
-      isHealthy: Boolean(healthData.isHealthy),
     })
   } catch (error) {
     console.error('Gemini Health API Error:', error)

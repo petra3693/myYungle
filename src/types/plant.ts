@@ -75,10 +75,9 @@ export interface PlantHealthLog {
   id: string
   timestamp: string
   photo: string
+  healthScore: number
   diagnosis: string
   treatmentNotes: string
-  severity: 'low' | 'medium' | 'high'
-  isHealthy: boolean
   analyzedByAI: boolean
 }
 

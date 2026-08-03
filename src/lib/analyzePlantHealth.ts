@@ -1,10 +1,10 @@
 import { parseImageDataUrl } from '@/lib/analyzePlant'
+import { clampHealthScore } from '@/lib/health-log'
 
 export interface AnalyzePlantHealthApiResponse {
+  healthScore: number
   diagnosis: string
-  severity: 'low' | 'medium' | 'high'
   treatmentNotes: string
-  isHealthy: boolean
 }
 
 function parseResponseJson(text: string): unknown | null {
@@ -72,10 +72,19 @@ export async function analyzePlantHealthImage(
     typeof data !== 'object' ||
     data === null ||
     !('diagnosis' in data) ||
-    typeof (data as AnalyzePlantHealthApiResponse).diagnosis !== 'string'
+    typeof (data as AnalyzePlantHealthApiResponse).diagnosis !== 'string' ||
+    typeof (data as AnalyzePlantHealthApiResponse).healthScore !== 'number'
   ) {
     return { ok: false, error: 'Invalid health analysis response.' }
   }
 
-  return { ok: true, data: data as AnalyzePlantHealthApiResponse }
+  const parsed = data as AnalyzePlantHealthApiResponse
+  return {
+    ok: true,
+    data: {
+      healthScore: clampHealthScore(parsed.healthScore),
+      diagnosis: parsed.diagnosis,
+      treatmentNotes: parsed.treatmentNotes,
+    },
+  }
 }

@@ -8,8 +8,8 @@ import { clearAllPhotos, deletePlantPhotos, getPhotoBlob } from '@/lib/photoStor
 import PlantPhoto from '@/components/PlantPhoto'
 import PlantHealthTracker from '@/components/plant-health-tracker'
 import PhotoActionSheet from '@/components/photo-action-sheet'
-import type { HealthLogSubmitData } from '@/components/health-analysis-sheet'
-import type { CheckInSubmitData } from '@/components/check-in-sheet'
+import type { HealthLogSubmitData } from '@/lib/health-log'
+import { clampHealthScore } from '@/lib/health-log'
 import { migrateLegacyCheckIn } from '@/lib/health-calculator'
 import type { AppSettings, DayCode, DayOfWeek, HealthCheckIn, HistoryEntry, Plant, WaterNeed } from '@/types/plant'
 import svgPaths from '@/imports/NewDesign2-1/svg-cm3nd9oy62'
@@ -105,18 +105,28 @@ function scheduleIndicesFromPlant(plant: Pick<Plant, 'wateringDays' | 'scheduleD
 
 function normalizeHealthLog(raw: unknown): Plant['healthLogs'][number] | null {
   if (!raw || typeof raw !== 'object') return null
-  const log = raw as Partial<Plant['healthLogs'][number]>
+  const log = raw as Partial<Plant['healthLogs'][number]> & {
+    severity?: string
+    isHealthy?: boolean
+  }
   if (!log.id || !log.timestamp || !log.diagnosis) return null
-  const severity = log.severity === 'high' || log.severity === 'medium' ? log.severity : 'low'
+
+  let healthScore = typeof log.healthScore === 'number' ? log.healthScore : NaN
+  if (Number.isNaN(healthScore)) {
+    if (log.isHealthy === true) healthScore = 90
+    else if (log.severity === 'high') healthScore = 35
+    else if (log.severity === 'medium') healthScore = 60
+    else healthScore = 75
+  }
+
   return {
     id: String(log.id),
     timestamp: String(log.timestamp),
     photo: typeof log.photo === 'string' ? log.photo : '',
+    healthScore: clampHealthScore(healthScore),
     diagnosis: String(log.diagnosis),
     treatmentNotes: typeof log.treatmentNotes === 'string' ? log.treatmentNotes : '',
-    severity,
-    isHealthy: Boolean(log.isHealthy),
-    analyzedByAI: Boolean(log.analyzedByAI),
+    analyzedByAI: log.analyzedByAI !== false,
   }
 }
 
@@ -1933,34 +1943,14 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
       id,
       timestamp,
       photo: data.photo,
+      healthScore: clampHealthScore(data.healthScore),
       diagnosis: data.diagnosis,
       treatmentNotes: data.treatmentNotes,
-      severity: data.severity,
-      isHealthy: data.isHealthy,
-      analyzedByAI: data.analyzedByAI,
+      analyzedByAI: true,
     }
     onUpdate({
       ...plant,
       healthLogs: [log, ...(plant.healthLogs ?? [])],
-    })
-  }
-
-  function saveCheckIn(data: CheckInSubmitData) {
-    const timestamp = new Date().toISOString()
-    const checkIn: HealthCheckIn = {
-      id: Date.now().toString(),
-      timestamp,
-      ...data,
-    }
-    onUpdate({
-      ...plant,
-      checkIns: [checkIn, ...(plant.checkIns ?? [])],
-      history: [{
-        id: `${Date.now()}-health`,
-        date: timestamp,
-        note: data.note?.trim() || `Comprehensive diagnosis — score pending`,
-        photo: plant.photo,
-      }, ...plantHistory(plant)],
     })
   }
 
@@ -2086,9 +2076,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
               plant={plant}
               isPro={isPro}
               onUpgrade={onShowPro}
-              onSaveCheckIn={saveCheckIn}
               onSaveHealthLog={saveHealthLog}
-              onRecordWatering={onMarkWatered}
               onPhotoClick={openLightbox}
             />
 
