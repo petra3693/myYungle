@@ -248,6 +248,49 @@
     pointer-events: none;
   }
 
+  .pro-feature-ai {
+    background: linear-gradient(135deg, rgba(0, 255, 102, 0.1) 0%, rgba(66, 133, 244, 0.08) 55%, rgba(124, 77, 255, 0.06) 100%);
+    box-shadow:
+      3px 3px 0 0 #000,
+      inset 0 0 0 2px rgba(0, 255, 102, 0.45);
+  }
+
+  .pro-feature-ai__icon {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #4285f4 0%, #7c4dff 52%, #00ff66 100%);
+    animation: gemini-glow 2.5s ease-in-out infinite;
+  }
+
+  .pro-feature-ai__icon-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 65%
+    );
+    animation: gemini-shimmer 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .pro-feature-ai__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border: 2px solid #000;
+    border-radius: 9999px;
+    background: var(--color-neo-green);
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 900;
+    font-size: 8px;
+    color: #000;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
   .neo-tab-bar {
     position: fixed;
     bottom: 0;

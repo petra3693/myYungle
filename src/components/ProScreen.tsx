@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { Activity, History, ShieldCheck, Sprout } from 'lucide-react'
+import { History, Sparkles, Sprout, Stethoscope } from 'lucide-react'
 import svgPro from '@/imports/MyjungleProPaywall/svg-frfo2l2sh3'
 
 const GREEN = '#00FF66'
@@ -11,6 +11,7 @@ export interface ProFeature {
   description: string
   highlights?: string[]
   icon: ComponentType<{ className?: string; strokeWidth?: number }>
+  isAiFeature?: boolean
 }
 
 export const PRO_FEATURES: ProFeature[] = [
@@ -28,37 +29,50 @@ export const PRO_FEATURES: ProFeature[] = [
     icon: History,
   },
   {
-    id: 'health-history',
-    title: 'HEALTH HISTORY & DIAGNOSTICS',
-    description: 'Detailed logs of plant illnesses, treatments, and recovery progress over time',
-    highlights: ['Illness logs', 'Treatment records', 'Recovery tracking'],
-    icon: Activity,
+    id: 'ai-health-diagnostics',
+    title: 'UNLIMITED AI HEALTH DIAGNOSTICS',
+    description: 'Instant photo-based disease & pest analysis powered by AI',
+    highlights: ['Disease detection', 'Pest identification', 'Treatment suggestions'],
+    icon: Stethoscope,
+    isAiFeature: true,
   },
   {
-    id: 'offline-private',
-    title: '100% OFFLINE & PRIVATE',
-    description: 'All photos and tracking data stored strictly on your device',
-    icon: ShieldCheck,
+    id: 'ai-health-timeline',
+    title: 'FULL AI HEALTH HISTORY & PROGRESS TIMELINE',
+    description: "Complete, unlimited visual health logging to track your plants' recovery over time",
+    highlights: ['Health score tracking', 'Photo timeline', 'Recovery progress'],
+    icon: Sparkles,
+    isAiFeature: true,
   },
 ]
 
 function ProFeatureCard({ feature }: { feature: ProFeature }) {
   const Icon = feature.icon
+  const isAi = feature.isAiFeature === true
 
   return (
-    <div className="neo-card relative rounded-2xl w-full">
+    <div className={`neo-card relative rounded-2xl w-full ${isAi ? 'pro-feature-ai' : ''}`}>
       <div className="flex items-start gap-3 p-3">
         <div
-          className="relative flex items-center justify-center rounded-full shrink-0 size-9 border-2 border-black"
-          style={{ background: GREEN }}
+          className={`relative flex items-center justify-center rounded-full shrink-0 size-9 border-2 border-black ${isAi ? 'pro-feature-ai__icon' : ''}`}
+          style={isAi ? undefined : { background: GREEN }}
         >
-          <Icon className="size-4 text-black" strokeWidth={2.25} aria-hidden />
+          {isAi && <span className="pro-feature-ai__icon-shine" aria-hidden />}
+          <Icon className="relative size-4 text-black" strokeWidth={2.25} aria-hidden />
         </div>
         <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', lineHeight: 1.3 }}>
-            {feature.title}
-          </p>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888', lineHeight: 1.45 }}>
+          <div className="flex items-start gap-2 flex-wrap">
+            <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', lineHeight: 1.3 }}>
+              {feature.title}
+            </p>
+            {isAi && (
+              <span className="pro-feature-ai__badge shrink-0">
+                <Sparkles className="size-2.5 text-black" strokeWidth={2.5} aria-hidden />
+                AI
+              </span>
+            )}
+          </div>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: isAi ? '#333' : '#888', lineHeight: 1.45 }}>
             {feature.description}
           </p>
           {feature.highlights && feature.highlights.length > 0 && (
@@ -72,7 +86,7 @@ function ProFeatureCard({ feature }: { feature: ProFeature }) {
                     fontWeight: 600,
                     fontSize: 9,
                     color: '#000',
-                    background: '#EFEFEF',
+                    background: isAi ? GREEN : '#EFEFEF',
                     lineHeight: 1.2,
                   }}
                 >
@@ -106,7 +120,7 @@ export default function ProScreen({ onUnlock, onClose: _onClose }: { onUnlock: (
               NO SUBSCRIPTIONS. UNLIMITED JUNGLE.
             </p>
             <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#888' }}>
-              Take absolute control of your collection offline.
+              Unlimited plants, growth tracking, and AI-powered plant health care.
             </p>
           </div>
         </div>
