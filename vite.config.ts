@@ -90,44 +90,77 @@ function feedbackApiDevPlugin(env: Record<string, string>): Plugin {
   }
 }
 
-/** Dev-only POST /api/analyze-plant — mirrors Vercel serverless route in `api/analyze-plant.ts`. */
+/** Dev/preview POST /api/analyze-plant — mirrors Vercel serverless route in `api/analyze-plant.ts`. */
 function analyzePlantApiDevPlugin(env: Record<string, string>): Plugin {
-  return {
-    name: 'analyze-plant-api-dev',
-    apply: 'serve',
-    configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        const url = req.url?.split('?')[0]
-        if (url !== '/api/analyze-plant') return next()
+  const registerAnalyzePlantRoute = (
+    middlewares: { use: (fn: (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse, next: (err?: unknown) => void) => void) => void },
+  ) => {
+    middlewares.use(async (req, res, next) => {
+      const url = req.url?.split('?')[0]
+      if (url !== '/api/analyze-plant') return next()
 
-        if (req.method !== 'POST') {
-          res.statusCode = 405
+      if (req.method !== 'POST') {
+        res.statusCode = 405
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ error: 'Method not allowed' }))
+        return
+      }
+
+      try {
+        const chunks: Buffer[] = []
+        for await (const chunk of req) {
+          chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+        }
+        const raw = Buffer.concat(chunks).toString('utf8')
+
+        let body: unknown = {}
+        if (raw) {
+          try {
+            body = JSON.parse(raw)
+          } catch {
+            res.statusCode = 400
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: 'Invalid JSON request body.' }))
+            return
+          }
+        }
+
+        process.env.GEMINI_API_KEY = env.GEMINI_API_KEY ?? process.env.GEMINI_API_KEY
+
+        if (!process.env.GEMINI_API_KEY) {
+          res.statusCode = 503
           res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ error: 'Method not allowed' }))
+          res.end(
+            JSON.stringify({
+              error:
+                'Plant analysis is not configured. Add GEMINI_API_KEY to .env.local and restart the dev server.',
+            }),
+          )
           return
         }
 
-        try {
-          const chunks: Buffer[] = []
-          for await (const chunk of req) {
-            chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
-          }
-          const raw = Buffer.concat(chunks).toString('utf8')
-          const body = raw ? JSON.parse(raw) : {}
+        const { handleAnalyzePlantRequest } = await import('./src/server/analyzePlantHandler.ts')
+        const result = await handleAnalyzePlantRequest(body)
+        res.statusCode = result.status
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify(result.body))
+      } catch (error) {
+        console.error('[myJungle] analyze-plant dev route error:', error)
+        res.statusCode = 500
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ error: 'Failed to analyze plant image' }))
+      }
+    })
+  }
 
-          process.env.GEMINI_API_KEY = env.GEMINI_API_KEY ?? process.env.GEMINI_API_KEY
-
-          const { handleAnalyzePlantRequest } = await import('./src/server/analyzePlantHandler')
-          const result = await handleAnalyzePlantRequest(body)
-          res.statusCode = result.status
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify(result.body))
-        } catch {
-          res.statusCode = 500
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ error: 'Failed to analyze plant image' }))
-        }
-      })
+  return {
+    name: 'analyze-plant-api-dev',
+    enforce: 'pre',
+    configureServer(server) {
+      registerAnalyzePlantRoute(server.middlewares)
+    },
+    configurePreviewServer(server) {
+      registerAnalyzePlantRoute(server.middlewares)
     },
   }
 }

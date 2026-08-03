@@ -1132,6 +1132,11 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
       setName(result.data.name)
       setWaterNeed(mapWaterNeedToForm(result.data.waterNeed))
       setNote(result.data.careNotes.slice(0, 500))
+    } catch (error) {
+      console.error('[myJungle] Plant analysis error:', error)
+      setAnalyzeError(
+        error instanceof Error ? error.message : 'Could not analyze this photo. Please try again.',
+      )
     } finally {
       setAnalyzing(false)
     }
