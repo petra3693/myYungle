@@ -22,9 +22,24 @@ export function isHealthCheckedToday(log: PlantHealthLog | null): boolean {
   )
 }
 
-export function healthScoreSummary(score: number | null, diagnosis: string | null): string {
-  if (score == null) return 'Scan your plant with AI to get a health score.'
-  if (score >= 85) return diagnosis ? `${diagnosis} — looking strong.` : 'Looking strong today.'
-  if (score >= 60) return diagnosis ? `${diagnosis} — monitor and follow care tips.` : 'Some signs to watch — check care tips.'
-  return diagnosis ? `${diagnosis} — needs attention.` : 'Needs attention — review care tips below.'
+export function healthScoreSummary(
+  score: number | null,
+  diagnosis: string | null,
+  translate?: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const t = translate ?? ((key: string) => key)
+  if (score == null) return t('health.scanPrompt')
+  if (score >= 85) {
+    return diagnosis
+      ? t('health.lookingStrongDiag', { diagnosis })
+      : t('health.lookingStrong')
+  }
+  if (score >= 60) {
+    return diagnosis
+      ? t('health.monitorDiag', { diagnosis })
+      : t('health.monitor')
+  }
+  return diagnosis
+    ? t('health.needsAttentionDiag', { diagnosis })
+    : t('health.needsAttention')
 }

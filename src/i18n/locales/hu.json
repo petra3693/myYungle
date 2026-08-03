@@ -32,7 +32,7 @@
     "mySpecimens": "NÖVÉNYEIM ({{count}})",
     "noPlants": "Még nincsenek növények. Koppints alul a hozzáadáshoz!",
     "addPlant": "+ NÖVÉNY HOZZÁADÁSA",
-    "upgradeToPro": "PRO FRissítés",
+    "upgradeToPro": "PRO FRISSÍTÉS",
     "markWatered": "Megjelölés öntözöttként",
     "watered": "Növény öntözve"
   },
@@ -117,7 +117,22 @@
     "upgradeToPro": "PRO FRissítés",
     "timeline": "Egészség idővonal",
     "noLogs": "Még nincs egészségvizsgálat. Készíts fotót az elemzéshez.",
-    "viewPhoto": "Egészség fotó megtekintése: {{date}}"
+    "viewPhoto": "Egészség fotó megtekintése: {{date}}",
+    "aiBadge": "MI",
+    "aiScanTitle": "MI növényegészség-vizsgálat",
+    "checkedTodayShort": "Ma ellenőrizve",
+    "notCheckedToday": "Ma még nincs ellenőrizve",
+    "latestDiagnosis": "Legutóbbi diagnózis",
+    "scanSummary": "Vizsgálat összefoglaló",
+    "aiScanSubtitle": "Készíts fotót, a Gemini pontozza a növény egészségét, felismeri a gondokat, és ápolási tippeket ad.",
+    "latestCareAdvice": "Legutóbbi ápolási tanács",
+    "scanPrompt": "Vizsgáld meg a növényt MI-vel az egészségpontszámhoz.",
+    "lookingStrongDiag": "{{diagnosis}} — erősnek tűnik.",
+    "lookingStrong": "Ma erősnek tűnik.",
+    "monitorDiag": "{{diagnosis}} — figyeld, és kövesd az ápolási tippeket.",
+    "monitor": "Figyelendő jelek — nézd meg az ápolási tippeket.",
+    "needsAttentionDiag": "{{diagnosis}} — figyelmet igényel.",
+    "needsAttention": "Figyelmet igényel — nézd meg az ápolási tippeket lent."
   },
   "deleteModal": {
     "title": "Növény törlése?",
@@ -133,9 +148,9 @@
     "weeklySchedule": "HETI ÖNTÖZÉSI ÜTEMTERV",
     "chooseDays": "Válaszd ki, mely napokon szeretnél öntözni",
     "dataPrivacy": "Adatok és adatvédelem",
-    "exportData": "DZSUNGEL ADATOK EXPORTÁLÁSA (JSON)",
+    "exportData": "Adatok exportálása",
     "export": "EXPORT",
-    "resetData": "ALKALMAZÁS ADATOK VISSZAÁLLÍTÁSA",
+    "resetData": "Adatok visszaállítása",
     "reset": "RESET",
     "sendFeedback": "Visszajelzés küldése",
     "proStatus": "MY JUNGLE PRO STÁTUSZ",
@@ -143,7 +158,12 @@
     "freeTier": "INGYENES",
     "proFooter": "Korlátlan növények · Minden funkció feloldva.",
     "freeFooter": "Még {{count}} hely maradt az ingyenes csomagban.",
-    "unlockPro": "PRO ÖRÖKRE — 5,99 $"
+    "unlockPro": "PRO ÖRÖKRE — 5,99 $",
+    "legalAbout": "Jogi információk",
+    "privacyPolicy": "Adatvédelmi nyilatkozat",
+    "legalNotice": "Impressum & Jogi nyilatkozat",
+    "appVersion": "MyJungle v{{version}}",
+    "closeLegal": "Bezárás"
   },
   "pro": {
     "tagline": "NINCS ELŐFIZETÉS. KORLÁTLAN DZSUNGEL.",
@@ -163,5 +183,176 @@
     "freeTierLimit": "Ingyenes limit elérve. Frissíts Pro-ra több növényhez.",
     "couldNotAdd": "A növény hozzáadása sikertelen. Próbáld újra.",
     "storageError": "A növények mentése sikertelen. Ellenőrizd a tárhelyet."
+  },
+  "days": {
+    "short": {
+      "mon": "H",
+      "tue": "K",
+      "wed": "SZE",
+      "thu": "CS",
+      "fri": "P",
+      "sat": "SZO",
+      "sun": "V"
+    },
+    "full": {
+      "mon": "Hétfő",
+      "tue": "Kedd",
+      "wed": "Szerda",
+      "thu": "Csütörtök",
+      "fri": "Péntek",
+      "sat": "Szombat",
+      "sun": "Vasárnap"
+    }
+  },
+  "rooms": {
+    "unknown": "Ismeretlen",
+    "living_room": "Nappali",
+    "bedroom": "Hálószoba",
+    "kitchen": "Konyha",
+    "bathroom": "Fürdőszoba",
+    "office": "Iroda",
+    "balcony": "Erkély",
+    "hallway": "Folyosó",
+    "dining_room": "Étkező",
+    "garden": "Kert"
+  },
+  "common": {
+    "cancel": "MÉGSE",
+    "pro": "PRO",
+    "proFeature": "PRO FUNKCIÓ",
+    "freeTier": "INGYENES",
+    "plantsUsed": "{{used}}/{{max}} NÖVÉNY",
+    "slotsRemaining": "Még {{count}} hely maradt.",
+    "slotsRemaining_one": "Még {{count}} hely maradt.",
+    "upgradeUnlimited": "Frissíts korlátlan növényekhez",
+    "limitReached": "Limit elérve — mind a {{count}} ingyenes hely foglalt.",
+    "upgradeUnlimitedCta": "FRISSÍTÉS KORLÁTLAN NÖVÉNYEKHEZ",
+    "mainNav": "Fő navigáció",
+    "dismiss": "Bezárás",
+    "deleteNamed": "{{name}} törlése"
+  },
+  "customSchedule": {
+    "title": "Egyéni öntözési ütemterv",
+    "subtitle": "Válassz napokat csak ehhez a növényhez. Általános ütemterv: {{schedule}}",
+    "noGlobalDays": "Nincs általános nap beállítva",
+    "inGeneral": "általánosban",
+    "editGlobal": "Általános ütemterv szerkesztése",
+    "apply": "Alkalmazás erre a növényre",
+    "useDefault": "Általános alapértelmezett ütemterv",
+    "close": "Bezárás"
+  },
+  "growth": {
+    "proUnlock": "PRO funkció: Előzmények és követés feloldása",
+    "growthOverTime": "Növekedés időben",
+    "photoTimeline": "Fotó idővonal",
+    "snapshot": "PILLANATKÉP",
+    "daysTracked": "Követett napok",
+    "plantAge": "Növény kora",
+    "totalGrowth": "Összes növekedés",
+    "consistencyScore": "Konzisztencia pontszám",
+    "logGrowth": "Növekedés rögzítése",
+    "heightCm": "Magasság (cm)",
+    "note": "Megjegyzés",
+    "notePlaceholder": "Mi változott az utolsó ellenőrzés óta?",
+    "saveLog": "NAPLÓ MENTÉSE",
+    "history": "Növekedési előzmények",
+    "logGrowthBtn": "+ Növekedés rögzítése",
+    "waterings": "Öntözések",
+    "consistent": "{{percent}}% következetes",
+    "newSnapshotLine1": "ÚJ",
+    "newSnapshotLine2": "PILLANATKÉP",
+    "chartAria": "Növény növekedési diagram",
+    "snapshotAlt": "Növekedési pillanatkép",
+    "defaultNote": "Növekedésellenőrzés rögzítve.",
+    "defaultSnapshotNote": "Növekedési pillanatkép mentve.",
+    "unitCm": "cm"
+  },
+  "notifications": {
+    "pushTitle": "Push értesítés",
+    "pushSubtitle": "Értesítések engedélyezése az öntözéshez",
+    "blocked": "Az értesítések blokkolva vannak. Engedélyezd őket a készülék vagy böngésző beállításaiban a myJungle számára, majd próbáld újra.",
+    "reminderTime": "Öntözési emlékeztető ideje",
+    "alertAt": "Értesítés ekkor ({{tz}})",
+    "timezoneSync": "Készülék időzóna szinkron",
+    "timezoneAuto": "Automatikus szinkron a készülék időzónájával",
+    "timezoneManual": "Manuális időzóna",
+    "soundAlerts": "Hangjelzések",
+    "soundSubtitle": "Hang lejátszása értesítéseknél",
+    "haptic": "Rezgő visszajelzés",
+    "hapticSubtitle": "Rezgés riasztásoknál és kapcsolóknál",
+    "sendTest": "Teszt értesítés küldése",
+    "unsupported": "Az értesítések nem támogatottak ezen a készüléken.",
+    "enableFirst": "Először engedélyezd a push értesítéseket.",
+    "testSent": "Teszt értesítés elküldve!",
+    "testFailed": "A teszt értesítés küldése sikertelen.",
+    "timezoneAutoSynced": "Auto-szinkron: {{tz}}",
+    "timezoneManualValue": "Manuális: {{tz}}",
+    "togglePush": "Push értesítések kapcsolása",
+    "toggleTimezone": "Időzóna auto-szinkron kapcsolása",
+    "toggleSound": "Hangjelzések kapcsolása",
+    "toggleHaptic": "Rezgő visszajelzés kapcsolása"
+  },
+  "photo": {
+    "chooseSource": "Fotóforrás választása",
+    "takePhoto": "Fotó készítése",
+    "chooseLibrary": "Választás a galériából",
+    "cancel": "Mégse",
+    "selectedPlant": "Kiválasztott növény"
+  },
+  "feedback": {
+    "intro": "Örömmel fogadjuk a visszajelzésedet!",
+    "thought": "Mi jár a fejedben?",
+    "issue": "Mi romlott el? / Írd le a problémát",
+    "contact": "Mit szeretnél látni az alkalmazásban?",
+    "send": "Visszajelzés küldése",
+    "sending": "Küldés…",
+    "success": "Köszönjük! A visszajelzésedet elküldtük.",
+    "failed": "A visszajelzés küldése sikertelen. Ellenőrizd a kapcsolatot.",
+    "sendShort": "KÜLDÉS",
+    "failedShort": "A visszajelzés küldése sikertelen."
+  },
+  "confirm": {
+    "resetData": "Minden alkalmazásadat visszaállítása?"
+  },
+  "analyze": {
+    "failed": "A fotó elemzése sikertelen. Próbáld újra."
+  },
+  "months": {
+    "short": {
+      "jan": "jan.",
+      "feb": "feb.",
+      "mar": "márc.",
+      "apr": "ápr.",
+      "may": "máj.",
+      "jun": "jún.",
+      "jul": "júl.",
+      "aug": "aug.",
+      "sep": "szept.",
+      "oct": "okt.",
+      "nov": "nov.",
+      "dec": "dec."
+    }
+  },
+  "legal": {
+    "privacy": {
+      "updated": "Utolsó frissítés: 2026. augusztus",
+      "intro": "A myJungle („az Alkalmazás”) segít az öntözési ütemtervek és ápolási adatok követésében. Ez az oldal elmagyarázza, milyen információkat dolgozunk fel használatkor.",
+      "dataTitle": "Tárolt adatok",
+      "dataBody": "A növényprofilok, fotók, ütemtervek, beállítások és az opcionális visszajelzés az eszközödön tárolódnak, és/vagy csak a használt funkciókhoz szükséges mértékben kerülnek továbbításra (pl. MI-elemzés vagy visszajelzés).",
+      "choicesTitle": "Választási lehetőségek",
+      "choicesBody": "A Beállításokban exportálhatod vagy visszaállíthatod az adatokat. Az értesítéseket a Beállításokban vagy a készülék rendszerbeállításaiban kapcsolhatod ki.",
+      "contactTitle": "Kapcsolat",
+      "contactBody": "Adatvédelmi kérdésekhez használd az alkalmazáson belüli visszajelző űrlapot, vagy keresd az üzemeltetőt a következő szerint:"
+    },
+    "impressum": {
+      "intro": "Tájékoztatás a vonatkozó impresszum / szolgáltatói azonosítási kötelezettség szerint.",
+      "serviceTitle": "Szolgáltatás",
+      "serviceName": "myJungle Plant Watering Tracker",
+      "webLabel": "Web",
+      "operatorTitle": "Üzemeltető",
+      "operatorBody": "Kérjük, a bolti megjelenés előtt cseréld le ezt a részt a jogi üzemeltető nevére, címére és elérhetőségére.",
+      "contactTitle": "Kapcsolat",
+      "contactBody": "Termékkel kapcsolatos kérdésekhez használd az alkalmazáson belüli visszajelző űrlapot."
+    }
   }
 }

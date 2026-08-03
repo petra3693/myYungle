@@ -12,3 +12,10 @@ logs/
 .claude-replay.*
 .tmp-*
 .vercel
+ios/DerivedData/
+android/.gradle/
+android/app/build/
+android/build/
+**/.DS_Store
+**/xcuserdata/
+**/*.xcuserstate

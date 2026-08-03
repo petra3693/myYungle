@@ -117,7 +117,22 @@
     "upgradeToPro": "UPGRADE TO PRO",
     "timeline": "Health Timeline",
     "noLogs": "No health scans yet. Take a photo to analyze your plant.",
-    "viewPhoto": "View health photo from {{date}}"
+    "viewPhoto": "View health photo from {{date}}",
+    "aiBadge": "AI",
+    "aiScanTitle": "AI Plant Health Scan",
+    "checkedTodayShort": "Checked Today",
+    "notCheckedToday": "Not Checked Today",
+    "latestDiagnosis": "Latest Diagnosis",
+    "scanSummary": "Scan Summary",
+    "aiScanSubtitle": "Snap a photo and Gemini will score your plant's health, spot issues, and suggest care steps.",
+    "latestCareAdvice": "Latest Care Advice",
+    "scanPrompt": "Scan your plant with AI to get a health score.",
+    "lookingStrongDiag": "{{diagnosis}} — looking strong.",
+    "lookingStrong": "Looking strong today.",
+    "monitorDiag": "{{diagnosis}} — monitor and follow care tips.",
+    "monitor": "Some signs to watch — check care tips.",
+    "needsAttentionDiag": "{{diagnosis}} — needs attention.",
+    "needsAttention": "Needs attention — review care tips below."
   },
   "deleteModal": {
     "title": "Delete Plant?",
@@ -133,9 +148,9 @@
     "weeklySchedule": "WEEKLY WATER SCHEDULE",
     "chooseDays": "Choose which days you'd like to water",
     "dataPrivacy": "Data & Privacy",
-    "exportData": "EXPORT JUNGLE DATA (JSON)",
+    "exportData": "Export Data",
     "export": "EXPORT",
-    "resetData": "RESET APP DATA",
+    "resetData": "Reset App Data",
     "reset": "RESET",
     "sendFeedback": "Send Feedback",
     "proStatus": "MY JUNGLE PRO STATUS",
@@ -143,7 +158,12 @@
     "freeTier": "FREE TIER",
     "proFooter": "Unlimited plants · All features unlocked.",
     "freeFooter": "{{count}} plants slot remaining on free tier.",
-    "unlockPro": "UNLOCK PRO FOREVER — $5.99"
+    "unlockPro": "UNLOCK PRO FOREVER — $5.99",
+    "legalAbout": "Legal & About",
+    "privacyPolicy": "Privacy Policy",
+    "legalNotice": "Legal Notice & Impressum",
+    "appVersion": "MyJungle v{{version}}",
+    "closeLegal": "Close"
   },
   "pro": {
     "tagline": "NO SUBSCRIPTIONS. UNLIMITED JUNGLE.",
@@ -163,5 +183,176 @@
     "freeTierLimit": "Free tier limit reached. Upgrade to Pro to add more plants.",
     "couldNotAdd": "Could not add plant. Please try again.",
     "storageError": "Could not save your plants. Check storage space and try again."
+  },
+  "days": {
+    "short": {
+      "mon": "MON",
+      "tue": "TUE",
+      "wed": "WED",
+      "thu": "THU",
+      "fri": "FRI",
+      "sat": "SAT",
+      "sun": "SUN"
+    },
+    "full": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    }
+  },
+  "rooms": {
+    "unknown": "Unknown",
+    "living_room": "Living Room",
+    "bedroom": "Bedroom",
+    "kitchen": "Kitchen",
+    "bathroom": "Bathroom",
+    "office": "Office",
+    "balcony": "Balcony",
+    "hallway": "Hallway",
+    "dining_room": "Dining Room",
+    "garden": "Garden"
+  },
+  "common": {
+    "cancel": "CANCEL",
+    "pro": "PRO",
+    "proFeature": "PRO FEATURE",
+    "freeTier": "FREE TIER",
+    "plantsUsed": "{{used}}/{{max}} PLANTS USED",
+    "slotsRemaining": "{{count}} slots remaining.",
+    "slotsRemaining_one": "{{count}} slot remaining.",
+    "upgradeUnlimited": "Upgrade to add unlimited plants",
+    "limitReached": "Limit reached — you've used all {{count}} free plant slots.",
+    "upgradeUnlimitedCta": "UPGRADE TO ADD UNLIMITED PLANTS",
+    "mainNav": "Main navigation",
+    "dismiss": "Dismiss",
+    "deleteNamed": "Delete {{name}}"
+  },
+  "customSchedule": {
+    "title": "Custom Watering Schedule",
+    "subtitle": "Pick any days for this plant only. General schedule: {{schedule}}",
+    "noGlobalDays": "No global days set",
+    "inGeneral": "in general",
+    "editGlobal": "Edit Global General Schedule",
+    "apply": "Apply for this Plant",
+    "useDefault": "Use General Default Schedule",
+    "close": "Close"
+  },
+  "growth": {
+    "proUnlock": "PRO Feature: Unlock History & Tracking",
+    "growthOverTime": "Growth Over Time",
+    "photoTimeline": "Photo Timeline",
+    "snapshot": "SNAPSHOT",
+    "daysTracked": "Days Tracked",
+    "plantAge": "Plant age",
+    "totalGrowth": "Total Growth",
+    "consistencyScore": "Consistency Score",
+    "logGrowth": "Log Growth",
+    "heightCm": "Height (cm)",
+    "note": "Note",
+    "notePlaceholder": "What changed since last check?",
+    "saveLog": "SAVE LOG",
+    "history": "Growth History",
+    "logGrowthBtn": "+ Log Growth",
+    "waterings": "Waterings",
+    "consistent": "{{percent}}% consistent",
+    "newSnapshotLine1": "NEW",
+    "newSnapshotLine2": "SNAPSHOT",
+    "chartAria": "Plant growth chart",
+    "snapshotAlt": "Growth snapshot",
+    "defaultNote": "Growth check logged.",
+    "defaultSnapshotNote": "Growth snapshot logged.",
+    "unitCm": "cm"
+  },
+  "notifications": {
+    "pushTitle": "Push Notification",
+    "pushSubtitle": "Allow notifications for watering",
+    "blocked": "Notifications are blocked. Open your device or browser settings and allow notifications for myJungle, then try again.",
+    "reminderTime": "Watering Reminder Time",
+    "alertAt": "Alert at this time ({{tz}})",
+    "timezoneSync": "Device Timezone Sync",
+    "timezoneAuto": "Auto-sync with device timezone",
+    "timezoneManual": "Manual timezone",
+    "soundAlerts": "Sound Alerts",
+    "soundSubtitle": "Play sound with notifications",
+    "haptic": "Haptic Feedback",
+    "hapticSubtitle": "Vibrate on alerts and toggles",
+    "sendTest": "Send Test Notification",
+    "unsupported": "Notifications are not supported on this device.",
+    "enableFirst": "Enable push notifications first.",
+    "testSent": "Test notification sent!",
+    "testFailed": "Could not send test notification.",
+    "timezoneAutoSynced": "Auto-synced: {{tz}}",
+    "timezoneManualValue": "Manual: {{tz}}",
+    "togglePush": "Toggle push notifications",
+    "toggleTimezone": "Toggle timezone auto sync",
+    "toggleSound": "Toggle sound alerts",
+    "toggleHaptic": "Toggle haptic feedback"
+  },
+  "photo": {
+    "chooseSource": "Choose photo source",
+    "takePhoto": "Take Photo",
+    "chooseLibrary": "Choose from Library",
+    "cancel": "Cancel",
+    "selectedPlant": "Selected plant"
+  },
+  "feedback": {
+    "intro": "We'd love to hear from you!",
+    "thought": "Tell us what's on your mind...",
+    "issue": "What went wrong? / Describe the issue",
+    "contact": "What would you like to see in the app?",
+    "send": "Send Feedback",
+    "sending": "Sending…",
+    "success": "Thanks! Your feedback was sent.",
+    "failed": "Failed to send feedback. Please check your connection and try again.",
+    "sendShort": "SEND",
+    "failedShort": "Failed to send feedback."
+  },
+  "confirm": {
+    "resetData": "Reset all app data?"
+  },
+  "analyze": {
+    "failed": "Could not analyze this photo. Please try again."
+  },
+  "months": {
+    "short": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
+    }
+  },
+  "legal": {
+    "privacy": {
+      "updated": "Last updated: August 2026",
+      "intro": "myJungle (“the App”) helps you track plant watering schedules and related care data. This page explains what information is processed when you use the App.",
+      "dataTitle": "Data we store",
+      "dataBody": "Plant profiles, photos, schedules, settings, and optional feedback you submit are stored on your device and/or transmitted only as needed to provide features you use (for example AI analysis or feedback delivery).",
+      "choicesTitle": "Your choices",
+      "choicesBody": "You can export or reset app data from Settings. You may also disable notifications in Settings or through your device system preferences.",
+      "contactTitle": "Contact",
+      "contactBody": "For privacy questions, use the in-app feedback form or contact the operator listed in the"
+    },
+    "impressum": {
+      "intro": "Information according to applicable imprint / provider identification requirements.",
+      "serviceTitle": "Service",
+      "serviceName": "myJungle Plant Watering Tracker",
+      "webLabel": "Web",
+      "operatorTitle": "Operator",
+      "operatorBody": "Please replace this section with your legal operator name, address, and contact details before publishing to production app stores.",
+      "contactTitle": "Contact",
+      "contactBody": "Use the in-app feedback form for product questions."
+    }
   }
 }

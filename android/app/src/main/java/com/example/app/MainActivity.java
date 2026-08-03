@@ -1,4 +1,4 @@
-package com.myjungle.planttracker;
+package com.example.app;
 
 import com.getcapacitor.BridgeActivity;
 

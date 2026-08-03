@@ -114,7 +114,7 @@ function HealthLogTimelineItem({ log, onPhotoClick }: { log: PlantHealthLog; onP
             className="rounded-full border border-black px-2 py-0.5"
             style={{ background: '#EEF2FF', fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 9, color: '#4338CA' }}
           >
-            AI
+            {t('health.aiBadge')}
           </span>
         </div>
         <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>
@@ -207,7 +207,7 @@ function HealthTrackerBody({
     } catch (error) {
       console.error('[myJungle] Health analysis error:', error)
       setAnalyzeError(
-        error instanceof Error ? error.message : 'Could not analyze this photo. Please try again.',
+        error instanceof Error ? error.message : t('analyze.failed'),
       )
     } finally {
       setAnalyzing(false)
@@ -236,10 +236,10 @@ function HealthTrackerBody({
         <div className="relative z-10 flex flex-col items-center gap-3 w-full">
           <Sparkles size={22} strokeWidth={2.5} className="text-white drop-shadow-sm" aria-hidden />
           <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
-            AI Plant Health Scan
+            {t('health.aiScanTitle')}
           </span>
           <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: 'rgba(255,255,255,0.92)', lineHeight: 1.45, maxWidth: 280 }}>
-            Snap a photo and Gemini will score your plant&apos;s health, spot issues, and suggest care steps.
+            {t('health.aiScanSubtitle')}
           </p>
 
           <div className="rounded-2xl border-2 border-black bg-white/15 backdrop-blur-sm p-3 flex items-center gap-4 w-full max-w-[320px]">
@@ -255,10 +255,10 @@ function HealthTrackerBody({
                   color: checkedToday ? '#047857' : '#92400E',
                 }}
               >
-                {checkedToday ? 'Checked Today' : 'Not Checked Today'}
+                {checkedToday ? t('health.checkedTodayShort') : t('health.notCheckedToday')}
               </span>
               <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#fff', lineHeight: 1.4 }}>
-                {healthScoreSummary(healthScore, latestLog?.diagnosis ?? null)}
+                {healthScoreSummary(healthScore, latestLog?.diagnosis ?? null, t)}
               </span>
             </div>
           </div>
@@ -287,7 +287,7 @@ function HealthTrackerBody({
       {latestLog?.treatmentNotes && (
         <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-2 w-full">
           <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>
-            Latest Care Advice
+            {t('health.latestCareAdvice')}
           </span>
           <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}>
             {latestLog.treatmentNotes}

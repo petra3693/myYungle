@@ -8,7 +8,14 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "format": "oxfmt"
+    "format": "oxfmt",
+    "update:all": "npm run update:assets && npm run deploy:vercel && npm run sync:mobile",
+    "update:assets": "npx @capacitor/assets generate --ios --android",
+    "deploy:vercel": "npx vercel build && npx vercel deploy --prod",
+    "deploy:all": "npm run deploy:vercel && npm run sync:mobile && bash -c 'npm run run:ios & npm run run:android & wait'",
+    "sync:mobile": "npm run build && npx cap copy && npx cap sync",
+    "run:ios": "npx cap run ios",
+    "run:android": "npx cap run android"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
@@ -17,6 +24,7 @@
     "@capacitor/ios": "^8.5.0",
     "@capacitor/local-notifications": "^8.2.1",
     "@google/generative-ai": "^0.24.1",
+    "@revenuecat/purchases-capacitor": "^13.3.0",
     "i18next": "^26.3.6",
     "idb-keyval": "^6.3.0",
     "lucide-react": "^1.28.0",
@@ -26,6 +34,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.5.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^22.0.0",

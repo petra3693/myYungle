@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Camera, Sparkles, Sun } from 'lucide-react'
+import { Capacitor } from '@capacitor/core'
+import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor'
+import { Camera, ChevronRight, Sparkles, Sun } from 'lucide-react'
 import LanguageSelector from '@/components/LanguageSelector'
-import { getAppLanguage } from '@/i18n'
+import i18n, { getAppLanguage } from '@/i18n'
+import { formatWateringDayTags, fullDayLabel, shortDayLabel, translateRoomLabel } from '@/i18n/labels'
 import { submitFeedback } from '@/lib/submitFeedback'
 import { analyzePlantImage, mapLightNeedToForm, mapWaterNeedToForm } from '@/lib/analyzePlant'
 import { mapRecommendedDaysToIndices } from '@/lib/wateringSchedule'
@@ -21,12 +24,13 @@ import PhotoActionSheet from '@/components/photo-action-sheet'
 import type { HealthLogSubmitData } from '@/lib/health-log'
 import { clampHealthScore } from '@/lib/health-log'
 import { migrateLegacyCheckIn } from '@/lib/health-calculator'
-import type { AppSettings, DayCode, DayOfWeek, HealthCheckIn, HistoryEntry, LightNeed, Plant, WaterNeed, WateringFrequency } from '@/types/plant'
+import type { AppSettings, DayCode, HealthCheckIn, HistoryEntry, LightNeed, Plant, WaterNeed, WateringFrequency } from '@/types/plant'
 import svgPaths from '@/imports/NewDesign2-1/svg-cm3nd9oy62'
 import svgPaths2 from '@/imports/MyjungleSettimgs-2/svg-u9kpmn74e6'
 import svgAdd from '@/imports/MyjungleAddPlant/svg-fer892chf7'
 import svgDetail from '@/imports/MyjungleAddPlant-1/svg-op7ttlkxgr'
 import svgBatch from '@/imports/MyjungleBatchChecklist/svg-yfmp6xfqu5'
+import LegalDocumentScreen, { type LegalDocument } from '@/components/LegalDocumentScreen'
 import ProScreen from '@/components/ProScreen'
 import svgSettings from '@/imports/MyjungleSettings/svg-doomn8mxv7'
 import detailHeroImg from '@/imports/MyjungleAddPlant-1/06984fd808ab72dc75d1af5314ea222465c42869.png'
@@ -47,9 +51,8 @@ const BLACK = '#000000'
 const RED = '#FF2D55'
 const WATERED_BG = '#D9FFE8'
 const DAYS: DayCode[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const
-const DAY_OF_WEEK: DayOfWeek[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
 const MAX_FREE_PLANTS = 5
+const APP_VERSION = '1.0.0'
 const PLANT_PHOTOS = [plantImg0, plantImg1, plantImg2, plantImg3]
 
 function isFreeTierLimitReached(plantCount: number, isPro: boolean): boolean {
@@ -257,9 +260,15 @@ function getWaterNeedFills(need: WaterNeed): number {
   return need === 'Heavy' ? 3 : need === 'Moderate' ? 2 : 1
 }
 
-function formatWaterLevelLabel(need: WaterNeed): string {
+function formatWaterLevelLabel(need: WaterNeed, translate: (key: string) => string): string {
   const fills = getWaterNeedFills(need)
-  return `${need} · ${fills}/3`
+  const label =
+    need === 'Heavy'
+      ? translate('needLevels.waterHeavy')
+      : need === 'Moderate'
+        ? translate('needLevels.waterModerate')
+        : translate('needLevels.waterLight')
+  return `${label} · ${fills}/3`
 }
 
 function getLightNeedFills(need: LightNeed): number {
@@ -272,17 +281,13 @@ function DetailSunIcon({ filled, size = 12 }: { filled: boolean; size?: number }
       size={size}
       strokeWidth={2.25}
       aria-hidden
-      className={filled ? 'text-black shrink-0' : 'text-[#00FF66] shrink-0'}
-      fill={filled ? 'black' : 'none'}
+      className={filled ? 'text-[#00FF66] shrink-0' : 'text-[#C4C4C4] shrink-0'}
+      fill={filled ? GREEN : 'none'}
     />
   )
 }
 
 function getTodayDayIndex(): number { return (new Date().getDay() + 6) % 7 }
-
-function getDayOfWeek(index: number): DayOfWeek {
-  return DAY_OF_WEEK[index] ?? 'MONDAY'
-}
 
 /** Hydration-safe: day index is null until after mount. */
 function useTodayDayIndex(): number | null {
@@ -313,10 +318,11 @@ function SvgDrop() {
     </svg>
   )
 }
-function SvgDropSmall({ color = '#000000', filled = false }: { color?: string; filled?: boolean }) {
+function SvgDropSmall({ color = GREEN, filled = false }: { color?: string; filled?: boolean }) {
+  const stroke = filled ? color : '#C4C4C4'
   return (
     <svg className="block" fill="none" height="20" viewBox="0 0 12 20" width="12">
-      <path d={svgPaths.p35497c00} fill={filled ? color : 'none'} stroke={color} strokeLinecap="round" strokeWidth="2" />
+      <path d={svgPaths.p35497c00} fill={filled ? color : 'none'} stroke={stroke} strokeLinecap="round" strokeWidth="2" />
     </svg>
   )
 }
@@ -397,14 +403,14 @@ function TabBar({
     { id: 'settings', label: t('tabs.settings'), path: svgPaths2.p1eebb470, stroke: false },
   ]
   return (
-    <nav className="neo-tab-bar fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-black" aria-label="Main navigation">
+    <nav className="neo-tab-bar fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-black" aria-label={t('common.mainNav')}>
       <div className="neo-tab-bar-inner">
       {tabs.map((tabItem) => {
         const on = tabItem.id === active
         const isUpgradeTab = Boolean(tabItem.upgradeTab)
-        const tabBg = on ? GREEN : isUpgradeTab ? '#EFEFEF' : 'transparent'
-        const iconColor = on ? BLACK : isUpgradeTab ? BLACK : '#aaa'
-        const labelColor = on ? BLACK : isUpgradeTab ? BLACK : '#aaa'
+        const tabBg = isUpgradeTab ? '#EFEFEF' : 'transparent'
+        const iconColor = BLACK
+        const labelColor = BLACK
 
         return (
           <button
@@ -417,10 +423,18 @@ function TabBar({
               }
               onChange(tabItem.id)
             }}
-            className={`flex flex-col items-center justify-center gap-1 min-w-0 cursor-pointer transition-colors py-2 ${isUpgradeTab ? 'border-x-2 border-black' : ''}`}
+            className={`relative flex flex-col items-center justify-center gap-1 min-w-0 cursor-pointer transition-colors pt-3 pb-2 ${isUpgradeTab ? 'border-x-2 border-black' : ''}`}
             style={{ background: tabBg }}
+            aria-current={on ? 'page' : undefined}
             aria-label={isUpgradeTab ? t('tabs.upgradeToPro') : tabItem.label}
           >
+            {on && (
+              <span
+                aria-hidden
+                className="absolute left-0 right-0 top-0 pointer-events-none"
+                style={{ height: 6, background: GREEN }}
+              />
+            )}
             <div className="flex items-center justify-center" style={{ width: 20, height: 20 }}>
               <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
                 {tabItem.stroke
@@ -432,7 +446,7 @@ function TabBar({
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 8, color: labelColor, textTransform: 'uppercase' }}>{tabItem.label}</span>
             {isUpgradeTab && (
               <span className="neo-pill px-1 py-px" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 6, background: RED, color: '#fff', lineHeight: 1.2 }}>
-                PRO
+                {t('common.pro')}
               </span>
             )}
           </button>
@@ -474,7 +488,7 @@ function SplashScreen({ onNext }: { onNext: () => void }) {
 
       {/* Text */}
       <div className="text-animate text-center">
-        <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 28, color: '#000', letterSpacing: '-0.01em' }}>MYJUNGLE</div>
+        <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 28, color: '#000', letterSpacing: '-0.01em' }}>{t('app.name')}</div>
         <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', opacity: 0.55, marginTop: 4 }}>{t('app.version')}</div>
       </div>
     </div>
@@ -505,25 +519,23 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
       className="flex flex-col h-[100dvh] p-4 overflow-hidden box-border"
       style={{
         background: BG,
-        paddingTop: 'calc(1rem + env(safe-area-inset-top, 0px))',
+        paddingTop: 'calc(0.5rem + env(safe-area-inset-top, 0px))',
+        paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
       }}
     >
-      <div className="flex flex-col items-center shrink-0 gap-1 w-full">
-        <svg className="h-12 w-auto max-h-14 shrink-0" fill="none" viewBox="0 0 85 116">
+      <div className="flex flex-col items-center shrink-0 gap-0.5 w-full">
+        <svg className="h-10 w-auto max-h-12 shrink-0" fill="none" viewBox="0 0 85 116">
           <path d={svgPaths.p1cd02a80} fill="black" stroke="black" strokeLinecap="round" strokeWidth="2" />
         </svg>
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000' }}>MYJUNGLE</span>
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000' }}>{t('app.name')}</span>
       </div>
 
-      <div className="text-center my-[20px] shrink-0 flex flex-col gap-1 w-full">
+      <div className="text-center mt-3 mb-2 shrink-0 flex flex-col gap-0.5 w-full">
         <span className="section-header" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>{t('onboarding.weeklySchedule')}</span>
         <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>{t('onboarding.chooseDays')}</span>
       </div>
 
-      <div className="flex flex-col gap-3 flex-1 min-h-0 w-full">
-        <LanguageSelector showSubtitle />
-
-        <div className="flex flex-col gap-1.5 flex-1 min-h-0 justify-center w-full">
+      <div className="flex flex-col gap-1 flex-1 min-h-0 justify-center w-full">
         {DAYS.map((d, i) => {
           const on = selectedDays.includes(i)
           return (
@@ -534,7 +546,7 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
               className={`neo-pill relative flex items-center justify-between w-full cursor-pointer shrink-0 transition-all ${on ? 'option-selected' : ''}`}
               style={{ background: on ? undefined : 'white', paddingLeft: 16, paddingRight: 16, paddingTop: 5, paddingBottom: 5 }}
             >
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{shortDayLabel(t, d)}</span>
               {on ? (
                 <svg fill="none" height="16" viewBox="0 0 18 18" width="16">
                   <path d={svgPaths.p2c13d500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
@@ -545,10 +557,13 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
             </button>
           )
         })}
-        </div>
       </div>
 
-      <div className="my-[20px] shrink-0 flex flex-row items-center justify-between w-full gap-4">
+      <div className="mt-3 mb-2 shrink-0 w-full">
+        <LanguageSelector showSubtitle />
+      </div>
+
+      <div className="mb-3 shrink-0 flex flex-row items-center justify-between w-full gap-4">
         <div className="flex flex-col gap-1 flex-1 min-w-0 text-left">
           <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>{t('onboarding.pushNotification')}</span>
           <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>{t('onboarding.allowNotifications')}</span>
@@ -627,7 +642,7 @@ function WeeklyStrip({ plants, todayIdx }: { plants: Plant[]; todayIdx: number }
           const badgeText = isToday ? BLACK : hasPlants ? GREEN : '#888'
           return (
             <div key={d} className="neo-pill flex flex-col items-center gap-1 py-2.5" style={{ background: bg, width: 44 }}>
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: textColor }}>{d}</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: textColor }}>{shortDayLabel(t, d)}</span>
               <div className="flex items-center justify-center rounded-full" style={{ width: 18, height: 18, background: badgeBg }}>
                 <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: badgeText }}>{count}</span>
               </div>
@@ -668,7 +683,7 @@ function PlantCard({ plant, onTap, onDeleteRequest, onWater, todayIdx, swipeRese
         className="absolute inset-y-0 right-0 flex items-center justify-center cursor-pointer"
         style={{ width: 95, background: RED }}
         onClick={(e) => { e.stopPropagation(); onDeleteRequest() }}
-        aria-label={`Delete ${plant.name}`}
+        aria-label={t('common.deleteNamed', { name: plant.name })}
       >
         <svg fill="none" height="28" viewBox="46 27 27 28" width="27" aria-hidden>
           <path d={svgPaths2.p36f8ca80} fill="white" />
@@ -696,9 +711,9 @@ function PlantCard({ plant, onTap, onDeleteRequest, onWater, todayIdx, swipeRese
             {plant.name}
           </div>
           <div className="flex flex-wrap gap-1">
-            <span className="badge px-1.5 py-0.5" style={{ background: BG, fontSize: 9, color: '#000' }}>{plant.room}</span>
+            <span className="badge px-1.5 py-0.5" style={{ background: BG, fontSize: 9, color: '#000' }}>{translateRoomLabel(t, plant.room)}</span>
             <span className="badge px-1.5 py-0.5" style={{ background: GREEN, fontSize: 9, color: '#000' }}>
-              {plant.wateringDays.map((d) => DAYS[d]).filter(Boolean).join(' & ') || '—'}
+              {formatWateringDayTags(t, plant.wateringDays)}
             </span>
           </div>
           <div className="flex gap-1 items-end" style={{ height: 16 }}>
@@ -765,7 +780,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
       <div className="app-header" style={{ background: BG }}>
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 24, color: '#000' }}>MYJUNGLE</span>
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 24, color: '#000' }}>{t('app.name')}</span>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -774,7 +789,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
             style={{ background: GREEN }}
           >
             <SvgLeaf />
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>PRO</span>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('common.pro')}</span>
           </button>
           <button type="button" onClick={onSettings} className="flex items-center justify-center rounded-full border-2 border-black bg-white cursor-pointer" style={{ width: 38, height: 38 }}>
             <SvgSettings />
@@ -861,6 +876,7 @@ function AddPlantForm({
   currentPlantCount: number
   onUpgrade: () => void
 }) {
+  const { t } = useTranslation()
   const isLimitReached = isFreeTierLimitReached(currentPlantCount, false)
   const remainingSlots = Math.max(0, MAX_FREE_PLANTS - currentPlantCount)
   const progressPercentage = Math.min(100, (currentPlantCount / MAX_FREE_PLANTS) * 100)
@@ -868,10 +884,12 @@ function AddPlantForm({
   return (
     <div className={`free-tier-card w-full transition-colors ${isLimitReached ? 'free-tier-card--limit' : ''}`}>
       <div className="free-tier-header">
-        <span className="font-display font-bold" style={{ fontSize: 10, color: '#000' }}>FREE TIER</span>
-        <div className={`plants-used-badge ${isLimitReached ? 'plants-used-badge--limit' : ''}`}>
-          {currentPlantCount}/{MAX_FREE_PLANTS} PLANTS USED
-        </div>
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>
+          {t('common.freeTier')}
+        </span>
+        <span className={`plants-used-badge ${isLimitReached ? 'plants-used-badge--limit' : ''}`}>
+          {t('common.plantsUsed', { used: currentPlantCount, max: MAX_FREE_PLANTS })}
+        </span>
       </div>
 
       <div className="progress-bar-track">
@@ -889,7 +907,7 @@ function AddPlantForm({
             role="alert"
           >
             <span aria-hidden>⚠️</span>
-            <span>Limit reached — you&apos;ve used all {MAX_FREE_PLANTS} free plant slots.</span>
+            <span>{t('common.limitReached', { count: MAX_FREE_PLANTS })}</span>
           </p>
           <button
             type="button"
@@ -898,13 +916,21 @@ function AddPlantForm({
             style={{ background: GREEN }}
           >
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>
-              UPGRADE TO ADD UNLIMITED PLANTS
+              {t('common.upgradeUnlimitedCta')}
             </span>
           </button>
         </div>
       ) : (
-        <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#666', lineHeight: 1.5 }}>
-          {remainingSlots} {remainingSlots === 1 ? 'slot' : 'slots'} remaining on the free tier.
+        <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#888', lineHeight: 1.5 }}>
+          {t('common.slotsRemaining', { count: remainingSlots })}{' '}
+          <button
+            type="button"
+            onClick={onUpgrade}
+            className="cursor-pointer underline bg-transparent border-0 p-0"
+            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 13, color: '#000' }}
+          >
+            {t('common.upgradeUnlimited')}
+          </button>
         </p>
       )}
     </div>
@@ -922,12 +948,13 @@ function FreeTierCard({
   plantsMax: number
   footer: React.ReactNode
 }) {
+  const { t } = useTranslation()
   const fillPct = Math.min(plantsUsed / plantsMax, 1)
   return (
     <div className="free-tier-card w-full">
       <div className="free-tier-header">
         <span className="font-display" style={{ fontSize: 10, color: '#000' }}>{title}</span>
-        <span className="plants-used-badge">{plantsUsed}/{plantsMax} PLANTS USED</span>
+        <span className="plants-used-badge">{t('common.plantsUsed', { used: plantsUsed, max: plantsMax })}</span>
       </div>
       <div className="progress-bar-track">
         <div className="progress-bar-fill" style={{ width: `${fillPct * 100}%` }} />
@@ -962,6 +989,7 @@ function CustomScheduleModal({
   onUseDefault: () => void
   onEditGlobalSchedule: () => void
 }) {
+  const { t } = useTranslation()
   const [draftDays, setDraftDays] = useState<number[]>(selectedDays)
 
   useEffect(() => {
@@ -979,7 +1007,9 @@ function CustomScheduleModal({
     onApply([...draftDays].sort((a, b) => a - b))
   }
 
-  const globalLabel = globalSchedule.length ? globalSchedule.join(', ') : 'No global days set'
+  const globalLabel = globalSchedule.length
+    ? globalSchedule.map((d) => shortDayLabel(t, d)).join(', ')
+    : t('customSchedule.noGlobalDays')
 
   return (
     <>
@@ -988,10 +1018,10 @@ function CustomScheduleModal({
         <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000', textTransform: 'uppercase' }}>
-              Custom Watering Schedule
+              {t('customSchedule.title')}
             </span>
             <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888', lineHeight: 1.4 }}>
-              Pick any days for this plant only. General schedule: {globalLabel}
+              {t('customSchedule.subtitle', { schedule: globalLabel })}
             </span>
           </div>
 
@@ -1009,9 +1039,9 @@ function CustomScheduleModal({
                 >
                   <div className="flex items-center justify-between px-5 py-2">
                     <div className="flex items-center gap-2">
-                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: on ? '#000' : '#888' }}>{d}</span>
+                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: on ? '#000' : '#888' }}>{shortDayLabel(t, d)}</span>
                       {inGlobal && !on && (
-                        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 9, color: '#888' }}>in general</span>
+                        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 9, color: '#888' }}>{t('customSchedule.inGeneral')}</span>
                       )}
                     </div>
                     {on ? (
@@ -1033,7 +1063,7 @@ function CustomScheduleModal({
             className="w-full text-left underline cursor-pointer"
             style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#000' }}
           >
-            Edit Global General Schedule
+            {t('customSchedule.editGlobal')}
           </button>
 
           <div className="flex flex-col gap-2">
@@ -1044,7 +1074,7 @@ function CustomScheduleModal({
               className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer disabled:opacity-40"
               style={{ background: GREEN, height: 48 }}
             >
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>Apply for this Plant</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('customSchedule.apply')}</span>
             </button>
             <button
               type="button"
@@ -1052,7 +1082,7 @@ function CustomScheduleModal({
               className="flex w-full items-center justify-center rounded-full border-2 border-black bg-white cursor-pointer"
               style={{ height: 44, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}
             >
-              Use General Default Schedule
+              {t('customSchedule.useDefault')}
             </button>
             <button
               type="button"
@@ -1060,7 +1090,7 @@ function CustomScheduleModal({
               className="flex w-full items-center justify-center cursor-pointer"
               style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#888' }}
             >
-              Cancel
+              {t('deleteModal.cancel')}
             </button>
           </div>
         </div>
@@ -1094,12 +1124,12 @@ function WateringScheduleSection({
 }) {
   const { t } = useTranslation()
 
-  function toggleFrequencyOption(option: 'biweekly' | 'monthly') {
+  function selectFrequencyOption(option: 'biweekly' | 'monthly') {
     onFrequencyChange(wateringFrequency === option ? 'weekly' : option)
   }
 
   function frequencyOptionClass(checked: boolean, highlighted: boolean) {
-    const base = 'neo-pill relative w-full transition-all rounded-full border-2 border-black cursor-pointer active:scale-[0.99]'
+    const base = 'neo-pill relative flex-1 min-w-0 transition-all rounded-full border-2 border-black cursor-pointer active:scale-[0.99]'
     if (checked) return `${base} option-selected`
     if (highlighted) return `${base} option-ai-hint`
     return base
@@ -1137,7 +1167,7 @@ function WateringScheduleSection({
               style={{ background: disabled && !on ? '#E5E5E5' : on || aiHighlighted ? undefined : '#F3F4F6' }}
             >
               <div className="flex items-center justify-between px-5 py-1.5">
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: disabled && !on ? '#888' : '#000' }}>{d}</span>
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: disabled && !on ? '#888' : '#000' }}>{shortDayLabel(t, d)}</span>
                 {on ? (
                   <svg fill="none" height="18" viewBox="0 0 18 18" width="18" aria-hidden>
                     <path d={CHECK_PATH} stroke="#000" strokeLinecap="round" strokeWidth="2" />
@@ -1151,38 +1181,42 @@ function WateringScheduleSection({
         })}
       </div>
 
-      <div className="flex flex-col gap-[7px] w-full mt-1">
+      <div className="flex flex-row gap-2 w-full mt-1" role="radiogroup" aria-label={t('addPlant.waterScheduleQuestion')}>
         <button
           type="button"
-          onClick={() => toggleFrequencyOption('biweekly')}
+          role="radio"
+          aria-checked={wateringFrequency === 'biweekly'}
+          onClick={() => selectFrequencyOption('biweekly')}
           className={frequencyOptionClass(wateringFrequency === 'biweekly', aiHighlightedFrequency === 'biweekly')}
           style={{ background: wateringFrequency === 'biweekly' || aiHighlightedFrequency === 'biweekly' ? undefined : '#F3F4F6' }}
         >
-          <div className="flex items-center justify-between px-5 py-1.5">
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{t('addPlant.every2Weeks')}</span>
+          <div className="flex items-center justify-between gap-1 px-3 py-1.5">
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, color: '#000', lineHeight: 1.2 }}>{t('addPlant.every2Weeks')}</span>
             {wateringFrequency === 'biweekly' ? (
-              <svg fill="none" height="18" viewBox="0 0 18 18" width="18" aria-hidden>
+              <svg fill="none" height="16" viewBox="0 0 18 18" width="16" aria-hidden className="shrink-0">
                 <path d={CHECK_PATH} stroke="#000" strokeLinecap="round" strokeWidth="2" />
               </svg>
             ) : (
-              <div className="size-[18px] rounded-full border-2 border-[#888]" aria-hidden />
+              <div className="size-4 rounded-full border-2 border-[#888] shrink-0" aria-hidden />
             )}
           </div>
         </button>
         <button
           type="button"
-          onClick={() => toggleFrequencyOption('monthly')}
+          role="radio"
+          aria-checked={wateringFrequency === 'monthly'}
+          onClick={() => selectFrequencyOption('monthly')}
           className={frequencyOptionClass(wateringFrequency === 'monthly', aiHighlightedFrequency === 'monthly')}
           style={{ background: wateringFrequency === 'monthly' || aiHighlightedFrequency === 'monthly' ? undefined : '#F3F4F6' }}
         >
-          <div className="flex items-center justify-between px-5 py-1.5">
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{t('addPlant.onceAMonth')}</span>
+          <div className="flex items-center justify-between gap-1 px-3 py-1.5">
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, color: '#000', lineHeight: 1.2 }}>{t('addPlant.onceAMonth')}</span>
             {wateringFrequency === 'monthly' ? (
-              <svg fill="none" height="18" viewBox="0 0 18 18" width="18" aria-hidden>
+              <svg fill="none" height="16" viewBox="0 0 18 18" width="16" aria-hidden className="shrink-0">
                 <path d={CHECK_PATH} stroke="#000" strokeLinecap="round" strokeWidth="2" />
               </svg>
             ) : (
-              <div className="size-[18px] rounded-full border-2 border-[#888]" aria-hidden />
+              <div className="size-4 rounded-full border-2 border-[#888] shrink-0" aria-hidden />
             )}
           </div>
         </button>
@@ -1224,41 +1258,34 @@ function NeedLevelSegmentPicker<T extends string>({
   value: T
   options: { value: T; label: string; indicatorCount: number }[]
   onChange: (value: T) => void
-  renderIndicator: (filled: boolean) => React.ReactNode
+  renderIndicator: (active: boolean) => React.ReactNode
 }) {
   return (
     <div className="flex flex-col gap-[8px] w-full">
       <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', whiteSpace: 'pre' }}>
         {label}
       </span>
-      <div className="neo-input relative rounded-[12px] w-full" style={{ height: 37 }}>
-        <div className="flex items-center h-full px-[4px]">
-          {options.map((option) => {
-            const on = value === option.value
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => onChange(option.value)}
-                className={`flex items-center justify-center gap-[2px] py-[10px] rounded-full cursor-pointer active:scale-95 transition-all ${on ? 'option-segment-selected' : ''}`}
-                style={{
-                  flex: on ? '0 0 auto' : '1 0 0',
-                  width: on ? 135 : undefined,
-                  height: 37,
-                  background: on ? undefined : 'transparent',
-                  border: on ? '2px solid black' : '2px solid transparent',
-                }}
-              >
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: on ? '#fff' : '#000' }}>
-                  {option.label.toUpperCase()}
-                </span>
-                {Array.from({ length: option.indicatorCount }).map((_, idx) => (
-                  <span key={idx}>{renderIndicator(on)}</span>
-                ))}
-              </button>
-            )
-          })}
-        </div>
+      <div className="need-segment-track" role="radiogroup" aria-label={label}>
+        {options.map((option) => {
+          const on = value === option.value
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => onChange(option.value)}
+              className={`need-segment-btn ${on ? 'is-active' : ''}`}
+            >
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>
+                {option.label.toUpperCase()}
+              </span>
+              {Array.from({ length: option.indicatorCount }).map((_, idx) => (
+                <span key={idx} className="shrink-0">{renderIndicator(on)}</span>
+              ))}
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -1343,7 +1370,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     } catch (error) {
       console.error('[myJungle] Plant analysis error:', error)
       setAnalyzeError(
-        error instanceof Error ? error.message : 'Could not analyze this photo. Please try again.',
+        error instanceof Error ? error.message : t('analyze.failed'),
       )
     } finally {
       setAnalyzing(false)
@@ -1431,23 +1458,23 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
 
   const dropletPath = svgAdd.p13e3d5f0
 
-  function WaterDroplet({ filled }: { filled: boolean }) {
-    const c = filled ? 'black' : '#888'
+  function WaterDroplet({ active }: { active: boolean }) {
+    const c = active ? BLACK : GREEN
     return (
-      <svg fill="none" height="12" viewBox="0 0 12 12" width="12">
+      <svg fill="none" height="12" viewBox="0 0 12 12" width="12" aria-hidden>
         <path d={dropletPath} fill={c} stroke={c} strokeLinecap="round" strokeWidth="2" />
       </svg>
     )
   }
 
-  function LightSunIcon({ filled }: { filled: boolean }) {
+  function LightSunIcon({ active }: { active: boolean }) {
     return (
       <Sun
         size={12}
         strokeWidth={2.25}
         aria-hidden
-        className={filled ? 'text-black' : 'text-[#888]'}
-        fill={filled ? 'black' : 'none'}
+        className={active ? 'text-black' : 'text-[#00FF66]'}
+        fill={active ? BLACK : GREEN}
       />
     )
   }
@@ -1482,7 +1509,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             <div className="flex flex-col items-center gap-[16px] p-[16px]">
               <div className="bg-[#F7F7F7] relative rounded-full shrink-0 size-[80px] overflow-hidden border-2 border-black flex items-center justify-center">
                 {photo ? (
-                  <img src={photo} alt="Selected plant" className="w-full h-full object-cover" />
+                  <img src={photo} alt={t('photo.selectedPlant')} className="w-full h-full object-cover" />
                 ) : (
                   <svg fill="none" height="28" viewBox="0 0 24 24" width="28" aria-hidden>
                     <path d={svgAdd.p22b7c700} fill="black" />
@@ -1626,7 +1653,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
               { value: 'Heavy' as WaterNeed, label: t('needLevels.waterHeavy'), indicatorCount: 3 },
             ]}
             onChange={setWaterNeed}
-            renderIndicator={(filled) => <WaterDroplet filled={filled} />}
+            renderIndicator={(active) => <WaterDroplet active={active} />}
           />
 
           <NeedLevelSegmentPicker
@@ -1638,7 +1665,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
               { value: 'High' as LightNeed, label: t('needLevels.lightHigh'), indicatorCount: 3 },
             ]}
             onChange={setLightNeed}
-            renderIndicator={(filled) => <LightSunIcon filled={filled} />}
+            renderIndicator={(active) => <LightSunIcon active={active} />}
           />
 
           {/* Free tier bar */}
@@ -1672,10 +1699,10 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
           <div className="flex w-full pb-[40px]">
             <button
               onClick={onCancel}
-              className="btn-secondary flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer active:scale-95 transition-all bg-white"
-              style={{ height: 41 }}
+              className="btn-secondary btn-green flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer bg-white"
+              style={{ height: 48, background: 'white' }}
             >
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>CANCEL</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>{t('common.cancel')}</span>
             </button>
           </div>
 
@@ -1686,7 +1713,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
 }
 
 const DETAIL_GRAY_LIGHT = '#F3F4F6'
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const
 
 // ─── Plant Detail Helpers ─────────────────────────────────────────────────────
 
@@ -1695,9 +1722,13 @@ function formatDetailDate(iso: string) {
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
 }
 
-function formatTimelineChip(iso: string) {
+function monthShortLabel(monthIndex: number, translate: (key: string) => string = (key) => i18n.t(key)) {
+  return translate(`months.short.${MONTH_KEYS[monthIndex] ?? 'jan'}`)
+}
+
+function formatTimelineChip(iso: string, translate: (key: string) => string = (key) => i18n.t(key)) {
   const d = new Date(iso)
-  return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`
+  return `${monthShortLabel(d.getMonth(), translate)} ${d.getDate()}`
 }
 
 function daysSinceLabel(iso: string | null, translate: (key: string, options?: { count?: number }) => string): string {
@@ -1756,22 +1787,22 @@ function getGrowthTimeline(plant: Plant) {
   }))
 }
 
-function getGrowthChartPoints(plant: Plant, previewMode = false) {
+function getGrowthChartPoints(plant: Plant, previewMode = false, translate: (key: string) => string = (key) => i18n.t(key)) {
   if (previewMode) {
     return [
-      { label: 'May', value: 12 },
-      { label: 'Jun', value: 12.5 },
-      { label: 'Jul', value: 13 },
+      { label: monthShortLabel(4, translate), value: 12 },
+      { label: monthShortLabel(5, translate), value: 12.5 },
+      { label: monthShortLabel(6, translate), value: 13 },
     ]
   }
   const chronological = [...getGrowthTimeline(plant)].reverse()
   if (chronological.length === 0) {
-    return [{ label: MONTHS_SHORT[new Date().getMonth()], value: getGrowthHeights(plant).start }]
+    return [{ label: monthShortLabel(new Date().getMonth(), translate), value: getGrowthHeights(plant).start }]
   }
   return chronological.map((entry) => {
     const d = new Date(entry.date)
     return {
-      label: MONTHS_SHORT[d.getMonth()],
+      label: monthShortLabel(d.getMonth(), translate),
       value: entry.heightCm ?? getGrowthHeights(plant).start,
     }
   })
@@ -1793,6 +1824,7 @@ function LockIcon({ size = 28 }: { size?: number }) {
 }
 
 function ProSectionLock({ onUpgrade }: { onUpgrade: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
       <div className="neo-card flex flex-col items-center gap-3 rounded-2xl border-2 border-black bg-white p-5 text-center w-full max-w-[300px]">
@@ -1801,10 +1833,10 @@ function ProSectionLock({ onUpgrade }: { onUpgrade: () => void }) {
           className="rounded-full border-2 border-black px-3 py-1"
           style={{ background: GREEN, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}
         >
-          PRO FEATURE
+          {t('common.proFeature')}
         </span>
         <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 14, color: '#000', lineHeight: 1.4 }}>
-          PRO Feature: Unlock History &amp; Tracking
+          {t('growth.proUnlock')}
         </p>
         <button
           type="button"
@@ -1812,7 +1844,7 @@ function ProSectionLock({ onUpgrade }: { onUpgrade: () => void }) {
           className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
           style={{ background: GREEN, height: 48 }}
         >
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>UPGRADE TO PRO</span>
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('home.upgradeToPro')}</span>
         </button>
       </div>
     </div>
@@ -1956,6 +1988,7 @@ function GrowthStatCard({ label, value, sub }: { label: string; value: string; s
 }
 
 function GrowthChart({ points }: { points: { label: string; value: number }[] }) {
+  const { t } = useTranslation()
   const max = Math.max(...points.map((p) => p.value), 1)
   const min = Math.min(...points.map((p) => p.value), 0)
   const range = Math.max(max - min, 0.5)
@@ -1976,10 +2009,10 @@ function GrowthChart({ points }: { points: { label: string; value: number }[] })
   return (
     <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-3 w-full">
       <div className="flex items-center justify-between mb-2">
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>Growth Over Time</span>
-        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 11, color: '#888' }}>cm</span>
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>{t('growth.growthOverTime')}</span>
+        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 11, color: '#888' }}>{t('growth.unitCm')}</span>
       </div>
-      <svg className="w-full" height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Plant growth chart">
+      <svg className="w-full" height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={t('growth.chartAria')}>
         {[0, 0.5, 1].map((t) => {
           const y = padY + chartH * (1 - t)
           return <line key={t} stroke="#EFEFEF" strokeWidth="1" x1={padX} x2={width - padX} y1={y} y2={y} />
@@ -2007,15 +2040,16 @@ function PhotoTimelineStrip({
   onNewSnapshot: () => void
   onPhotoClick: (photo: string) => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col gap-3 w-full">
-      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>Photo Timeline</span>
+      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>{t('growth.photoTimeline')}</span>
       <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
         <button type="button" onClick={onNewSnapshot} className="detail-snapshot-new cursor-pointer active:opacity-80">
           <Camera size={22} strokeWidth={2.5} className="shrink-0 text-black" aria-hidden />
           <span className="detail-snapshot-new-label">
-            <span>NEW</span>
-            <span>SNAPSHOT</span>
+            <span>{t('growth.newSnapshotLine1')}</span>
+            <span>{t('growth.newSnapshotLine2')}</span>
           </span>
         </button>
         {entries.map((entry) => (
@@ -2028,7 +2062,7 @@ function PhotoTimelineStrip({
             <PlantPhoto photo={entry.photo} alt="" className="w-full h-full object-cover" />
             <div className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1.5">
               <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 10, color: '#fff' }}>
-                {formatTimelineChip(entry.date)} · {entry.heightCm}cm
+                {formatTimelineChip(entry.date, t)} · {entry.heightCm}{t('growth.unitCm')}
               </span>
             </div>
           </button>
@@ -2056,19 +2090,20 @@ function GrowthHistoryContent({
   const timeline = previewMode
     ? GROWTH_PREVIEW_ENTRIES.map((entry) => ({ ...entry, photo: plant.photo }))
     : getGrowthTimeline(plant)
-  const chartPoints = getGrowthChartPoints(plant, previewMode)
+  const { t } = useTranslation()
+  const chartPoints = getGrowthChartPoints(plant, previewMode, t)
 
   return (
     <div className="flex flex-col gap-3 w-full">
       <div className="grid grid-cols-3 gap-2 w-full">
-        <GrowthStatCard label="Days Tracked" value={`${ageDays}`} sub="Plant age" />
-        <GrowthStatCard label="Total Growth" value={`+${heights.delta} cm`} sub={`${heights.start} → ${heights.current} cm`} />
-        <GrowthStatCard label="Waterings" value={`${wateringCount}`} sub={`${consistency}% consistent`} />
+        <GrowthStatCard label={t('growth.daysTracked')} value={`${ageDays}`} sub={t('growth.plantAge')} />
+        <GrowthStatCard label={t('growth.totalGrowth')} value={`+${heights.delta} ${t('growth.unitCm')}`} sub={`${heights.start} → ${heights.current} ${t('growth.unitCm')}`} />
+        <GrowthStatCard label={t('growth.waterings')} value={`${wateringCount}`} sub={t('growth.consistent', { percent: consistency })} />
       </div>
 
       <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-3 w-full">
         <div className="flex items-center justify-between mb-2">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>Consistency Score</span>
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>{t('growth.consistencyScore')}</span>
           <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: GREEN }}>{consistency}%</span>
         </div>
         <div className="progress-bar-track">
@@ -2101,12 +2136,13 @@ function GrowthHistorySection({
   onNewSnapshot: () => void
   onPhotoClick: (photo: string) => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="neo-card relative rounded-3xl shrink-0 w-full overflow-hidden">
       <div className="flex flex-col gap-4 p-4">
         <div className="flex items-center justify-between gap-3 w-full">
           <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
-            Growth History
+            {t('growth.history')}
           </span>
           <button
             type="button"
@@ -2114,7 +2150,7 @@ function GrowthHistorySection({
             className="btn-primary btn-green shrink-0 inline-flex items-center justify-center rounded-full border-2 border-black cursor-pointer px-3 py-1.5"
             style={{ background: GREEN }}
           >
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>+ Log Growth</span>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{t('growth.logGrowthBtn')}</span>
           </button>
         </div>
 
@@ -2176,7 +2212,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
           history: [{
             id: Date.now().toString(),
             date: new Date().toISOString(),
-            note: growthNote.trim() || 'Growth snapshot logged.',
+            note: growthNote.trim() || t('growth.defaultSnapshotNote'),
             photo: compressed,
             heightCm: height,
           }, ...plantHistory(plant)],
@@ -2190,7 +2226,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
           history: [{
             id: Date.now().toString(),
             date: new Date().toISOString(),
-            note: 'New growth snapshot.',
+            note: t('growth.defaultSnapshotNote'),
             photo: compressed,
             heightCm: growthHeight ? Number(growthHeight) : getGrowthHeights(plant).current,
           }, ...plantHistory(plant)],
@@ -2280,7 +2316,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
       history: [{
         id: Date.now().toString(),
         date: new Date().toISOString(),
-        note: growthNote.trim() || 'Growth check logged.',
+        note: growthNote.trim() || t('growth.defaultNote'),
         photo: plant.photo,
         heightCm: growthHeight ? Number(growthHeight) : getGrowthHeights(plant).current,
       }, ...plantHistory(plant)],
@@ -2315,31 +2351,36 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
   return (
     <div className="content-stretch flex flex-col items-start justify-between relative size-full" style={{ background: BG }}>
       <div className="content-stretch flex flex-col items-start relative shrink-0 w-full flex-1 min-h-0">
-        <div className="app-header relative shrink-0 w-full">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000', textTransform: 'uppercase' }}>{t('plantDetails.title')}</span>
-          <button
-            type="button"
-            onClick={onBack}
-            className="bg-black flex items-center justify-center rounded-full shrink-0 cursor-pointer border-2 border-black"
-            style={{ width: 38, height: 38 }}
-            aria-label={t('plantDetails.close')}
-          >
-            <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-              <path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" />
-            </svg>
-          </button>
-        </div>
-
         <div className="flex-1 overflow-y-auto w-full pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
-          <div className="content-stretch flex flex-col gap-4 items-start px-5 pb-6 relative w-full">
-
-            {/* Hero photo + species tag */}
-            <div className="h-[219px] relative rounded-3xl shrink-0 w-full overflow-hidden border-2 border-black">
-              <PlantPhoto photo={plant.photo} alt={plant.name} className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute bottom-3 left-3">
-                <span className="detail-tag detail-tag-filled">{plant.name}</span>
-              </div>
+          {/* Full-bleed hero photo */}
+          <div
+            className="relative shrink-0 w-full overflow-hidden"
+            style={{ height: 'calc(219px + env(safe-area-inset-top, 0px))' }}
+          >
+            <PlantPhoto photo={plant.photo} alt={plant.name} className="absolute inset-0 w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={onBack}
+              className="absolute z-10 bg-black flex items-center justify-center rounded-full shrink-0 cursor-pointer border-2 border-black"
+              style={{
+                width: 38,
+                height: 38,
+                top: 'calc(12px + env(safe-area-inset-top, 0px))',
+                right: 16,
+              }}
+              aria-label={t('plantDetails.close')}
+            >
+              <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
+                <path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" />
+              </svg>
+            </button>
+            <div className="absolute bottom-3 left-4 z-10">
+              <span className="detail-tag detail-tag-filled">{plant.name}</span>
             </div>
+          </div>
+          <div className="w-full border-b-2 border-black shrink-0" aria-hidden />
+
+          <div className="content-stretch flex flex-col gap-4 items-start px-5 pt-4 pb-6 relative w-full">
 
             {/* Species info card */}
             <div className="neo-card relative rounded-3xl shrink-0 w-full">
@@ -2351,9 +2392,9 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                       {plant.isCustomSchedule ? (
                         <button type="button" className="detail-tag detail-tag-filled cursor-default">{t('plantDetails.customSchedule')}</button>
                       ) : null}
-                      <button type="button" className="detail-tag detail-tag-outline cursor-default">{plant.room.toUpperCase()}</button>
+                      <button type="button" className="detail-tag detail-tag-outline cursor-default">{translateRoomLabel(t, plant.room).toUpperCase()}</button>
                       {primaryDay != null && (
-                        <button type="button" className="detail-tag detail-tag-filled cursor-default">{DAY_NAMES[primaryDay].toUpperCase()}</button>
+                        <button type="button" className="detail-tag detail-tag-filled cursor-default">{shortDayLabel(t, primaryDay)}</button>
                       )}
                     </div>
                   </div>
@@ -2379,7 +2420,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                         ))}
                       </div>
                       <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000', lineHeight: 1.2 }}>
-                        {formatWaterLevelLabel(plant.waterNeed)}
+                        {formatWaterLevelLabel(plant.waterNeed, t)}
                       </span>
                     </div>
                   </div>
@@ -2499,13 +2540,13 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                   { value: 'High' as LightNeed, label: t('needLevels.lightHigh'), indicatorCount: 3 },
                 ]}
                 onChange={setEditLightNeed}
-                renderIndicator={(filled) => (
+                renderIndicator={(active) => (
                   <Sun
                     size={12}
                     strokeWidth={2.25}
                     aria-hidden
-                    className={filled ? 'text-black' : 'text-[#888]'}
-                    fill={filled ? 'black' : 'none'}
+                    className={active ? 'text-black' : 'text-[#00FF66]'}
+                    fill={active ? BLACK : GREEN}
                   />
                 )}
               />
@@ -2538,18 +2579,18 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
       )}
 
       {showLogGrowth && (
-        <DetailModal title="Log Growth" onClose={() => setShowLogGrowth(false)}>
+        <DetailModal title={t('growth.logGrowth')} onClose={() => setShowLogGrowth(false)}>
           <div className="flex flex-col gap-3">
             <label className="flex flex-col gap-1">
-              <span className="detail-stat-label">Height (cm)</span>
+              <span className="detail-stat-label">{t('growth.heightCm')}</span>
               <input value={growthHeight} onChange={(e) => setGrowthHeight(e.target.value)} inputMode="decimal" placeholder={`${getGrowthHeights(plant).current}`} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="detail-stat-label">Note</span>
-              <textarea value={growthNote} onChange={(e) => setGrowthNote(e.target.value)} rows={2} placeholder="What changed since last check?" className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full resize-none" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
+              <span className="detail-stat-label">{t('growth.note')}</span>
+              <textarea value={growthNote} onChange={(e) => setGrowthNote(e.target.value)} rows={2} placeholder={t('growth.notePlaceholder')} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full resize-none" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
             </label>
             <button type="button" onClick={logGrowthEntry} className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer" style={{ background: GREEN, height: 44 }}>
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>SAVE LOG</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{t('growth.saveLog')}</span>
             </button>
           </div>
         </DetailModal>
@@ -2567,7 +2608,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
         <>
           <div className="fixed inset-0 z-[80] bg-black/80" onClick={() => setLightboxPhoto(null)} aria-hidden />
           <div className="fixed inset-4 z-[90] flex items-center justify-center">
-            <img alt="Growth snapshot" src={lightboxPhoto} className="max-w-full max-h-full object-contain rounded-2xl border-2 border-white" />
+            <img alt={t('growth.snapshotAlt')} src={lightboxPhoto} className="max-w-full max-h-full object-contain rounded-2xl border-2 border-white" />
             <button type="button" onClick={() => setLightboxPhoto(null)} className="absolute top-6 right-6 size-10 rounded-full border-2 border-white bg-black/50 text-white cursor-pointer">✕</button>
           </div>
         </>
@@ -2631,7 +2672,7 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
         {orderedDays.map((di) => {
           const dayPlants = grouped[di] || []
           const isToday = todayIdx !== null && di === todayIdx
-          const dayName = getDayOfWeek(di)
+          const dayName = fullDayLabel(t, di)
           return (
             <div
               key={di}
@@ -2647,7 +2688,7 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
                     className="neo-pill inline-flex items-center px-2 py-0.5 border-2 border-black"
                     style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, background: GREEN, color: '#000' }}
                   >
-                    {dayName}
+                    {shortDayLabel(t, di)}
                   </span>
                 )}
               </div>
@@ -2675,10 +2716,10 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
                         </p>
                         <div className="flex flex-wrap gap-1">
                           <div className="badge px-1.5 py-0.5" style={{ background: BG }}>
-                            <span style={{ fontSize: 9, color: '#000' }}>{p.room.toUpperCase()}</span>
+                            <span style={{ fontSize: 9, color: '#000' }}>{translateRoomLabel(t, p.room).toUpperCase()}</span>
                           </div>
                           <div className="badge px-1.5 py-0.5" style={{ background: isToday ? GREEN : BG }}>
-                            <span style={{ fontSize: 9, color: '#000' }}>{isToday ? 'TODAY' : dayName}</span>
+                            <span style={{ fontSize: 9, color: '#000' }}>{isToday ? t('plantDetails.today').toUpperCase() : dayName.toUpperCase()}</span>
                           </div>
                         </div>
                         <div className="flex gap-[5px] h-4 items-end">
@@ -2767,6 +2808,7 @@ function NotificationSettingsPanel({
   settings: AppSettings
   onChange: (patch: Partial<AppSettings>) => void
 }) {
+  const { t } = useTranslation()
   const timeInputRef = useRef<HTMLInputElement>(null)
   const [permissionDenied, setPermissionDenied] = useState(false)
   const [testResult, setTestResult] = useState<string | null>(null)
@@ -2836,15 +2878,15 @@ function NotificationSettingsPanel({
 
   function handleTestNotification() {
     if (!isNotificationSupported()) {
-      setTestResult('Notifications are not supported on this device.')
+      setTestResult(t('notifications.unsupported'))
       return
     }
     if (Notification.permission !== 'granted') {
-      setTestResult('Enable push notifications first.')
+      setTestResult(t('notifications.enableFirst'))
       return
     }
     const ok = sendTestNotification(settings)
-    setTestResult(ok ? 'Test notification sent!' : 'Could not send test notification.')
+    setTestResult(ok ? t('notifications.testSent') : t('notifications.testFailed'))
   }
 
   return (
@@ -2852,16 +2894,16 @@ function NotificationSettingsPanel({
       {/* Push notification */}
       <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
         <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Push Notification</p>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Allow notifications for watering</p>
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>{t('notifications.pushTitle')}</p>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('notifications.pushSubtitle')}</p>
         </div>
-        <SettingsToggle on={settings.pushNotifications} onToggle={handlePushToggle} ariaLabel="Toggle push notifications" />
+        <SettingsToggle on={settings.pushNotifications} onToggle={handlePushToggle} ariaLabel={t('notifications.togglePush')} />
       </div>
 
       {permissionDenied && (
         <div className="neo-card rounded-2xl border-2 border-black bg-white p-3 flex flex-col gap-2">
           <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: RED, lineHeight: 1.4 }}>
-            Notifications are blocked. Open your device or browser settings and allow notifications for myJungle, then try again.
+            {t('notifications.blocked')}
           </p>
           <button
             type="button"
@@ -2869,7 +2911,7 @@ function NotificationSettingsPanel({
             className="self-start underline cursor-pointer"
             style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#000' }}
           >
-            Dismiss
+            {t('common.dismiss')}
           </button>
         </div>
       )}
@@ -2877,8 +2919,8 @@ function NotificationSettingsPanel({
       {/* Watering reminder time */}
       <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
         <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Watering Reminder Time</p>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Alert at this time ({effectiveTz})</p>
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>{t('notifications.reminderTime')}</p>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('notifications.alertAt', { tz: effectiveTz })}</p>
         </div>
         <label
           htmlFor="watering-reminder-time"
@@ -2898,7 +2940,7 @@ function NotificationSettingsPanel({
             value={formatReminderTime(settings.reminderTime)}
             onChange={handleReminderTimeChange}
             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-            aria-label="Watering reminder time"
+            aria-label={t('notifications.reminderTime')}
           />
         </label>
       </div>
@@ -2906,9 +2948,11 @@ function NotificationSettingsPanel({
       {/* Device timezone sync */}
       <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
         <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Device Timezone Sync</p>
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>{t('notifications.timezoneSync')}</p>
           <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>
-            {settings.timezoneAutoSync ? `Auto-synced: ${deviceTz}` : `Manual: ${settings.timezone}`}
+            {settings.timezoneAutoSync
+              ? t('notifications.timezoneAutoSynced', { tz: deviceTz })
+              : t('notifications.timezoneManualValue', { tz: settings.timezone })}
           </p>
         </div>
         <SettingsToggle
@@ -2917,7 +2961,7 @@ function NotificationSettingsPanel({
             timezoneAutoSync: !settings.timezoneAutoSync,
             timezone: settings.timezoneAutoSync ? settings.timezone : deviceTz,
           })}
-          ariaLabel="Toggle timezone auto sync"
+          ariaLabel={t('notifications.toggleTimezone')}
         />
       </div>
 
@@ -2939,21 +2983,21 @@ function NotificationSettingsPanel({
       {/* Sound alerts */}
       <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
         <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Sound Alerts</p>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Play sound with notifications</p>
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>{t('notifications.soundAlerts')}</p>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('notifications.soundSubtitle')}</p>
         </div>
         <SettingsToggle
           on={settings.soundAlerts}
           onToggle={() => onChange({ soundAlerts: !settings.soundAlerts })}
-          ariaLabel="Toggle sound alerts"
+          ariaLabel={t('notifications.toggleSound')}
         />
       </div>
 
       {/* Haptic feedback */}
       <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
         <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>Haptic Feedback</p>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Vibrate on alerts and toggles</p>
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>{t('notifications.haptic')}</p>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('notifications.hapticSubtitle')}</p>
         </div>
         <SettingsToggle
           on={settings.hapticFeedback}
@@ -2964,7 +3008,7 @@ function NotificationSettingsPanel({
               navigator.vibrate(10)
             }
           }}
-          ariaLabel="Toggle haptic feedback"
+          ariaLabel={t('notifications.toggleHaptic')}
         />
       </div>
 
@@ -2975,7 +3019,7 @@ function NotificationSettingsPanel({
           onClick={handleTestNotification}
           className="btn-secondary flex w-full min-h-[44px] items-center justify-center rounded-full border-2 border-black bg-white cursor-pointer active:scale-[0.98]"
         >
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>Send Test Notification</span>
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('notifications.sendTest')}</span>
         </button>
         {testResult && (
           <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}>{testResult}</p>
@@ -2994,6 +3038,7 @@ interface FeedbackFormState {
 }
 
 function FeedbackForm() {
+  const { t } = useTranslation()
   const [fields, setFields] = useState<FeedbackFormState>({ thought: '', issue: '', contact: '' })
   const [submitting, setSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -3014,26 +3059,26 @@ function FeedbackForm() {
 
       if (result.success) {
         setFields({ thought: '', issue: '', contact: '' })
-        setSuccessMessage('Thanks! Your feedback was sent.')
+        setSuccessMessage(t('feedback.success'))
       } else {
-        setErrorMessage(result.error ?? 'Failed to send feedback.')
+        setErrorMessage(result.error ?? t('feedback.failedShort'))
       }
     } catch {
-      setErrorMessage('Failed to send feedback. Please check your connection and try again.')
+      setErrorMessage(t('feedback.failed'))
     } finally {
       setSubmitting(false)
     }
   }
 
   const fieldConfig = [
-    { key: 'thought' as const, placeholder: "Tell us what's on your mind..." },
-    { key: 'issue' as const, placeholder: 'What went wrong? / Describe the issue' },
-    { key: 'contact' as const, placeholder: 'What would you like to see in the app?' },
+    { key: 'thought' as const, placeholder: t('feedback.thought') },
+    { key: 'issue' as const, placeholder: t('feedback.issue') },
+    { key: 'contact' as const, placeholder: t('feedback.contact') },
   ]
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2 pb-3 w-full">
-      <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>We&apos;d love to hear from you!</p>
+      <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('feedback.intro')}</p>
       {fieldConfig.map(({ key, placeholder }) => (
         <div key={key} className="neo-input relative rounded-2xl w-full min-h-[46px]">
           <input
@@ -3069,7 +3114,7 @@ function FeedbackForm() {
         style={{ background: GREEN, height: 44 }}
       >
         <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
-          {submitting ? 'SENDING…' : 'SEND'}
+          {submitting ? t('feedback.sending') : t('feedback.sendShort')}
         </p>
       </button>
     </form>
@@ -3083,6 +3128,7 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
 }) {
   const { t } = useTranslation()
   const [s, setS] = useState(settings)
+  const [legalDocument, setLegalDocument] = useState<LegalDocument | null>(null)
   useEffect(() => { onSave(s) }, [s])
 
   function toggleDay(i: number) {
@@ -3138,7 +3184,7 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
                     className={`neo-pill relative flex flex-col gap-1 items-center py-[10px] shrink-0 w-[44px] cursor-pointer active:scale-95 transition-all ${on ? 'option-selected' : ''}`}
                     style={{ background: on ? undefined : 'white' }}
                   >
-                    <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</p>
+                    <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{shortDayLabel(t, d)}</p>
                     {on ? (
                       <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
                         <path d={svgSettings.p2c13d500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
@@ -3161,35 +3207,120 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
         {/* ── Data & Privacy ── */}
         <div className="flex flex-col gap-3 px-5">
           <p className="section-header" style={{ fontSize: 14 }}>{t('settings.dataPrivacy')}</p>
-          <div className="neo-card relative rounded-2xl w-full" style={{ height: 109 }}>
-            {/* Export row */}
-            <p className="absolute font-['Unbounded:Black',sans-serif]"
-              style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', left: 14, top: 27 }}>
-              {t('settings.exportData')}
-            </p>
-            <button type="button" onClick={onExport}
-              className="absolute bg-white border-2 border-black flex gap-3 items-center px-[11px] py-[3px] rounded-full cursor-pointer"
-              style={{ height: 35, right: 14, top: 15 }}
+          <div className="neo-card rounded-2xl w-full overflow-hidden">
+            <div className="flex w-full items-center justify-between gap-3 px-3.5 py-3.5 border-b-2 border-black">
+              <p
+                className="min-w-0"
+                style={{
+                  flex: 1,
+                  marginRight: 12,
+                  fontFamily: 'Unbounded, sans-serif',
+                  fontWeight: 900,
+                  fontSize: 10,
+                  color: '#000',
+                  textTransform: 'uppercase',
+                  lineHeight: 1.3,
+                }}
+              >
+                {t('settings.exportData')}
+              </p>
+              <button
+                type="button"
+                onClick={onExport}
+                className="shrink-0 bg-white border-2 border-black flex gap-2 items-center px-[11px] py-[3px] rounded-full cursor-pointer active:scale-95"
+                style={{ height: 35 }}
+              >
+                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{t('settings.export')}</p>
+                <div className="flex-none rotate-180" style={{ width: 13.28, height: 14 }}>
+                  <svg fill="none" height="14" viewBox="0 0 13.2793 14" width="13.2793" aria-hidden>
+                    <path d={svgSettings.p218111f0} fill="black" />
+                  </svg>
+                </div>
+              </button>
+            </div>
+            <div className="flex w-full items-center justify-between gap-3 px-3.5 py-3.5">
+              <p
+                className="min-w-0"
+                style={{
+                  flex: 1,
+                  marginRight: 12,
+                  fontFamily: 'Unbounded, sans-serif',
+                  fontWeight: 900,
+                  fontSize: 10,
+                  color: RED,
+                  textTransform: 'uppercase',
+                  lineHeight: 1.3,
+                }}
+              >
+                {t('settings.resetData')}
+              </p>
+              <button
+                type="button"
+                onClick={onReset}
+                className="shrink-0 bg-white flex items-center px-[11px] py-[3px] rounded-full cursor-pointer active:scale-95 border-2"
+                style={{ height: 35, borderColor: RED }}
+              >
+                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: RED }}>{t('settings.reset')}</p>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Legal & About ── */}
+        <div className="flex flex-col gap-3 px-5">
+          <p className="section-header" style={{ fontSize: 14 }}>{t('settings.legalAbout')}</p>
+          <div className="neo-card rounded-2xl w-full overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setLegalDocument('privacy')}
+              className="flex w-full items-center justify-between gap-3 px-3.5 py-3.5 border-b-2 border-black bg-white cursor-pointer active:bg-[#F7F7F7]"
             >
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{t('settings.export')}</p>
-              <div className="flex-none rotate-180" style={{ width: 13.28, height: 14 }}>
-                <svg fill="none" height="14" viewBox="0 0 13.2793 14" width="13.2793">
-                  <path d={svgSettings.p218111f0} fill="black" />
-                </svg>
-              </div>
+              <span
+                className="min-w-0 text-left"
+                style={{
+                  flex: 1,
+                  marginRight: 12,
+                  fontFamily: 'Unbounded, sans-serif',
+                  fontWeight: 900,
+                  fontSize: 10,
+                  color: '#000',
+                  textTransform: 'uppercase',
+                  lineHeight: 1.3,
+                }}
+              >
+                {t('settings.privacyPolicy')}
+              </span>
+              <ChevronRight size={18} strokeWidth={2.5} className="shrink-0 text-black" aria-hidden />
             </button>
-            {/* Reset row */}
-            <p className="absolute"
-              style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: RED, left: 14, top: 71 }}>
-              {t('settings.resetData')}
-            </p>
-            <button onClick={onReset}
-              className="absolute bg-white flex items-center px-[11px] py-[3px] rounded-full cursor-pointer active:scale-95 border-2"
-              style={{ height: 35, right: 14, top: 59, borderColor: RED }}
+            <button
+              type="button"
+              onClick={() => setLegalDocument('impressum')}
+              className="flex w-full items-center justify-between gap-3 px-3.5 py-3.5 bg-white cursor-pointer active:bg-[#F7F7F7]"
             >
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: RED }}>{t('settings.reset')}</p>
+              <span
+                className="min-w-0 text-left"
+                style={{
+                  flex: 1,
+                  marginRight: 12,
+                  fontFamily: 'Unbounded, sans-serif',
+                  fontWeight: 900,
+                  fontSize: 10,
+                  color: '#000',
+                  textTransform: 'uppercase',
+                  lineHeight: 1.3,
+                }}
+              >
+                {t('settings.legalNotice')}
+              </span>
+              <ChevronRight size={18} strokeWidth={2.5} className="shrink-0 text-black" aria-hidden />
             </button>
           </div>
+          <p
+            className="text-center w-full"
+            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}
+          >
+            {t('settings.appVersion', { version: APP_VERSION })}
+          </p>
         </div>
 
         {/* ── Send Feedback ── */}
@@ -3225,6 +3356,14 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
           </div>
         </div>
       </div>
+
+      {legalDocument && (
+        <LegalDocumentScreen
+          document={legalDocument}
+          onClose={() => setLegalDocument(null)}
+          onOpenDocument={setLegalDocument}
+        />
+      )}
     </div>
   )
 }
@@ -3240,6 +3379,20 @@ export default function App() {
   const [storageError, setStorageError] = useState<string | null>(null)
   const todayIdx = useTodayDayIndex()
   const todayIdxSafe = todayIdx ?? -1
+
+  useEffect(() => {
+    async function configurePurchases() {
+      await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG })
+
+      const platform = Capacitor.getPlatform()
+
+      if (platform === 'ios' || platform === 'android') {
+        await Purchases.configure({ apiKey: 'test_XsjuRyhMrzEQuaHZEwejrcVDtfL' })
+      }
+    }
+
+    void configurePurchases()
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -3265,7 +3418,7 @@ export default function App() {
     try {
       if (!canAddMorePlants(plants.length, settings.isPro)) {
         console.error('[myJungle] Free tier plant limit reached')
-        setStorageError('Free tier limit reached. Upgrade to Pro to add more plants.')
+        setStorageError(i18n.t('errors.freeTierLimit'))
         return
       }
       const normalized = normalizePlant(p)
@@ -3273,7 +3426,7 @@ export default function App() {
       setTab('home')
     } catch (error) {
       console.error('[myJungle] handleAddPlant failed:', error)
-      setStorageError('Could not add plant. Please try again.')
+      setStorageError(i18n.t('errors.couldNotAdd'))
     }
   }
 
@@ -3364,7 +3517,7 @@ export default function App() {
   }
 
   function handleReset() {
-    if (window.confirm('Reset all app data?')) {
+    if (window.confirm(i18n.t('confirm.resetData'))) {
       void clearAllPhotos()
       localStorage.clear(); setPlants([])
       setSettings({ ...DEFAULT_SETTINGS })
@@ -3451,7 +3604,9 @@ export default function App() {
 
   const isSplash = screen === 'splash'
   const isOnboarding = screen === 'onboarding'
-  const skipTopSafeArea = isSplash || isOnboarding
+  const isProView = screen === 'pro' || (screen === 'main' && tab === 'settings')
+  const isDetailView = screen === 'detail'
+  const skipTopSafeArea = isSplash || isOnboarding || isProView || isDetailView
 
   return (
     <div className="relative min-h-dvh max-h-dvh h-dvh w-full overflow-hidden flex flex-col" style={{ background: isSplash ? GREEN : BG }}>

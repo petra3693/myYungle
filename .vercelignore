@@ -1,0 +1,17 @@
+node_modules
+.git
+.cache
+.vite
+.tmp-*
+*.log
+*-debug.log*
+.claude-replay.*
+ios
+android
+dist
+**/.DS_Store
+**/DerivedData
+**/build
+**/.gradle
+**/xcuserdata
+**/*.xcuserstate

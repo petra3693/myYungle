@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>myJungle — Privacy Policy</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Geist, system-ui, sans-serif;
+        background: #f7f7f7;
+        color: #000;
+        line-height: 1.55;
+      }
+      .header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #fff;
+        border-bottom: 2px solid #000;
+        padding-top: env(safe-area-inset-top, 0px);
+      }
+      .header-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        min-height: 56px;
+        padding: 0.75rem 1rem;
+      }
+      .header h1 {
+        margin: 0;
+        font-family: Unbounded, system-ui, sans-serif;
+        font-size: 1rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        line-height: 1.2;
+        flex: 1;
+        min-width: 0;
+      }
+      .close-btn {
+        width: 38px;
+        height: 38px;
+        border: 2px solid #000;
+        border-radius: 9999px;
+        background: #000;
+        color: #fff;
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      main {
+        max-width: 40rem;
+        margin: 0 auto;
+        padding: 1.25rem 1.25rem calc(2rem + env(safe-area-inset-bottom, 0px));
+      }
+      h2 {
+        font-family: Unbounded, system-ui, sans-serif;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        margin-top: 1.75rem;
+      }
+      p { margin: 0.75rem 0; }
+      a { color: #000; }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-inner">
+        <h1>Privacy Policy</h1>
+        <button type="button" class="close-btn" aria-label="Close" onclick="goBack()">✕</button>
+      </div>
+    </header>
+    <main>
+      <p>Last updated: August 2026</p>
+      <p>
+        myJungle (“the App”) helps you track plant watering schedules and related care data.
+        This page explains what information is processed when you use the App.
+      </p>
+      <h2>Data we store</h2>
+      <p>
+        Plant profiles, photos, schedules, settings, and optional feedback you submit are stored
+        on your device and/or transmitted only as needed to provide features you use
+        (for example AI analysis or feedback delivery).
+      </p>
+      <h2>Your choices</h2>
+      <p>
+        You can export or reset app data from Settings. You may also disable notifications
+        in Settings or through your device system preferences.
+      </p>
+      <h2>Contact</h2>
+      <p>
+        For privacy questions, use the in-app feedback form or contact the operator listed
+        in the <a href="./impressum.html">Legal Notice &amp; Impressum</a>.
+      </p>
+    </main>
+    <script>
+      function goBack() {
+        if (window.history.length > 1) {
+          window.history.back();
+          return;
+        }
+        if (window.opener && !window.opener.closed) {
+          window.close();
+          return;
+        }
+        window.location.href = '/';
+      }
+    </script>
+  </body>
+</html>
