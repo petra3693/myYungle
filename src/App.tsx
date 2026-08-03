@@ -2,7 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import { Camera, Sparkles } from 'lucide-react'
 import { submitFeedback } from '@/lib/submitFeedback'
 import { analyzePlantImage, mapWaterNeedToForm } from '@/lib/analyzePlant'
-import { pickWateringDaysForNeed } from '@/lib/wateringSchedule'
+import { mapRecommendedDaysToIndices } from '@/lib/wateringSchedule'
+import {
+  cycleAnchorForFrequency,
+  dayNamesFromIndices,
+  getDateForDayIndex,
+  isPlantDueOnDay,
+  isPlantDueToday,
+} from '@/lib/wateringDue'
 import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, type StorageResult } from '@/lib/plantStorage'
 import { clearAllPhotos, deletePlantPhotos, getPhotoBlob } from '@/lib/photoStore'
 import PlantPhoto from '@/components/PlantPhoto'
@@ -11,7 +18,7 @@ import PhotoActionSheet from '@/components/photo-action-sheet'
 import type { HealthLogSubmitData } from '@/lib/health-log'
 import { clampHealthScore } from '@/lib/health-log'
 import { migrateLegacyCheckIn } from '@/lib/health-calculator'
-import type { AppSettings, DayCode, DayOfWeek, HealthCheckIn, HistoryEntry, Plant, WaterNeed } from '@/types/plant'
+import type { AppSettings, DayCode, DayOfWeek, HealthCheckIn, HistoryEntry, Plant, WaterNeed, WateringFrequency } from '@/types/plant'
 import svgPaths from '@/imports/NewDesign2-1/svg-cm3nd9oy62'
 import svgPaths2 from '@/imports/MyjungleSettimgs-2/svg-u9kpmn74e6'
 import svgAdd from '@/imports/MyjungleAddPlant/svg-fer892chf7'
@@ -146,6 +153,10 @@ function normalizePlant(raw: Plant & { watered?: boolean; lastWatered?: string |
     wateringDays: scheduleToIndices(scheduleDays),
     scheduleDays,
     isCustomSchedule: raw.isCustomSchedule ?? false,
+    wateringFrequency: raw.wateringFrequency === 'biweekly' || raw.wateringFrequency === 'monthly'
+      ? raw.wateringFrequency
+      : 'weekly',
+    wateringCycleAnchor: raw.wateringCycleAnchor ?? null,
     waterNeed,
     photo,
     lastWateredAt: raw.lastWateredAt ?? raw.lastWatered ?? null,
@@ -259,8 +270,8 @@ function useTodayDayIndex(): number | null {
   return todayIdx
 }
 
-function getPlantsForDay(plants: Plant[], dayIdx: number): Plant[] {
-  return plants.filter((p) => p.wateringDays.includes(dayIdx))
+function getPlantsForDay(plants: Plant[], dayIdx: number, referenceDate = new Date()): Plant[] {
+  return plants.filter((p) => isPlantDueOnDay(p, dayIdx, referenceDate))
 }
 
 function getWateringDayOrder(globalWaterSchedule: string[], plants: Plant[], todayIdx: number): number[] {
@@ -566,7 +577,10 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 // ─── Weekly Day Strip (horizontal, compact) ───────────────────────────────────
 
 function WeeklyStrip({ plants, todayIdx }: { plants: Plant[]; todayIdx: number }) {
-  const counts = DAYS.map((_, i) => plants.filter((p) => p.wateringDays.includes(i)).length)
+  const today = new Date()
+  const counts = DAYS.map((_, i) =>
+    plants.filter((p) => isPlantDueOnDay(p, i, getDateForDayIndex(i, today))).length,
+  )
   return (
     <div className="px-5 py-3 shrink-0">
       <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', marginBottom: 8 }}>WEEKLY WATER SCHEDULE</div>
@@ -681,7 +695,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
   plants: Plant[]; settings: AppSettings; onSelectPlant: (p: Plant) => void;
   onDeletePlant: (id: string) => void; onWaterPlant: (id: string) => void; onGoAdd: () => void; onSettings: () => void; onShowPro: () => void; todayIdx: number
 }) {
-  const needsWater = plants.filter((p) => p.wateringDays.includes(todayIdx) && !p.isWateredToday)
+  const needsWater = plants.filter((p) => isPlantDueToday(p, todayIdx) && !p.isWateredToday)
   const limitReached = isFreeTierLimitReached(plants.length, settings.isPro)
 
   return (
@@ -979,17 +993,35 @@ function WateringScheduleSection({
   days,
   isCustomSchedule,
   globalIndices,
+  wateringFrequency,
+  aiHighlightedDays,
+  aiHighlightedFrequency,
   onToggleDay,
+  onFrequencyChange,
   onOpenCustomModal,
   onResetToDefault,
 }: {
   days: number[]
   isCustomSchedule: boolean
   globalIndices: number[]
+  wateringFrequency: WateringFrequency
+  aiHighlightedDays?: number[]
+  aiHighlightedFrequency?: WateringFrequency | null
   onToggleDay: (index: number) => void
+  onFrequencyChange: (frequency: WateringFrequency) => void
   onOpenCustomModal: () => void
   onResetToDefault: () => void
 }) {
+  function toggleFrequencyOption(option: 'biweekly' | 'monthly') {
+    onFrequencyChange(wateringFrequency === option ? 'weekly' : option)
+  }
+
+  function frequencyOptionClass(checked: boolean, highlighted: boolean) {
+    const base = 'neo-pill relative w-full transition-all rounded-full border-2 border-black cursor-pointer active:scale-[0.99]'
+    if (checked || highlighted) return `${base} filled-day`
+    return `${base}`
+  }
+
   return (
     <div className="flex flex-col gap-2 w-full">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1010,14 +1042,15 @@ function WateringScheduleSection({
         {DAYS.map((d, i) => {
           const on = days.includes(i)
           const disabled = !isCustomSchedule && !globalIndices.includes(i)
+          const aiHighlighted = aiHighlightedDays?.includes(i) ?? false
           return (
             <button
               key={d}
               type="button"
               onClick={() => onToggleDay(i)}
               disabled={disabled}
-              className={`neo-pill relative w-full transition-all rounded-full border-2 border-black ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-[0.99]'} ${on ? 'filled-day' : ''}`}
-              style={{ background: disabled && !on ? '#E5E5E5' : on ? undefined : '#F3F4F6' }}
+              className={`neo-pill relative w-full transition-all rounded-full border-2 border-black ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-[0.99]'} ${on || aiHighlighted ? 'filled-day' : ''}`}
+              style={{ background: disabled && !on ? '#E5E5E5' : on || aiHighlighted ? undefined : '#F3F4F6' }}
             >
               <div className="flex items-center justify-between px-5 py-1.5">
                 <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: disabled && !on ? '#888' : '#000' }}>{d}</span>
@@ -1032,6 +1065,43 @@ function WateringScheduleSection({
             </button>
           )
         })}
+      </div>
+
+      <div className="flex flex-col gap-[7px] w-full mt-1">
+        <button
+          type="button"
+          onClick={() => toggleFrequencyOption('biweekly')}
+          className={frequencyOptionClass(wateringFrequency === 'biweekly', aiHighlightedFrequency === 'biweekly')}
+          style={{ background: wateringFrequency === 'biweekly' || aiHighlightedFrequency === 'biweekly' ? undefined : '#F3F4F6' }}
+        >
+          <div className="flex items-center justify-between px-5 py-1.5">
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>Every 2 weeks</span>
+            {wateringFrequency === 'biweekly' ? (
+              <svg fill="none" height="18" viewBox="0 0 18 18" width="18" aria-hidden>
+                <path d={CHECK_PATH} stroke="#000" strokeLinecap="round" strokeWidth="2" />
+              </svg>
+            ) : (
+              <div className="size-[18px] rounded-full border-2 border-[#888]" aria-hidden />
+            )}
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleFrequencyOption('monthly')}
+          className={frequencyOptionClass(wateringFrequency === 'monthly', aiHighlightedFrequency === 'monthly')}
+          style={{ background: wateringFrequency === 'monthly' || aiHighlightedFrequency === 'monthly' ? undefined : '#F3F4F6' }}
+        >
+          <div className="flex items-center justify-between px-5 py-1.5">
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>Once a month</span>
+            {wateringFrequency === 'monthly' ? (
+              <svg fill="none" height="18" viewBox="0 0 18 18" width="18" aria-hidden>
+                <path d={CHECK_PATH} stroke="#000" strokeLinecap="round" strokeWidth="2" />
+              </svg>
+            ) : (
+              <div className="size-[18px] rounded-full border-2 border-[#888]" aria-hidden />
+            )}
+          </div>
+        </button>
       </div>
 
       {isCustomSchedule ? (
@@ -1071,6 +1141,9 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   const [isCustomSchedule, setIsCustomSchedule] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [waterNeed, setWaterNeed] = useState<WaterNeed>('Moderate')
+  const [wateringFrequency, setWateringFrequency] = useState<WateringFrequency>('weekly')
+  const [aiHighlightedDays, setAiHighlightedDays] = useState<number[]>([])
+  const [aiHighlightedFrequency, setAiHighlightedFrequency] = useState<WateringFrequency | null>(null)
   const [photo, setPhoto] = useState<string | null>(null)
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -1106,21 +1179,27 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     setAnalyzeError(null)
     setAnalyzing(true)
     try {
-      const result = await analyzePlantImage(photo)
+      const preferredDays = dayNamesFromIndices(globalIndices)
+      const result = await analyzePlantImage(photo, preferredDays)
       if (!result.ok) {
         setAnalyzeError(result.error)
         return
       }
       const mappedNeed = mapWaterNeedToForm(result.data.waterNeed)
-      const { days: suggestedDays, isCustomSchedule: customSchedule } = pickWateringDaysForNeed(
+      const { days: suggestedDays, isCustomSchedule: customSchedule } = mapRecommendedDaysToIndices(
+        result.data.recommendedDays,
         result.data.waterNeed,
         globalIndices,
       )
+      const frequency = result.data.frequency ?? 'weekly'
       setName(result.data.name)
       setWaterNeed(mappedNeed)
       setNote(result.data.careNotes.slice(0, 500))
       setDays(suggestedDays)
       setIsCustomSchedule(customSchedule)
+      setWateringFrequency(frequency)
+      setAiHighlightedDays(suggestedDays)
+      setAiHighlightedFrequency(frequency !== 'weekly' ? frequency : null)
     } catch (error) {
       console.error('[myJungle] Plant analysis error:', error)
       setAnalyzeError(
@@ -1132,6 +1211,8 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   }
 
   function toggleDay(i: number) {
+    setAiHighlightedDays([])
+    setAiHighlightedFrequency(null)
     if (!isCustomSchedule && !globalIndices.includes(i)) {
       setShowScheduleModal(true)
       return
@@ -1159,6 +1240,14 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     setDays(globalIndices)
     setIsCustomSchedule(false)
     setShowScheduleModal(false)
+    setAiHighlightedDays([])
+    setAiHighlightedFrequency(null)
+  }
+
+  function handleFrequencyChange(frequency: WateringFrequency) {
+    setWateringFrequency(frequency)
+    setAiHighlightedFrequency(null)
+    setAiHighlightedDays([])
   }
 
   async function save() {
@@ -1178,6 +1267,8 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
         wateringDays: scheduleToIndices(scheduleDays),
         scheduleDays,
         isCustomSchedule,
+        wateringFrequency,
+        wateringCycleAnchor: cycleAnchorForFrequency(wateringFrequency, null),
         waterNeed,
         photo: photoUrl,
         lastWateredAt: null,
@@ -1354,7 +1445,11 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             days={days}
             isCustomSchedule={isCustomSchedule}
             globalIndices={globalIndices}
+            wateringFrequency={wateringFrequency}
+            aiHighlightedDays={aiHighlightedDays}
+            aiHighlightedFrequency={aiHighlightedFrequency}
             onToggleDay={toggleDay}
+            onFrequencyChange={handleFrequencyChange}
             onOpenCustomModal={() => setShowScheduleModal(true)}
             onResetToDefault={resetToGeneralSchedule}
           />
@@ -1811,12 +1906,13 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
   const [editNote, setEditNote] = useState(plant.careNote)
   const [editDays, setEditDays] = useState<number[]>(scheduleIndicesFromPlant(plant))
   const [editIsCustomSchedule, setEditIsCustomSchedule] = useState(plant.isCustomSchedule)
+  const [editWateringFrequency, setEditWateringFrequency] = useState<WateringFrequency>(plant.wateringFrequency ?? 'weekly')
   const [growthNote, setGrowthNote] = useState('')
   const [growthHeight, setGrowthHeight] = useState('')
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
 
-  const needsWater = plant.wateringDays.includes(todayIdx) && !plant.isWateredToday
+  const needsWater = isPlantDueToday(plant, todayIdx) && !plant.isWateredToday
   const waterFills = getWaterNeedFills(plant.waterNeed)
   const primaryDay = plant.wateringDays[0]
   const onSchedule = !needsWater
@@ -1869,6 +1965,11 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
   function saveEdit() {
     if (!editName.trim() || editDays.length === 0) return
     const scheduleDays = indicesToSchedule(editDays)
+    const frequencyChanged = editWateringFrequency !== (plant.wateringFrequency ?? 'weekly')
+    const nextAnchor = cycleAnchorForFrequency(
+      editWateringFrequency,
+      frequencyChanged ? null : plant.wateringCycleAnchor,
+    )
     onUpdate({
       ...plant,
       name: editName.trim(),
@@ -1877,6 +1978,8 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
       wateringDays: scheduleToIndices(scheduleDays),
       scheduleDays,
       isCustomSchedule: editIsCustomSchedule,
+      wateringFrequency: editWateringFrequency,
+      wateringCycleAnchor: nextAnchor,
     })
     setShowEdit(false)
   }
@@ -1917,6 +2020,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
     setEditNote(plant.careNote)
     setEditDays(scheduleIndicesFromPlant(plant))
     setEditIsCustomSchedule(plant.isCustomSchedule)
+    setEditWateringFrequency(plant.wateringFrequency ?? 'weekly')
     setShowEdit(true)
   }
 
@@ -2117,7 +2221,9 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                 days={editDays}
                 isCustomSchedule={editIsCustomSchedule}
                 globalIndices={globalIndices}
+                wateringFrequency={editWateringFrequency}
                 onToggleDay={toggleEditDay}
+                onFrequencyChange={setEditWateringFrequency}
                 onOpenCustomModal={() => setShowScheduleModal(true)}
                 onResetToDefault={resetEditToGeneralSchedule}
               />
@@ -2201,9 +2307,12 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
   onMarkWatered: (id: string) => void
   onMarkAll: () => void
 }) {
+  const today = new Date()
   const grouped: Record<number, Plant[]> = {}
   plants.forEach((p) => {
     p.wateringDays.forEach((d) => {
+      const dateForDay = getDateForDayIndex(d, today)
+      if (!isPlantDueOnDay(p, d, dateForDay)) return
       if (!grouped[d]) grouped[d] = []
       if (!grouped[d].some((x) => x.id === p.id)) grouped[d].push(p)
     })
@@ -2949,8 +3058,9 @@ export default function App() {
 
   function handleMarkAll() {
     if (todayIdxSafe < 0) return
+    const today = new Date()
     setPlants((prev) => prev.map((p) => {
-      if (!p.wateringDays.includes(todayIdxSafe) || p.isWateredToday) return p
+      if (!isPlantDueOnDay(p, todayIdxSafe, today) || p.isWateredToday) return p
       const now = new Date().toISOString()
       return {
         ...p,

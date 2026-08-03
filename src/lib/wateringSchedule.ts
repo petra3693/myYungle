@@ -1,12 +1,31 @@
+import { indexFromDayName } from '@/lib/wateringDue'
 import type { WaterNeed } from '@/types/plant'
 
 const ALL_DAY_INDICES = [0, 1, 2, 3, 4, 5, 6] as const
 
+/** Minimum days for schedule stacking: light/moderate → 1, heavy → 2 */
 export function getDayCountForWaterNeed(waterNeed: string | WaterNeed): number {
   const normalized = String(waterNeed).toLowerCase()
-  if (normalized === 'light') return 1
-  if (normalized === 'moderate') return 2
-  return 3
+  if (normalized === 'light' || normalized === 'moderate') return 1
+  return 2
+}
+
+export function mapRecommendedDaysToIndices(
+  recommendedDays: string[],
+  waterNeed: string | WaterNeed,
+  globalIndices: number[],
+): { days: number[]; isCustomSchedule: boolean } {
+  const mapped = recommendedDays
+    .map((name) => indexFromDayName(name))
+    .filter((i): i is number => i !== null)
+  const unique = [...new Set(mapped)].sort((a, b) => a - b)
+
+  if (unique.length > 0) {
+    const usesOnlyGlobal = globalIndices.length === 0 || unique.every((d) => globalIndices.includes(d))
+    return { days: unique, isCustomSchedule: !usesOnlyGlobal }
+  }
+
+  return pickWateringDaysForNeed(waterNeed, globalIndices)
 }
 
 function pickEvenlySpacedFromPool(pool: number[], count: number): number[] {

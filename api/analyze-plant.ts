@@ -14,9 +14,21 @@ interface AnalyzePlantResult {
   name: string
   waterNeed: 'light' | 'moderate' | 'heavy'
   careNotes: string
+  recommendedDays: string[]
+  frequency: 'weekly' | 'biweekly' | 'monthly'
 }
 
 const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'] as const
+
+const FULL_DAY_NAMES = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+]
 
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,
@@ -35,15 +47,71 @@ const responseSchema: Schema = {
       type: SchemaType.STRING,
       description: 'Short care instructions and tips',
     },
+    recommendedDays: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description:
+        'Minimum necessary watering days selected from the user preferred days (full day names, e.g. "Tuesday")',
+    },
+    frequency: {
+      type: SchemaType.STRING,
+      format: 'enum',
+      enum: ['weekly', 'biweekly', 'monthly'],
+      description: 'How often to water: weekly, biweekly (every 2 weeks), or monthly (every 4 weeks)',
+    },
   },
-  required: ['name', 'waterNeed', 'careNotes'],
+  required: ['name', 'waterNeed', 'careNotes', 'recommendedDays', 'frequency'],
 }
 
-function getRequestBody(req: VercelRequest): { imageBase64?: string; mimeType?: string } {
+function getRequestBody(req: VercelRequest): {
+  imageBase64?: string
+  mimeType?: string
+  preferredDays?: string[]
+} {
   if (req.body && typeof req.body === 'object') {
-    return req.body as { imageBase64?: string; mimeType?: string }
+    return req.body as {
+      imageBase64?: string
+      mimeType?: string
+      preferredDays?: string[]
+    }
   }
   return {}
+}
+
+function normalizePreferredDays(preferredDays: unknown): string[] {
+  if (!Array.isArray(preferredDays)) return [...FULL_DAY_NAMES]
+  const valid = preferredDays
+    .filter((d): d is string => typeof d === 'string' && d.trim().length > 0)
+    .map((d) => {
+      const match = FULL_DAY_NAMES.find((name) => name.toLowerCase() === d.trim().toLowerCase())
+      return match ?? d.trim()
+    })
+  return valid.length > 0 ? valid : [...FULL_DAY_NAMES]
+}
+
+function buildAnalyzePrompt(preferredDays: string[]): string {
+  const dayList = preferredDays.join(', ')
+  return [
+    'Identify the plant in this image, determine its water requirement (light, moderate, or heavy), and provide care instructions.',
+    '',
+    `The user's globally active preferred watering days are: ${dayList}.`,
+    'Select the MINIMUM necessary days from ONLY these preferred days to maximize schedule stacking:',
+    '- light or moderate water need: select exactly 1 day',
+    '- heavy water need: select exactly 2 days',
+    '',
+    'For drought-tolerant or sparse-water plants (cacti, succulents, snake plants, ZZ plants, etc.), use frequency "biweekly" or "monthly" instead of "weekly".',
+    'When using biweekly or monthly frequency, still select only 1 day from the preferred list.',
+    '',
+    'Return recommendedDays as full English day names from the preferred list (e.g. ["Tuesday"]).',
+    'Return frequency as "weekly", "biweekly", or "monthly".',
+  ].join('\n')
+}
+
+function normalizeFrequency(value: unknown): AnalyzePlantResult['frequency'] {
+  const normalized = String(value ?? '').toLowerCase()
+  if (normalized === 'biweekly') return 'biweekly'
+  if (normalized === 'monthly') return 'monthly'
+  return 'weekly'
 }
 
 async function generatePlantAnalysis(
@@ -84,10 +152,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'GEMINI_API_KEY environment variable is missing on Vercel' })
   }
 
-  const { imageBase64, mimeType = 'image/jpeg' } = getRequestBody(req)
+  const { imageBase64, mimeType = 'image/jpeg', preferredDays: rawPreferredDays } = getRequestBody(req)
   if (!imageBase64 || typeof imageBase64 !== 'string') {
     return res.status(400).json({ error: 'No image provided' })
   }
+
+  const preferredDays = normalizePreferredDays(rawPreferredDays)
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
@@ -100,9 +170,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     }
 
-    const prompt =
-      'Identify the plant in this image, determine its water requirement (light, moderate, heavy), and provide care instructions.'
-
+    const prompt = buildAnalyzePrompt(preferredDays)
     const text = await generatePlantAnalysis(genAI, prompt, imagePart)
 
     let plantData: AnalyzePlantResult
@@ -121,10 +189,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Invalid water need in AI response.' })
     }
 
+    const recommendedDays = Array.isArray(plantData.recommendedDays)
+      ? plantData.recommendedDays.filter((d): d is string => typeof d === 'string' && d.trim().length > 0)
+      : []
+
     return res.status(200).json({
       name: plantData.name.trim(),
       waterNeed,
       careNotes: plantData.careNotes.trim(),
+      recommendedDays,
+      frequency: normalizeFrequency(plantData.frequency),
     })
   } catch (error) {
     console.error('Gemini API Error:', error)

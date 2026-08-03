@@ -4,6 +4,7 @@ import { z } from 'zod'
 export const analyzePlantPayloadSchema = z.object({
   imageBase64: z.string().min(1, 'No image provided'),
   mimeType: z.string().default('image/jpeg'),
+  preferredDays: z.array(z.string()).optional(),
 })
 
 export type AnalyzePlantPayload = z.infer<typeof analyzePlantPayloadSchema>
@@ -12,11 +13,25 @@ export interface AnalyzePlantResult {
   name: string
   waterNeed: 'light' | 'moderate' | 'heavy'
   careNotes: string
+  recommendedDays: string[]
+  frequency: 'weekly' | 'biweekly' | 'monthly'
 }
 
 export interface AnalyzePlantError {
   error: string
 }
+
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'] as const
+
+const FULL_DAY_NAMES = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+]
 
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,
@@ -35,8 +50,84 @@ const responseSchema: Schema = {
       type: SchemaType.STRING,
       description: 'Short care instructions and tips',
     },
+    recommendedDays: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description:
+        'Minimum necessary watering days selected from the user preferred days (full day names, e.g. "Tuesday")',
+    },
+    frequency: {
+      type: SchemaType.STRING,
+      format: 'enum',
+      enum: ['weekly', 'biweekly', 'monthly'],
+      description: 'How often to water: weekly, biweekly (every 2 weeks), or monthly (every 4 weeks)',
+    },
   },
-  required: ['name', 'waterNeed', 'careNotes'],
+  required: ['name', 'waterNeed', 'careNotes', 'recommendedDays', 'frequency'],
+}
+
+function normalizePreferredDays(preferredDays: string[] | undefined): string[] {
+  if (!preferredDays?.length) return [...FULL_DAY_NAMES]
+  const valid = preferredDays
+    .map((d) => {
+      const match = FULL_DAY_NAMES.find((name) => name.toLowerCase() === d.trim().toLowerCase())
+      return match ?? d.trim()
+    })
+    .filter(Boolean)
+  return valid.length > 0 ? valid : [...FULL_DAY_NAMES]
+}
+
+function buildAnalyzePrompt(preferredDays: string[]): string {
+  const dayList = preferredDays.join(', ')
+  return [
+    'Identify the plant in this image, determine its water requirement (light, moderate, or heavy), and provide care instructions.',
+    '',
+    `The user's globally active preferred watering days are: ${dayList}.`,
+    'Select the MINIMUM necessary days from ONLY these preferred days to maximize schedule stacking:',
+    '- light or moderate water need: select exactly 1 day',
+    '- heavy water need: select exactly 2 days',
+    '',
+    'For drought-tolerant or sparse-water plants (cacti, succulents, snake plants, ZZ plants, etc.), use frequency "biweekly" or "monthly" instead of "weekly".',
+    'When using biweekly or monthly frequency, still select only 1 day from the preferred list.',
+    '',
+    'Return recommendedDays as full English day names from the preferred list (e.g. ["Tuesday"]).',
+    'Return frequency as "weekly", "biweekly", or "monthly".',
+  ].join('\n')
+}
+
+function normalizeFrequency(value: unknown): AnalyzePlantResult['frequency'] {
+  const normalized = String(value ?? '').toLowerCase()
+  if (normalized === 'biweekly') return 'biweekly'
+  if (normalized === 'monthly') return 'monthly'
+  return 'weekly'
+}
+
+async function generatePlantAnalysis(
+  genAI: GoogleGenerativeAI,
+  prompt: string,
+  imagePart: { inlineData: { data: string; mimeType: string } },
+): Promise<string> {
+  let lastError: unknown
+
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema,
+        },
+      })
+
+      const result = await model.generateContent([prompt, imagePart])
+      return result.response.text()
+    } catch (error) {
+      console.error(`Gemini model "${modelName}" failed:`, error)
+      lastError = error
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('All Gemini models failed.')
 }
 
 export async function handleAnalyzePlantRequest(
@@ -54,16 +145,9 @@ export async function handleAnalyzePlantRequest(
   }
 
   try {
-    const { imageBase64, mimeType } = parsed.data
+    const { imageBase64, mimeType, preferredDays: rawPreferredDays } = parsed.data
+    const preferredDays = normalizePreferredDays(rawPreferredDays)
     const genAI = new GoogleGenerativeAI(apiKey)
-
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema,
-      },
-    })
 
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '')
     const imagePart = {
@@ -73,11 +157,8 @@ export async function handleAnalyzePlantRequest(
       },
     }
 
-    const prompt =
-      'Identify the plant in this image, determine its water requirement (light, moderate, heavy), and provide care instructions.'
-
-    const result = await model.generateContent([prompt, imagePart])
-    const text = result.response.text()
+    const prompt = buildAnalyzePrompt(preferredDays)
+    const text = await generatePlantAnalysis(genAI, prompt, imagePart)
     const plantData = JSON.parse(text) as AnalyzePlantResult
 
     if (!plantData.name || !plantData.waterNeed || !plantData.careNotes) {
@@ -89,12 +170,18 @@ export async function handleAnalyzePlantRequest(
       return { status: 500, body: { error: 'Invalid water need in AI response.' } }
     }
 
+    const recommendedDays = Array.isArray(plantData.recommendedDays)
+      ? plantData.recommendedDays.filter((d): d is string => typeof d === 'string' && d.trim().length > 0)
+      : []
+
     return {
       status: 200,
       body: {
         name: plantData.name.trim(),
         waterNeed: waterNeed as AnalyzePlantResult['waterNeed'],
         careNotes: plantData.careNotes.trim(),
+        recommendedDays,
+        frequency: normalizeFrequency(plantData.frequency),
       },
     }
   } catch (error) {

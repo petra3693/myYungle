@@ -43,6 +43,7 @@ function buildNonJsonErrorMessage(status: number, text: string): string {
 
 export async function analyzePlantImage(
   imageSource: string,
+  preferredDays: string[] = [],
 ): Promise<{ ok: true; data: AnalyzePlantApiResponse } | { ok: false; error: string }> {
   const { imageBase64, mimeType } = parseImageDataUrl(imageSource)
 
@@ -51,7 +52,11 @@ export async function analyzePlantImage(
     response = await fetch('/api/analyze-plant', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64, mimeType }),
+      body: JSON.stringify({
+        imageBase64,
+        mimeType,
+        preferredDays: preferredDays.length > 0 ? preferredDays : undefined,
+      }),
     })
   } catch (error) {
     console.error('[myJungle] analyze-plant network error:', error)
