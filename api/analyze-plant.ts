@@ -16,6 +16,8 @@ interface AnalyzePlantResult {
   careNotes: string
 }
 
+const GEMINI_MODELS = ['gemini-1.5-flash-latest', 'gemini-2.0-flash'] as const
+
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
@@ -44,6 +46,34 @@ function getRequestBody(req: VercelRequest): { imageBase64?: string; mimeType?: 
   return {}
 }
 
+async function generatePlantAnalysis(
+  genAI: GoogleGenerativeAI,
+  prompt: string,
+  imagePart: { inlineData: { data: string; mimeType: string } },
+): Promise<string> {
+  let lastError: unknown
+
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema,
+        },
+      })
+
+      const result = await model.generateContent([prompt, imagePart])
+      return result.response.text()
+    } catch (error) {
+      console.error(`Gemini model "${modelName}" failed:`, error)
+      lastError = error
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('All Gemini models failed.')
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -62,14 +92,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema,
-      },
-    })
-
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '')
     const imagePart = {
       inlineData: {
@@ -81,8 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const prompt =
       'Identify the plant in this image, determine its water requirement (light, moderate, heavy), and provide care instructions.'
 
-    const result = await model.generateContent([prompt, imagePart])
-    const text = result.response.text()
+    const text = await generatePlantAnalysis(genAI, prompt, imagePart)
 
     let plantData: AnalyzePlantResult
     try {
