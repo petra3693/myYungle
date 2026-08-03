@@ -1904,7 +1904,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
       history: [{
         id: `${Date.now()}-health`,
         date: timestamp,
-        note: data.note?.trim() || `Health check (${data.mode}): ${data.leafColor}, ${data.soilMoisture}, ${data.pestCheck}`,
+        note: data.note?.trim() || `Comprehensive diagnosis — score pending`,
         photo: plant.photo,
       }, ...plantHistory(plant)],
     })

@@ -2,43 +2,64 @@ export type WaterNeed = 'Light' | 'Moderate' | 'Heavy'
 export type DayCode = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN'
 export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'
 
-/** 8-parameter health diagnostic model — S_i percentage values in health-calculator */
-export type LeafColor = 'healthy' | 'brown_tips' | 'yellowing' | 'brown_spots'
-export type NewGrowth = 'thriving' | 'stagnant' | 'dead_shoots'
-export type StemHealth = 'firm' | 'drooping' | 'soft_rotting'
-export type SoilMoisture = 'optimal' | 'dry' | 'waterlogged'
-export type SoilSurface = 'clean' | 'mold_salt' | 'foul_odor'
-export type PestCheck = 'clean' | 'pests_detected'
-export type LightStress = 'ideal' | 'etiolated' | 'sunburn'
-export type HumidityReaction = 'normal' | 'curling' | 'crispy_edges'
+// ─── Comprehensive 12-question diagnostic model ───────────────────────────────
 
-export interface PlantHealthMetrics8P {
-  leafColor: LeafColor
-  newGrowth: NewGrowth
-  stemHealth: StemHealth
-  soilMoisture: SoilMoisture
-  soilSurface: SoilSurface
-  pestCheck: PestCheck
-  lightStress: LightStress
-  humidityReaction: HumidityReaction
+export type InputType = 'slider' | 'boolean' | 'chips' | 'conditional'
+
+export type DiagnosticDomain = 'foliage' | 'soil' | 'pest' | 'environment'
+
+export type LeafVitalityLevel = 1 | 2 | 3 | 4 | 5
+export type LeafDiscoloration = 'none' | 'yellowing' | 'brown_tips' | 'dark_spots'
+export type NewGrowthVigor = 1 | 2 | 3
+export type SoilMoistureLevel = 1 | 2 | 3 | 4 | 5
+export type SoilSurfaceCondition = 'clean' | 'white_salt_mold' | 'foul_odor' | 'compacted'
+export type PestType = 'spider_mites' | 'mealybugs' | 'scale' | 'fungus_gnats'
+export type PestSeverity = 1 | 2 | 3
+export type StemFirmnessLevel = 1 | 2 | 3 | 4
+export type LightStressLevel = 'ideal' | 'etiolated' | 'sunburnt'
+export type HumidityReactionLevel = 'normal' | 'curled_edges' | 'crispy_tips'
+export type RootStabilityLevel = 1 | 2 | 3
+
+export interface ComprehensiveCheckInPayload {
+  leafVitality: LeafVitalityLevel
+  leafDiscoloration: LeafDiscoloration
+  hasNewGrowth: boolean
+  newGrowthVigor?: NewGrowthVigor
+  soilMoistureLevel: SoilMoistureLevel
+  soilSurfaceCondition: SoilSurfaceCondition
+  potDrainageWorking: boolean
+  pestsPresent: boolean
+  pestType?: PestType
+  pestSeverity?: PestSeverity
+  fungalRotSigns: boolean
+  stemFirmness: StemFirmnessLevel
+  lightStress: LightStressLevel
+  humidityReaction: HumidityReactionLevel
+  rootStability: RootStabilityLevel
   note?: string
   timestamp: string
 }
 
-export type HealthCheckMode = 'quick' | 'deep'
-
-export interface HealthCheckIn extends PlantHealthMetrics8P {
+export interface HealthCheckIn extends ComprehensiveCheckInPayload {
   id: string
-  mode: HealthCheckMode
 }
 
-/** @deprecated Legacy 3-parameter check-in — migrated on load */
+export interface DiagnosticQuestion {
+  id: keyof Omit<ComprehensiveCheckInPayload, 'note' | 'timestamp' | 'newGrowthVigor' | 'pestType' | 'pestSeverity'>
+  domain: DiagnosticDomain
+  label: string
+  description?: string
+  inputType: InputType
+  weight: number
+}
+
+/** @deprecated Legacy 3-parameter check-in */
 export interface LegacyCheckInLog {
   id: string
   timestamp: string
   leafStatus?: 'lush' | 'brown_tips' | 'yellowing' | 'drooping'
   soilStatus?: 'moist' | 'dry' | 'saturated'
-  pestStatus?: PestCheck
+  pestStatus?: 'clean' | 'pests_detected'
   note?: string
 }
 

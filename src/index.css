@@ -390,6 +390,37 @@
     transform: rotate(-90deg);
     transform-origin: center;
   }
+
+  .health-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    border-radius: 9999px;
+    border: 2px solid #000;
+    background: #fff;
+  }
+
+  .health-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    border: 2px solid #000;
+    background: var(--color-neo-green);
+    box-shadow: 2px 2px 0 0 #000;
+    cursor: pointer;
+  }
+
+  .health-range::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    border: 2px solid #000;
+    background: var(--color-neo-green);
+    box-shadow: 2px 2px 0 0 #000;
+    cursor: pointer;
+  }
 }
 
 html {
