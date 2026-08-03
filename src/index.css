@@ -175,6 +175,7 @@
 
   .gemini-analyze-btn {
     position: relative;
+    isolation: isolate;
     overflow: hidden;
     background: linear-gradient(90deg, #4285f4, #7c4dff, #d96570, #4285f4);
     background-size: 300% 100%;
@@ -183,6 +184,8 @@
     border-radius: 9999px;
     cursor: pointer;
     transition: transform 0.15s ease, opacity 0.15s ease;
+    /* Contain paint so Android WebView doesn't bleed this layer over siblings */
+    contain: paint;
   }
 
   .gemini-analyze-btn:not(:disabled):active {
@@ -200,6 +203,7 @@
   .gemini-analyze-btn__shine {
     position: absolute;
     inset: 0;
+    z-index: 0;
     background: linear-gradient(
       105deg,
       transparent 35%,
@@ -208,6 +212,33 @@
     );
     animation: gemini-shimmer 3s ease-in-out infinite;
     pointer-events: none;
+  }
+
+  .gemini-analyze-btn__icon,
+  .gemini-analyze-btn__label {
+    position: relative;
+    z-index: 1;
+  }
+
+  .add-screen {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+  }
+
+  .add-screen-scroll {
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+
+  .add-screen-scroll > * {
+    position: relative;
+    z-index: 0;
   }
 
   .neo-input:focus-within,

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 
 export default function PhotoActionSheet({
@@ -11,7 +12,7 @@ export default function PhotoActionSheet({
 }) {
   const { t } = useTranslation()
 
-  return (
+  return createPortal(
     <>
       <div className="fixed inset-0 z-[100] bg-black/40" onClick={onClose} aria-hidden />
       <div
@@ -42,13 +43,14 @@ export default function PhotoActionSheet({
           <button
             type="button"
             onClick={onClose}
-            className="neo-card relative z-[100] flex w-full items-center justify-center rounded-2xl border-2 border-black bg-white px-4 py-4 mb-1 cursor-pointer active:bg-[#F7F7F7] shadow-lg"
+            className="neo-card flex w-full items-center justify-center rounded-2xl border-2 border-black bg-white px-4 py-4 mb-1 cursor-pointer active:bg-[#F7F7F7] shadow-lg"
             style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 16, color: '#000' }}
           >
             {t('photo.cancel')}
           </button>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }

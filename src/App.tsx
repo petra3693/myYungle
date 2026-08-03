@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Capacitor } from '@capacitor/core'
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor'
@@ -1011,11 +1012,11 @@ function CustomScheduleModal({
     ? globalSchedule.map((d) => shortDayLabel(t, d)).join(', ')
     : t('customSchedule.noGlobalDays')
 
-  return (
+  return createPortal(
     <>
       <div className="fixed inset-0 z-[60] bg-black/40" onClick={onClose} aria-hidden />
       <div className="fixed inset-x-4 top-1/2 z-[70] -translate-y-1/2 mx-auto max-w-md">
-        <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-4">
+        <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-4 max-h-[85dvh] overflow-y-auto">
           <div className="flex flex-col gap-1">
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000', textTransform: 'uppercase' }}>
               {t('customSchedule.title')}
@@ -1034,7 +1035,7 @@ function CustomScheduleModal({
                   key={d}
                   type="button"
                   onClick={() => toggleDraftDay(i)}
-                  className={`neo-pill relative w-full cursor-pointer active:scale-[0.99] transition-all rounded-full border-2 border-black ${on ? 'option-selected' : ''}`}
+                  className={`neo-pill w-full cursor-pointer active:scale-[0.99] transition-all rounded-full border-2 border-black ${on ? 'option-selected' : ''}`}
                   style={{ background: on ? undefined : '#F3F4F6' }}
                 >
                   <div className="flex items-center justify-between px-5 py-2">
@@ -1095,7 +1096,8 @@ function CustomScheduleModal({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 
@@ -1480,36 +1482,37 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   }
 
   return (
-    <div className="flex flex-col h-full" style={{ background: BG }}>
-      {/* Modal header */}
-      <div className="flex flex-col items-center pb-[16px] pt-[8px] shrink-0 w-full">
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000' }}>{t('addPlant.title')}</span>
+    <div className="add-screen flex flex-col flex-1 min-h-0 h-full w-full" style={{ background: BG }}>
+      <div className="flex flex-col items-center shrink-0 w-full px-5 pt-2 pb-3">
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000' }}>
+          {t('addPlant.title')}
+        </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="flex flex-col gap-[16px] items-start px-[20px] pb-[20px]">
+      <div className="add-screen-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full">
+        <div className="flex flex-col gap-4 w-full px-5 pb-24">
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handlePhotoInputChange}
+          />
+          <input
+            ref={libraryInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoInputChange}
+          />
 
-          {/* Photo upload */}
-          <div className="neo-card relative rounded-3xl w-full">
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handlePhotoInputChange}
-            />
-            <input
-              ref={libraryInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handlePhotoInputChange}
-            />
-            <div className="flex flex-col items-center gap-[16px] p-[16px]">
-              <div className="bg-[#F7F7F7] relative rounded-full shrink-0 size-[80px] overflow-hidden border-2 border-black flex items-center justify-center">
+          {/* Photo uploader */}
+          <div className="neo-card rounded-3xl w-full shrink-0">
+            <div className="flex flex-col items-center gap-4 p-4">
+              <div className="bg-[#F7F7F7] rounded-full shrink-0 size-20 overflow-hidden border-2 border-black flex items-center justify-center">
                 {photo ? (
-                  <img src={photo} alt={t('photo.selectedPlant')} className="w-full h-full object-cover" />
+                  <img src={photo} alt={t('photo.selectedPlant')} className="block w-full h-full object-cover" />
                 ) : (
                   <svg fill="none" height="28" viewBox="0 0 24 24" width="28" aria-hidden>
                     <path d={svgAdd.p22b7c700} fill="black" />
@@ -1532,23 +1535,23 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             </div>
           </div>
 
-          {/* Gemini AI analyze — prominent centered CTA */}
-          <div className="w-full flex flex-col items-center gap-[8px]">
+          {/* AI analyze */}
+          <div className="w-full flex flex-col items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => { void handleAnalyzeWithAi() }}
               disabled={!photo || analyzing}
-              className="gemini-analyze-btn relative w-full max-w-[340px] flex items-center justify-center gap-2 px-6 py-4"
+              className="gemini-analyze-btn w-full max-w-[340px] flex items-center justify-center gap-2 px-6 py-4"
             >
               <span className="gemini-analyze-btn__shine" aria-hidden />
-              <Sparkles size={18} strokeWidth={2.5} aria-hidden className="shrink-0 relative z-10 text-white drop-shadow-sm" />
+              <Sparkles size={18} strokeWidth={2.5} aria-hidden className="shrink-0 gemini-analyze-btn__icon text-white drop-shadow-sm" />
               <span
-                className="relative z-10"
+                className="gemini-analyze-btn__label"
                 style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#fff', lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}
               >
                 {analyzing ? t('addPlant.analyzingWithAi') : t('addPlant.analyzeWithAi')}
               </span>
-              <Sparkles size={18} strokeWidth={2.5} aria-hidden className="shrink-0 relative z-10 text-white drop-shadow-sm" />
+              <Sparkles size={18} strokeWidth={2.5} aria-hidden className="shrink-0 gemini-analyze-btn__icon text-white drop-shadow-sm" />
             </button>
             {!photo && (
               <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}>
@@ -1562,122 +1565,104 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             )}
           </div>
 
-          {showPhotoPicker && (
-            <PhotoActionSheet
-              onClose={() => setShowPhotoPicker(false)}
-              onTakePhoto={() => {
-                setShowPhotoPicker(false)
-                cameraInputRef.current?.click()
-              }}
-              onChooseLibrary={() => {
-                setShowPhotoPicker(false)
-                libraryInputRef.current?.click()
-              }}
-            />
-          )}
-
-          {/* Inputs group */}
-          <div className="flex flex-col gap-[12px] w-full">
-            {/* Plant Name */}
-            <div className="flex flex-col gap-[6px] w-full">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('addPlant.plantName').toUpperCase()}</span>
-              <div className="neo-input relative rounded-[12px] w-full">
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t('addPlant.plantNamePlaceholder')}
-                  className="w-full p-[14px] outline-none bg-transparent rounded-[12px]"
-                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}
-                />
-              </div>
-            </div>
-
-            {/* Room Location */}
-            <div className="flex flex-col gap-[6px] w-full">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('addPlant.room').toUpperCase()}</span>
-              <div className="neo-input relative rounded-[12px] w-full">
-                <input
-                  value={room}
-                  onChange={(e) => setRoom(e.target.value)}
-                  placeholder={t('addPlant.roomPlaceholder')}
-                  className="w-full p-[14px] outline-none bg-transparent rounded-[12px]"
-                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: room.trim() ? '#000' : '#888' }}
-                />
-              </div>
-            </div>
-
-            {/* Care Note */}
-            <div className="flex flex-col gap-[6px] w-full">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>{t('addPlant.careNote')}</span>
-              <div className="neo-input relative rounded-[12px] w-full" style={{ height: 96 }}>
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={t('addPlant.careNotePlaceholder')}
-                  className="w-full h-full p-[14px] outline-none bg-transparent rounded-[12px] resize-none"
-                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: note.trim() ? '#000' : '#888' }}
-                />
-              </div>
+          {/* Plant name */}
+          <div className="flex flex-col gap-1.5 w-full shrink-0">
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>
+              {t('addPlant.plantName').toUpperCase()}
+            </span>
+            <div className="neo-input rounded-[12px] w-full">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('addPlant.plantNamePlaceholder')}
+                className="w-full p-[14px] outline-none bg-transparent rounded-[12px]"
+                style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}
+              />
             </div>
           </div>
 
-          <WateringScheduleSection
-            days={days}
-            isCustomSchedule={isCustomSchedule}
-            globalIndices={globalIndices}
-            wateringFrequency={wateringFrequency}
-            aiHighlightedDays={aiHighlightedDays}
-            aiHighlightedFrequency={aiHighlightedFrequency}
-            onToggleDay={toggleDay}
-            onFrequencyChange={handleFrequencyChange}
-            onOpenCustomModal={() => setShowScheduleModal(true)}
-            onResetToDefault={resetToGeneralSchedule}
-          />
+          {/* Room */}
+          <div className="flex flex-col gap-1.5 w-full shrink-0">
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>
+              {t('addPlant.room').toUpperCase()}
+            </span>
+            <div className="neo-input rounded-[12px] w-full">
+              <input
+                value={room}
+                onChange={(e) => setRoom(e.target.value)}
+                placeholder={t('addPlant.roomPlaceholder')}
+                className="w-full p-[14px] outline-none bg-transparent rounded-[12px]"
+                style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: room.trim() ? '#000' : '#888' }}
+              />
+            </div>
+          </div>
 
-          <CustomScheduleModal
-            isOpen={showScheduleModal}
-            selectedDays={days}
-            globalSchedule={settings.globalWaterSchedule as DayCode[]}
-            onClose={() => setShowScheduleModal(false)}
-            onApply={applyCustomSchedule}
-            onUseDefault={resetToGeneralSchedule}
-            onEditGlobalSchedule={onEditGlobalSchedule}
-          />
+          {/* Care note */}
+          <div className="flex flex-col gap-1.5 w-full shrink-0">
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
+              {t('addPlant.careNote')}
+            </span>
+            <div className="neo-input rounded-[12px] w-full" style={{ height: 96 }}>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={t('addPlant.careNotePlaceholder')}
+                className="w-full h-full p-[14px] outline-none bg-transparent rounded-[12px] resize-none"
+                style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: note.trim() ? '#000' : '#888' }}
+              />
+            </div>
+          </div>
 
-          <NeedLevelSegmentPicker
-            label={t('addPlant.waterNeedQuestion')}
-            value={waterNeed}
-            options={[
-              { value: 'Light' as WaterNeed, label: t('needLevels.waterLight'), indicatorCount: 1 },
-              { value: 'Moderate' as WaterNeed, label: t('needLevels.waterModerate'), indicatorCount: 2 },
-              { value: 'Heavy' as WaterNeed, label: t('needLevels.waterHeavy'), indicatorCount: 3 },
-            ]}
-            onChange={setWaterNeed}
-            renderIndicator={(active) => <WaterDroplet active={active} />}
-          />
-
-          <NeedLevelSegmentPicker
-            label={t('addPlant.lightNeedQuestion')}
-            value={lightNeed}
-            options={[
-              { value: 'Low' as LightNeed, label: t('needLevels.lightLow'), indicatorCount: 1 },
-              { value: 'Medium' as LightNeed, label: t('needLevels.lightMedium'), indicatorCount: 2 },
-              { value: 'High' as LightNeed, label: t('needLevels.lightHigh'), indicatorCount: 3 },
-            ]}
-            onChange={setLightNeed}
-            renderIndicator={(active) => <LightSunIcon active={active} />}
-          />
-
-          {/* Free tier bar */}
-          {!settings.isPro && (
-            <AddPlantForm
-              currentPlantCount={plants.length}
-              onUpgrade={onUpgrade}
+          {/* Water & light */}
+          <div className="flex flex-col gap-4 w-full shrink-0">
+            <NeedLevelSegmentPicker
+              label={t('addPlant.waterNeedQuestion')}
+              value={waterNeed}
+              options={[
+                { value: 'Light' as WaterNeed, label: t('needLevels.waterLight'), indicatorCount: 1 },
+                { value: 'Moderate' as WaterNeed, label: t('needLevels.waterModerate'), indicatorCount: 2 },
+                { value: 'Heavy' as WaterNeed, label: t('needLevels.waterHeavy'), indicatorCount: 3 },
+              ]}
+              onChange={setWaterNeed}
+              renderIndicator={(active) => <WaterDroplet active={active} />}
             />
+
+            <NeedLevelSegmentPicker
+              label={t('addPlant.lightNeedQuestion')}
+              value={lightNeed}
+              options={[
+                { value: 'Low' as LightNeed, label: t('needLevels.lightLow'), indicatorCount: 1 },
+                { value: 'Medium' as LightNeed, label: t('needLevels.lightMedium'), indicatorCount: 2 },
+                { value: 'High' as LightNeed, label: t('needLevels.lightHigh'), indicatorCount: 3 },
+              ]}
+              onChange={setLightNeed}
+              renderIndicator={(active) => <LightSunIcon active={active} />}
+            />
+          </div>
+
+          {/* Schedule / day pickers */}
+          <div className="w-full shrink-0">
+            <WateringScheduleSection
+              days={days}
+              isCustomSchedule={isCustomSchedule}
+              globalIndices={globalIndices}
+              wateringFrequency={wateringFrequency}
+              aiHighlightedDays={aiHighlightedDays}
+              aiHighlightedFrequency={aiHighlightedFrequency}
+              onToggleDay={toggleDay}
+              onFrequencyChange={handleFrequencyChange}
+              onOpenCustomModal={() => setShowScheduleModal(true)}
+              onResetToDefault={resetToGeneralSchedule}
+            />
+          </div>
+
+          {!settings.isPro && (
+            <div className="w-full shrink-0">
+              <AddPlantForm currentPlantCount={plants.length} onUpgrade={onUpgrade} />
+            </div>
           )}
 
-          {/* Save button */}
-          <div className="flex flex-col gap-2 w-full pt-[8px]">
+          <div className="flex flex-col gap-2 w-full shrink-0 pt-1">
             {saveError && (
               <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: RED }} role="alert">
                 {saveError}
@@ -1695,9 +1680,9 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             </button>
           </div>
 
-          {/* Cancel button */}
-          <div className="flex w-full pb-[40px]">
+          <div className="flex w-full shrink-0">
             <button
+              type="button"
               onClick={onCancel}
               className="btn-secondary btn-green flex flex-1 items-center justify-center rounded-full border-2 border-black cursor-pointer bg-white"
               style={{ height: 48, background: 'white' }}
@@ -1705,9 +1690,32 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>{t('common.cancel')}</span>
             </button>
           </div>
-
         </div>
       </div>
+
+      {showPhotoPicker && (
+        <PhotoActionSheet
+          onClose={() => setShowPhotoPicker(false)}
+          onTakePhoto={() => {
+            setShowPhotoPicker(false)
+            cameraInputRef.current?.click()
+          }}
+          onChooseLibrary={() => {
+            setShowPhotoPicker(false)
+            libraryInputRef.current?.click()
+          }}
+        />
+      )}
+
+      <CustomScheduleModal
+        isOpen={showScheduleModal}
+        selectedDays={days}
+        globalSchedule={settings.globalWaterSchedule as DayCode[]}
+        onClose={() => setShowScheduleModal(false)}
+        onApply={applyCustomSchedule}
+        onUseDefault={resetToGeneralSchedule}
+        onEditGlobalSchedule={onEditGlobalSchedule}
+      />
     </div>
   )
 }
@@ -3595,8 +3603,10 @@ export default function App() {
       )
     }
     content = (
-      <div className="relative flex flex-col h-full min-h-0">
-        <div className="flex-1 min-h-0 overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))]">{tabContent}</div>
+      <div className="flex flex-col h-full min-h-0">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
+          {tabContent}
+        </div>
         <TabBar active={tab} onChange={(t) => { setTab(t); setScreen('main') }} plantCount={plants.length} isPro={settings.isPro} onUpgrade={() => setScreen('pro')} />
       </div>
     )
