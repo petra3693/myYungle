@@ -37,11 +37,28 @@ const responseSchema: Schema = {
   required: ['healthScore', 'diagnosis', 'treatmentNotes'],
 }
 
-function getRequestBody(req: VercelRequest): { imageBase64?: string; mimeType?: string } {
+function getRequestBody(req: VercelRequest): { imageBase64?: string; mimeType?: string; language?: string } {
   if (req.body && typeof req.body === 'object') {
-    return req.body as { imageBase64?: string; mimeType?: string }
+    return req.body as { imageBase64?: string; mimeType?: string; language?: string }
   }
   return {}
+}
+
+function normalizeLanguage(value: unknown): 'en' | 'de' | 'hu' {
+  const lang = String(value ?? 'en').toLowerCase()
+  if (lang === 'de' || lang === 'hu') return lang
+  return 'en'
+}
+
+function languagePromptInstruction(language: 'en' | 'de' | 'hu'): string {
+  switch (language) {
+    case 'de':
+      return 'Write diagnosis and treatmentNotes in German.'
+    case 'hu':
+      return 'Write diagnosis and treatmentNotes in Hungarian.'
+    default:
+      return 'Write diagnosis and treatmentNotes in English.'
+  }
 }
 
 function clampHealthScore(score: number): number {
@@ -86,10 +103,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'GEMINI_API_KEY environment variable is missing on Vercel' })
   }
 
-  const { imageBase64, mimeType = 'image/jpeg' } = getRequestBody(req)
+  const { imageBase64, mimeType = 'image/jpeg', language: rawLanguage } = getRequestBody(req)
   if (!imageBase64 || typeof imageBase64 !== 'string') {
     return res.status(400).json({ error: 'No image provided' })
   }
+
+  const language = normalizeLanguage(rawLanguage)
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
@@ -105,7 +124,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       'Analyze this plant photo for diseases, pests, nutrient deficiencies, watering issues, or other health problems. ' +
       'Return healthScore as an integer from 0 to 100 (100 = perfectly healthy). ' +
       'Set diagnosis to a short label like "Healthy", "Overwatered", "Spider mites", or "Leaf spot". ' +
-      'Provide brief, actionable treatmentNotes under 400 characters.'
+      'Provide brief, actionable treatmentNotes under 400 characters. ' +
+      languagePromptInstruction(language)
 
     const text = await generateHealthAnalysis(genAI, prompt, imagePart)
 

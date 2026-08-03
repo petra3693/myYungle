@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Sparkles } from 'lucide-react'
 import PhotoActionSheet from '@/components/photo-action-sheet'
 import PlantPhoto from '@/components/PlantPhoto'
+import { getAppLanguage } from '@/i18n'
 import { analyzePlantHealthImage } from '@/lib/analyzePlantHealth'
 import {
   getLatestHealthLog,
@@ -35,6 +37,8 @@ function LockIcon({ size = 28 }: { size?: number }) {
 }
 
 function ProSectionLock({ onUpgrade }: { onUpgrade: () => void }) {
+  const { t } = useTranslation()
+
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
       <div className="neo-card flex flex-col items-center gap-3 rounded-2xl border-2 border-black bg-white p-5 text-center w-full max-w-[300px]">
@@ -43,10 +47,10 @@ function ProSectionLock({ onUpgrade }: { onUpgrade: () => void }) {
           className="rounded-full border-2 border-black px-3 py-1"
           style={{ background: GREEN, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}
         >
-          PRO FEATURE
+          {t('health.proFeature')}
         </span>
         <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 14, color: '#000', lineHeight: 1.4 }}>
-          PRO Feature: Unlock AI Health Scans
+          {t('health.unlockAiScans')}
         </p>
         <button
           type="button"
@@ -54,7 +58,7 @@ function ProSectionLock({ onUpgrade }: { onUpgrade: () => void }) {
           className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
           style={{ background: GREEN, height: 48 }}
         >
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>UPGRADE TO PRO</span>
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('health.upgradeToPro')}</span>
         </button>
       </div>
     </div>
@@ -80,6 +84,7 @@ function HealthGauge({ score }: { score: number | null }) {
 }
 
 function HealthLogTimelineItem({ log, onPhotoClick }: { log: PlantHealthLog; onPhotoClick?: (photo: string) => void }) {
+  const { t } = useTranslation()
   const dateLabel = new Date(log.timestamp).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -92,7 +97,7 @@ function HealthLogTimelineItem({ log, onPhotoClick }: { log: PlantHealthLog; onP
         type="button"
         onClick={() => onPhotoClick?.(log.photo)}
         className="shrink-0 size-14 rounded-xl border-2 border-black overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
-        aria-label={`View health photo from ${dateLabel}`}
+        aria-label={t('health.viewPhoto', { date: dateLabel })}
       >
         <PlantPhoto photo={log.photo} alt="" className="w-full h-full object-cover" />
       </button>
@@ -126,10 +131,12 @@ function HealthLogTimelineItem({ log, onPhotoClick }: { log: PlantHealthLog; onP
 }
 
 function HealthLogTimeline({ logs, onPhotoClick }: { logs: PlantHealthLog[]; onPhotoClick?: (photo: string) => void }) {
+  const { t } = useTranslation()
+
   if (logs.length === 0) {
     return (
       <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#888', lineHeight: 1.4 }}>
-        No health scans yet. Tap the button above to check your plant with AI.
+        {t('health.noLogs')}
       </p>
     )
   }
@@ -167,6 +174,7 @@ function HealthTrackerBody({
   onSaveHealthLog: (data: HealthLogSubmitData) => void
   onPhotoClick?: (photo: string) => void
 }) {
+  const { t } = useTranslation()
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
@@ -184,7 +192,7 @@ function HealthTrackerBody({
     setAnalyzing(true)
     try {
       const compressed = await readAndCompressPhotoFile(file)
-      const result = await analyzePlantHealthImage(compressed)
+      const result = await analyzePlantHealthImage(compressed, getAppLanguage())
       if (!result.ok) {
         setAnalyzeError(result.error)
         return
@@ -264,7 +272,7 @@ function HealthTrackerBody({
           >
             <Sparkles size={16} strokeWidth={2.5} aria-hidden className="shrink-0 text-[#4285F4]" />
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>
-              {analyzing ? 'ANALYZING HEALTH…' : 'CHECK HEALTH WITH AI'}
+              {analyzing ? t('health.analyzing') : t('health.checkHealthWithAi')}
             </span>
           </button>
 
@@ -289,7 +297,7 @@ function HealthTrackerBody({
 
       <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-3 w-full">
         <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>
-          Health Timeline
+          {t('health.timeline')}
         </span>
         <HealthLogTimeline logs={healthLogs} onPhotoClick={onPhotoClick} />
       </div>
@@ -318,6 +326,7 @@ export default function PlantHealthTracker({
   onSaveHealthLog,
   onPhotoClick,
 }: PlantHealthTrackerProps) {
+  const { t } = useTranslation()
   const latestLog = isPro ? getLatestHealthLog(plant.healthLogs) : PREVIEW_HEALTH_LOG
   const checkedToday = isPro ? isHealthCheckedToday(latestLog) : true
   const healthScore = latestLog?.healthScore ?? null
@@ -327,7 +336,7 @@ export default function PlantHealthTracker({
       <div className="flex flex-col gap-4 p-4">
         <div className="flex items-center justify-between gap-3 w-full min-w-0">
           <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
-            Health Tracker
+            {t('health.title')}
           </span>
           <span
             className="shrink-0 rounded-full px-3 py-1 border-2 border-black max-w-[55%] truncate"
@@ -339,7 +348,7 @@ export default function PlantHealthTracker({
               color: checkedToday ? '#047857' : '#92400E',
             }}
           >
-            {checkedToday && healthScore != null ? `Checked Today · ${healthScore}%` : 'Scan to check health'}
+            {checkedToday && healthScore != null ? t('health.checkedToday', { score: healthScore }) : t('health.scanToCheck')}
           </span>
         </div>
 

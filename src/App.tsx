@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Camera, Sparkles, Sun } from 'lucide-react'
+import LanguageSelector from '@/components/LanguageSelector'
+import { getAppLanguage } from '@/i18n'
 import { submitFeedback } from '@/lib/submitFeedback'
 import { analyzePlantImage, mapLightNeedToForm, mapWaterNeedToForm } from '@/lib/analyzePlant'
 import { mapRecommendedDaysToIndices } from '@/lib/wateringSchedule'
@@ -263,12 +266,6 @@ function getLightNeedFills(need: LightNeed): number {
   return need === 'High' ? 3 : need === 'Medium' ? 2 : 1
 }
 
-function formatLightLevelLabel(need: LightNeed): string {
-  if (need === 'Low') return 'Low Light'
-  if (need === 'High') return 'High Light'
-  return 'Medium Light'
-}
-
 function DetailSunIcon({ filled, size = 12 }: { filled: boolean; size?: number }) {
   return (
     <Sun
@@ -391,47 +388,48 @@ function TabBar({
   isPro?: boolean
   onUpgrade?: () => void
 }) {
+  const { t } = useTranslation()
   const limitReached = isFreeTierLimitReached(plantCount, isPro)
   const tabs: { id: TabScreen; label: string; path: string; stroke: boolean; upgradeTab?: boolean }[] = [
-    { id: 'home', label: 'MY JUNGLE', path: svgPaths2.p2046d6b0, stroke: true },
-    { id: 'add', label: limitReached ? 'UPGRADE' : 'ADD NEW', path: svgPaths2.p3e11a380, stroke: true, upgradeTab: limitReached },
-    { id: 'watering', label: 'WATERING', path: svgPaths2.p376ce800, stroke: true },
-    { id: 'settings', label: 'PRO', path: svgPaths2.p1eebb470, stroke: false },
+    { id: 'home', label: t('tabs.home'), path: svgPaths2.p2046d6b0, stroke: true },
+    { id: 'add', label: limitReached ? t('tabs.addUpgrade') : t('tabs.add'), path: svgPaths2.p3e11a380, stroke: true, upgradeTab: limitReached },
+    { id: 'watering', label: t('tabs.watering'), path: svgPaths2.p376ce800, stroke: true },
+    { id: 'settings', label: t('tabs.settings'), path: svgPaths2.p1eebb470, stroke: false },
   ]
   return (
     <nav className="neo-tab-bar fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-black" aria-label="Main navigation">
       <div className="neo-tab-bar-inner">
-      {tabs.map((t) => {
-        const on = t.id === active
-        const isUpgradeTab = Boolean(t.upgradeTab)
+      {tabs.map((tabItem) => {
+        const on = tabItem.id === active
+        const isUpgradeTab = Boolean(tabItem.upgradeTab)
         const tabBg = on ? GREEN : isUpgradeTab ? '#EFEFEF' : 'transparent'
         const iconColor = on ? BLACK : isUpgradeTab ? BLACK : '#aaa'
         const labelColor = on ? BLACK : isUpgradeTab ? BLACK : '#aaa'
 
         return (
           <button
-            key={t.id}
+            key={tabItem.id}
             type="button"
             onClick={() => {
-              if (t.id === 'add' && limitReached && onUpgrade) {
+              if (tabItem.id === 'add' && limitReached && onUpgrade) {
                 onUpgrade()
                 return
               }
-              onChange(t.id)
+              onChange(tabItem.id)
             }}
             className={`flex flex-col items-center justify-center gap-1 min-w-0 cursor-pointer transition-colors py-2 ${isUpgradeTab ? 'border-x-2 border-black' : ''}`}
             style={{ background: tabBg }}
-            aria-label={isUpgradeTab ? 'Upgrade to Pro' : t.label}
+            aria-label={isUpgradeTab ? t('tabs.upgradeToPro') : tabItem.label}
           >
             <div className="flex items-center justify-center" style={{ width: 20, height: 20 }}>
               <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
-                {t.stroke
-                  ? <path d={t.path} stroke={iconColor} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-                  : <path d={t.path} fill={iconColor} />
+                {tabItem.stroke
+                  ? <path d={tabItem.path} stroke={iconColor} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+                  : <path d={tabItem.path} fill={iconColor} />
                 }
               </svg>
             </div>
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 8, color: labelColor, textTransform: 'uppercase' }}>{t.label}</span>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 8, color: labelColor, textTransform: 'uppercase' }}>{tabItem.label}</span>
             {isUpgradeTab && (
               <span className="neo-pill px-1 py-px" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 6, background: RED, color: '#fff', lineHeight: 1.2 }}>
                 PRO
@@ -448,9 +446,11 @@ function TabBar({
 // ─── Screen 1: Splash ─────────────────────────────────────────────────────────
 
 function SplashScreen({ onNext }: { onNext: () => void }) {
+  const { t } = useTranslation()
+
   useEffect(() => {
-    const t = setTimeout(onNext, 3200)
-    return () => clearTimeout(t)
+    const timer = setTimeout(onNext, 3200)
+    return () => clearTimeout(timer)
   }, [onNext])
 
   return (
@@ -475,7 +475,7 @@ function SplashScreen({ onNext }: { onNext: () => void }) {
       {/* Text */}
       <div className="text-animate text-center">
         <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 28, color: '#000', letterSpacing: '-0.01em' }}>MYJUNGLE</div>
-        <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', opacity: 0.55, marginTop: 4 }}>Version 1.0.0.</div>
+        <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', opacity: 0.55, marginTop: 4 }}>{t('app.version')}</div>
       </div>
     </div>
   )
@@ -484,6 +484,7 @@ function SplashScreen({ onNext }: { onNext: () => void }) {
 // ─── Screen 2: Onboarding ─────────────────────────────────────────────────────
 
 function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave: (s: AppSettings) => void }) {
+  const { t } = useTranslation()
   const [selectedDays, setSelectedDays] = useState<number[]>([])
   const [pushNotifications, setPushNotifications] = useState(settings.pushNotifications)
 
@@ -514,9 +515,11 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
         <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000' }}>MYJUNGLE</span>
       </div>
 
+      <LanguageSelector variant="cards" />
+
       <div className="text-center my-[20px] shrink-0 flex flex-col gap-1 w-full">
-        <span className="section-header" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>WEEKLY WATER SCHEDULE</span>
-        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Choose which days you&apos;d like to water</span>
+        <span className="section-header" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>{t('onboarding.weeklySchedule')}</span>
+        <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>{t('onboarding.chooseDays')}</span>
       </div>
 
       <div className="flex flex-col gap-1.5 flex-1 min-h-0 justify-center w-full">
@@ -545,8 +548,8 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
 
       <div className="my-[20px] shrink-0 flex flex-row items-center justify-between w-full gap-4">
         <div className="flex flex-col gap-1 flex-1 min-w-0 text-left">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Push Notification</span>
-          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>Allow notifications for watering</span>
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>{t('onboarding.pushNotification')}</span>
+          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>{t('onboarding.allowNotifications')}</span>
         </div>
         <div
           onClick={() => setPushNotifications((p) => !p)}
@@ -580,7 +583,7 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
         className="btn-primary btn-green flex w-full shrink-0 items-center justify-center rounded-full border-2 border-black cursor-pointer"
         style={{ background: GREEN, height: 52 }}
       >
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>START</span>
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>{t('onboarding.start')}</span>
       </button>
     </div>
   )
@@ -601,13 +604,14 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 // ─── Weekly Day Strip (horizontal, compact) ───────────────────────────────────
 
 function WeeklyStrip({ plants, todayIdx }: { plants: Plant[]; todayIdx: number }) {
+  const { t } = useTranslation()
   const today = new Date()
   const counts = DAYS.map((_, i) =>
     plants.filter((p) => isPlantDueOnDay(p, i, getDateForDayIndex(i, today))).length,
   )
   return (
     <div className="px-5 py-3 shrink-0">
-      <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', marginBottom: 8 }}>WEEKLY WATER SCHEDULE</div>
+      <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', marginBottom: 8 }}>{t('home.weeklySchedule')}</div>
       <div className="flex items-start justify-between gap-1">
         {DAYS.map((d, i) => {
           const isToday = i === todayIdx
@@ -643,6 +647,7 @@ function PlantCard({ plant, onTap, onDeleteRequest, onWater, todayIdx, swipeRese
   todayIdx: number
   swipeResetToken?: number
 }) {
+  const { t } = useTranslation()
   const startX = useRef(0)
   const [swiped, setSwiped] = useState(false)
 
@@ -706,7 +711,7 @@ function PlantCard({ plant, onTap, onDeleteRequest, onWater, todayIdx, swipeRese
           onClick={(e) => { e.stopPropagation(); onWater() }}
           className="ml-auto shrink-0 flex items-center justify-center rounded-full border-2 border-black size-10 cursor-pointer active:scale-90 transition-all"
           style={{ background: plant.isWateredToday ? 'white' : GREEN }}
-          aria-label={plant.isWateredToday ? 'Plant watered' : 'Mark as watered'}
+          aria-label={plant.isWateredToday ? t('home.watered') : t('home.markWatered')}
         >
           {plant.isWateredToday ? (
             <svg fill="none" height="18" viewBox="7 5.5 14 18" width="14">
@@ -729,6 +734,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
   plants: Plant[]; settings: AppSettings; onSelectPlant: (p: Plant) => void;
   onDeletePlant: (id: string) => void; onWaterPlant: (id: string) => void; onGoAdd: () => void; onSettings: () => void; onShowPro: () => void; todayIdx: number
 }) {
+  const { t } = useTranslation()
   const [plantToDelete, setPlantToDelete] = useState<Plant | null>(null)
   const [swipeResetTokens, setSwipeResetTokens] = useState<Record<string, number>>({})
   const needsWater = plants.filter((p) => isPlantDueToday(p, todayIdx) && !p.isWateredToday)
@@ -780,7 +786,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
           <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 border-black" style={{ background: GREEN }}>
             <SvgDroplet24 />
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000', lineHeight: 1.2 }}>
-              {needsWater.length} PLANTS NEED WATER TODAY!
+              {t('home.plantsNeedWater', { count: needsWater.length })}
             </span>
           </div>
         </div>
@@ -792,14 +798,14 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
         <div className="px-5">
           <div className="flex items-center justify-between mb-3">
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
-              MY SPECIMENS ({plants.length})
+              {t('home.mySpecimens', { count: plants.length })}
             </span>
           </div>
 
           {plants.length === 0 ? (
             <div className="flex flex-col items-center py-12 opacity-40">
               <SvgDrop />
-              <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', marginTop: 12 }}>No plants yet. Tap below to add one!</div>
+              <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', marginTop: 12 }}>{t('home.noPlants')}</div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 w-full">
@@ -835,7 +841,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
             style={{ background: limitReached ? '#EFEFEF' : GREEN }}
           >
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000' }}>
-              {limitReached ? 'UPGRADE TO PRO' : '+ ADD PLANT'}
+              {limitReached ? t('home.upgradeToPro') : t('home.addPlant')}
             </span>
           </button>
         </div>
@@ -1084,6 +1090,8 @@ function WateringScheduleSection({
   onOpenCustomModal: () => void
   onResetToDefault: () => void
 }) {
+  const { t } = useTranslation()
+
   function toggleFrequencyOption(option: 'biweekly' | 'monthly') {
     onFrequencyChange(wateringFrequency === option ? 'weekly' : option)
   }
@@ -1097,15 +1105,15 @@ function WateringScheduleSection({
   return (
     <div className="flex flex-col gap-2 w-full">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', lineHeight: 1.4 }}>
-          How often does your plant need<br />to be watered? *
+        <div style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', lineHeight: 1.4, whiteSpace: 'pre-line' }}>
+          {t('addPlant.waterScheduleQuestion')}
         </div>
         {isCustomSchedule && (
           <span
             className="rounded-full border-2 border-black px-2.5 py-1 shrink-0"
             style={{ background: GREEN, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, color: '#000' }}
           >
-            Custom Schedule
+            {t('addPlant.customSchedule')}
           </span>
         )}
       </div>
@@ -1147,7 +1155,7 @@ function WateringScheduleSection({
           style={{ background: wateringFrequency === 'biweekly' || aiHighlightedFrequency === 'biweekly' ? undefined : '#F3F4F6' }}
         >
           <div className="flex items-center justify-between px-5 py-1.5">
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>Every 2 weeks</span>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{t('addPlant.every2Weeks')}</span>
             {wateringFrequency === 'biweekly' ? (
               <svg fill="none" height="18" viewBox="0 0 18 18" width="18" aria-hidden>
                 <path d={CHECK_PATH} stroke="#000" strokeLinecap="round" strokeWidth="2" />
@@ -1164,7 +1172,7 @@ function WateringScheduleSection({
           style={{ background: wateringFrequency === 'monthly' || aiHighlightedFrequency === 'monthly' ? undefined : '#F3F4F6' }}
         >
           <div className="flex items-center justify-between px-5 py-1.5">
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>Once a month</span>
+            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{t('addPlant.onceAMonth')}</span>
             {wateringFrequency === 'monthly' ? (
               <svg fill="none" height="18" viewBox="0 0 18 18" width="18" aria-hidden>
                 <path d={CHECK_PATH} stroke="#000" strokeLinecap="round" strokeWidth="2" />
@@ -1183,7 +1191,7 @@ function WateringScheduleSection({
           className="text-left cursor-pointer underline"
           style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#000' }}
         >
-          Use General Default Schedule
+          {t('addPlant.useDefaultSchedule')}
         </button>
       ) : (
         <button
@@ -1192,7 +1200,7 @@ function WateringScheduleSection({
           className="text-left cursor-pointer underline"
           style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#000' }}
         >
-          Modify schedule / Enable extra days for this plant
+          {t('addPlant.modifySchedule')}
         </button>
       )}
     </div>
@@ -1258,6 +1266,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   plants: Plant[]; settings: AppSettings; onSave: (p: Plant) => void; onCancel: () => void; onUpgrade: () => void
   onEditGlobalSchedule: () => void
 }) {
+  const { t } = useTranslation()
   const globalIndices = scheduleToIndices(settings.globalWaterSchedule)
   const [name, setName] = useState('')
   const [room, setRoom] = useState('')
@@ -1306,7 +1315,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     setAnalyzing(true)
     try {
       const preferredDays = dayNamesFromIndices(globalIndices)
-      const result = await analyzePlantImage(photo, preferredDays)
+      const result = await analyzePlantImage(photo, preferredDays, getAppLanguage())
       if (!result.ok) {
         setAnalyzeError(result.error)
         return
@@ -1410,7 +1419,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
       onSave(newPlant)
     } catch (error) {
       console.error('[myJungle] Save plant failed:', error)
-      setSaveError('Could not save this plant. Please try again.')
+      setSaveError(t('addPlant.saveError'))
     } finally {
       setSaving(false)
     }
@@ -1443,7 +1452,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     <div className="flex flex-col h-full" style={{ background: BG }}>
       {/* Modal header */}
       <div className="flex flex-col items-center pb-[16px] pt-[8px] shrink-0 w-full">
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000' }}>ADD NEW </span>
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000' }}>{t('addPlant.title')}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -1486,7 +1495,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
                   <path d={svgAdd.p3e11a380} stroke="black" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
                 </svg>
                 <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', lineHeight: 1 }}>
-                  TAKE PHOTO
+                  {t('addPlant.takePhoto')}
                 </span>
               </button>
             </div>
@@ -1506,13 +1515,13 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
                 className="relative z-10"
                 style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#fff', lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}
               >
-                {analyzing ? 'ANALYZING WITH AI…' : 'ANALYZE WITH AI'}
+                {analyzing ? t('addPlant.analyzingWithAi') : t('addPlant.analyzeWithAi')}
               </span>
               <Sparkles size={18} strokeWidth={2.5} aria-hidden className="shrink-0 relative z-10 text-white drop-shadow-sm" />
             </button>
             {!photo && (
               <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}>
-                Add a photo first to identify your plant with Gemini
+                {t('addPlant.addPhotoFirst')}
               </p>
             )}
             {analyzeError && (
@@ -1540,12 +1549,12 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
           <div className="flex flex-col gap-[12px] w-full">
             {/* Plant Name */}
             <div className="flex flex-col gap-[6px] w-full">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>PLANT NAME *</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('addPlant.plantName').toUpperCase()}</span>
               <div className={`neo-input relative rounded-[12px] w-full ${name.trim() ? 'filled-field' : ''}`}>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Pilea Peperomioides"
+                  placeholder={t('addPlant.plantNamePlaceholder')}
                   className="w-full p-[14px] outline-none bg-transparent rounded-[12px]"
                   style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}
                 />
@@ -1554,12 +1563,12 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
 
             {/* Room Location */}
             <div className="flex flex-col gap-[6px] w-full">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>ROOM LOCATION</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('addPlant.room').toUpperCase()}</span>
               <div className={`neo-input relative rounded-[12px] w-full ${room.trim() ? 'filled-field' : ''}`}>
                 <input
                   value={room}
                   onChange={(e) => setRoom(e.target.value)}
-                  placeholder="e.g. Living Room, Kitchen"
+                  placeholder={t('addPlant.roomPlaceholder')}
                   className="w-full p-[14px] outline-none bg-transparent rounded-[12px]"
                   style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: room.trim() ? '#000' : '#888' }}
                 />
@@ -1568,12 +1577,12 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
 
             {/* Care Note */}
             <div className="flex flex-col gap-[6px] w-full">
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Care Note (max 500 Ca.)</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>{t('addPlant.careNote')}</span>
               <div className={`neo-input relative rounded-[12px] w-full ${note.trim() ? 'filled-field' : ''}`} style={{ height: 96 }}>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Optional care notes for this plant"
+                  placeholder={t('addPlant.careNotePlaceholder')}
                   className="w-full h-full p-[14px] outline-none bg-transparent rounded-[12px] resize-none"
                   style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: note.trim() ? '#000' : '#888' }}
                 />
@@ -1605,24 +1614,24 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
           />
 
           <NeedLevelSegmentPicker
-            label="How much water does your plant need?  *"
+            label={t('addPlant.waterNeedQuestion')}
             value={waterNeed}
             options={[
-              { value: 'Light' as WaterNeed, label: 'Light', indicatorCount: 1 },
-              { value: 'Moderate' as WaterNeed, label: 'Moderate', indicatorCount: 2 },
-              { value: 'Heavy' as WaterNeed, label: 'Heavy', indicatorCount: 3 },
+              { value: 'Light' as WaterNeed, label: t('needLevels.waterLight'), indicatorCount: 1 },
+              { value: 'Moderate' as WaterNeed, label: t('needLevels.waterModerate'), indicatorCount: 2 },
+              { value: 'Heavy' as WaterNeed, label: t('needLevels.waterHeavy'), indicatorCount: 3 },
             ]}
             onChange={setWaterNeed}
             renderIndicator={(filled) => <WaterDroplet filled={filled} />}
           />
 
           <NeedLevelSegmentPicker
-            label="How much light does your plant need?  *"
+            label={t('addPlant.lightNeedQuestion')}
             value={lightNeed}
             options={[
-              { value: 'Low' as LightNeed, label: 'Low', indicatorCount: 1 },
-              { value: 'Medium' as LightNeed, label: 'Medium', indicatorCount: 2 },
-              { value: 'High' as LightNeed, label: 'High', indicatorCount: 3 },
+              { value: 'Low' as LightNeed, label: t('needLevels.lightLow'), indicatorCount: 1 },
+              { value: 'Medium' as LightNeed, label: t('needLevels.lightMedium'), indicatorCount: 2 },
+              { value: 'High' as LightNeed, label: t('needLevels.lightHigh'), indicatorCount: 3 },
             ]}
             onChange={setLightNeed}
             renderIndicator={(filled) => <LightSunIcon filled={filled} />}
@@ -1650,7 +1659,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
               className="btn-primary btn-green save-jungle-btn w-full flex items-center justify-center rounded-full border-2 border-black cursor-pointer transition-all"
             >
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: 'inherit' }}>
-                {saving ? 'SAVING…' : 'SAVE TO JUNGLE'}
+                {saving ? t('addPlant.saving') : t('addPlant.savePlant')}
               </span>
             </button>
           </div>
@@ -1687,12 +1696,17 @@ function formatTimelineChip(iso: string) {
   return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`
 }
 
-function daysSinceLabel(iso: string | null): string {
-  if (!iso) return 'Never'
+function daysSinceLabel(iso: string | null, translate: (key: string, options?: { count?: number }) => string): string {
+  if (!iso) return translate('plantDetails.never')
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
-  if (diff <= 0) return 'Today'
-  if (diff === 1) return '1 day ago'
-  return `${diff} days ago`
+  if (diff <= 0) return translate('plantDetails.today')
+  return translate('plantDetails.daysAgo', { count: diff })
+}
+
+function lightLevelLabel(need: LightNeed, translate: (key: string) => string): string {
+  if (need === 'Low') return translate('plantDetails.lowLight')
+  if (need === 'High') return translate('plantDetails.highLight')
+  return translate('plantDetails.mediumLight')
 }
 
 function getPlantAgeDays(plant: Plant): number {
@@ -1839,6 +1853,7 @@ function DeletePlantConfirmModal({
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
   const closingRef = useRef(false)
 
@@ -1883,13 +1898,13 @@ function DeletePlantConfirmModal({
               id="delete-plant-title"
               style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000', textTransform: 'uppercase' }}
             >
-              Delete Plant?
+              {t('deleteModal.title')}
             </span>
             <button
               type="button"
               onClick={() => closeWithAnimation(onCancel)}
               className="flex items-center justify-center size-8 rounded-full border-2 border-black bg-black cursor-pointer"
-              aria-label="Close delete confirmation"
+              aria-label={t('deleteModal.close')}
             >
               <svg fill="none" height="14" viewBox="0 0 18 18" width="14" aria-hidden>
                 <path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" />
@@ -1900,7 +1915,7 @@ function DeletePlantConfirmModal({
             id="delete-plant-desc"
             style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}
           >
-            Are you sure you want to delete {plantName}? This action cannot be undone.
+            {t('deleteModal.body', { name: plantName })}
           </p>
           <div className="flex gap-2">
             <button
@@ -1909,7 +1924,7 @@ function DeletePlantConfirmModal({
               className="flex-1 h-11 rounded-full border-2 border-black bg-white cursor-pointer"
               style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10 }}
             >
-              Cancel
+              {t('deleteModal.cancel')}
             </button>
             <button
               type="button"
@@ -1917,7 +1932,7 @@ function DeletePlantConfirmModal({
               className="flex-1 h-11 rounded-full border-2 cursor-pointer"
               style={{ borderColor: RED, background: RED, color: '#fff', fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10 }}
             >
-              Delete
+              {t('deleteModal.delete')}
             </button>
           </div>
         </div>
@@ -2120,6 +2135,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
   plant: Plant; isPro: boolean; globalWaterSchedule: DayCode[]; onBack: () => void; onDelete: () => void; onUpdate: (p: Plant) => void
   onMarkWatered: () => void; onShowPro: () => void; onEditGlobalSchedule: () => void; todayIdx: number
 }) {
+  const { t } = useTranslation()
   const globalIndices = scheduleToIndices(globalWaterSchedule)
   const [showEdit, setShowEdit] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -2296,13 +2312,13 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
     <div className="content-stretch flex flex-col items-start justify-between relative size-full" style={{ background: BG }}>
       <div className="content-stretch flex flex-col items-start relative shrink-0 w-full flex-1 min-h-0">
         <div className="app-header relative shrink-0 w-full">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000', textTransform: 'uppercase' }}>Plant Details</span>
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000', textTransform: 'uppercase' }}>{t('plantDetails.title')}</span>
           <button
             type="button"
             onClick={onBack}
             className="bg-black flex items-center justify-center rounded-full shrink-0 cursor-pointer border-2 border-black"
             style={{ width: 38, height: 38 }}
-            aria-label="Close plant details"
+            aria-label={t('plantDetails.close')}
           >
             <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
               <path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" />
@@ -2329,7 +2345,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                     <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>{plant.name}</span>
                     <div className="flex flex-wrap gap-2">
                       {plant.isCustomSchedule ? (
-                        <button type="button" className="detail-tag detail-tag-filled cursor-default">Custom Schedule</button>
+                        <button type="button" className="detail-tag detail-tag-filled cursor-default">{t('plantDetails.customSchedule')}</button>
                       ) : null}
                       <button type="button" className="detail-tag detail-tag-outline cursor-default">{plant.room.toUpperCase()}</button>
                       {primaryDay != null && (
@@ -2341,7 +2357,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                     type="button"
                     onClick={openEditModal}
                     className="flex items-center justify-center shrink-0 size-9 rounded-full border-2 border-black bg-white cursor-pointer active:scale-95"
-                    aria-label="Edit plant"
+                    aria-label={t('plantDetails.edit')}
                   >
                     <svg fill="none" height="15" viewBox="0 0 16 15" width="16">
                       <path d={svgDetail.p3c709780} fill="black" />
@@ -2351,7 +2367,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
 
                 <div className="grid grid-cols-2 gap-3 w-full">
                   <div className="detail-mini-card bg-white">
-                    <span className="detail-stat-label">Water Level</span>
+                    <span className="detail-stat-label">{t('plantDetails.waterLevel')}</span>
                     <div className="flex flex-col gap-1.5 min-w-0">
                       <div className="flex gap-1 items-end">
                         {[0, 1, 2].map((i) => (
@@ -2364,7 +2380,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                     </div>
                   </div>
                   <div className="detail-mini-card bg-white">
-                    <span className="detail-stat-label">Light Level</span>
+                    <span className="detail-stat-label">{t('plantDetails.lightLevel')}</span>
                     <div className="flex flex-col gap-1.5 min-w-0">
                       <div className="flex gap-1 items-end">
                         {[0, 1, 2].map((i) => (
@@ -2372,29 +2388,29 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                         ))}
                       </div>
                       <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000', lineHeight: 1.2 }}>
-                        {formatLightLevelLabel(plant.lightNeed ?? 'Medium')}
+                        {lightLevelLabel(plant.lightNeed ?? 'Medium', t)}
                       </span>
                     </div>
                   </div>
                   <div className="detail-mini-card bg-white col-span-2">
-                    <span className="detail-stat-label">Last Watered</span>
+                    <span className="detail-stat-label">{t('plantDetails.lastWatered')}</span>
                     <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
-                      {daysSinceLabel(plant.lastWateredAt)}
+                      {daysSinceLabel(plant.lastWateredAt, t)}
                     </span>
                   </div>
                 </div>
 
                 <div className="detail-mini-card w-full" style={{ background: DETAIL_GRAY_LIGHT }}>
-                  <span className="detail-stat-label">Care Note</span>
+                  <span className="detail-stat-label">{t('plantDetails.careNote')}</span>
                   <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}>
-                    {plant.careNote || 'No care notes added yet.'}
+                    {plant.careNote || t('plantDetails.noCareNotes')}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span className="size-2 rounded-full shrink-0" style={{ background: onSchedule ? GREEN : RED }} aria-hidden />
                   <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#000' }}>
-                    {onSchedule ? 'On Schedule' : 'Needs Water'}
+                    {onSchedule ? t('plantDetails.onSchedule') : t('plantDetails.needsWater')}
                   </span>
                   {needsWater && (
                     <button
@@ -2403,7 +2419,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                       className="ml-auto shrink-0 rounded-full border-2 border-black px-3 py-1 cursor-pointer active:scale-95"
                       style={{ background: GREEN, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, color: '#000' }}
                     >
-                      MARK WATERED
+                      {t('plantDetails.markWatered')}
                     </button>
                   )}
                 </div>
@@ -2433,7 +2449,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
               className="btn-secondary bg-white flex w-full h-[52px] items-center justify-center rounded-full cursor-pointer active:scale-[0.98] transition-all border-2"
               style={{ borderColor: RED }}
             >
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: RED }}>Delete Plant</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: RED }}>{t('plantDetails.deletePlant')}</span>
             </button>
           </div>
         </div>
@@ -2445,19 +2461,19 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
       <input ref={libraryInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoInputChange(e, true)} />
 
       {showEdit && (
-        <DetailModal title="Edit Plant" onClose={() => setShowEdit(false)}>
+        <DetailModal title={t('plantDetails.editPlant')} onClose={() => setShowEdit(false)}>
           <div className="flex flex-col flex-1 min-h-0 gap-3">
             <div className="flex flex-col gap-3 overflow-y-auto flex-1 min-h-0">
               <label className="flex flex-col gap-1">
-                <span className="detail-stat-label">Plant Name</span>
+                <span className="detail-stat-label">{t('plantDetails.plantName')}</span>
                 <input value={editName} onChange={(e) => setEditName(e.target.value)} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
               </label>
               <label className="flex flex-col gap-1">
-                <span className="detail-stat-label">Room</span>
+                <span className="detail-stat-label">{t('plantDetails.room')}</span>
                 <input value={editRoom} onChange={(e) => setEditRoom(e.target.value)} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
               </label>
               <label className="flex flex-col gap-1">
-                <span className="detail-stat-label">Care Note</span>
+                <span className="detail-stat-label">{t('plantDetails.careNote')}</span>
                 <textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={3} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full resize-none" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
               </label>
               <WateringScheduleSection
@@ -2471,12 +2487,12 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                 onResetToDefault={resetEditToGeneralSchedule}
               />
               <NeedLevelSegmentPicker
-                label="How much light does your plant need?  *"
+                label={t('addPlant.lightNeedQuestion')}
                 value={editLightNeed}
                 options={[
-                  { value: 'Low' as LightNeed, label: 'Low', indicatorCount: 1 },
-                  { value: 'Medium' as LightNeed, label: 'Medium', indicatorCount: 2 },
-                  { value: 'High' as LightNeed, label: 'High', indicatorCount: 3 },
+                  { value: 'Low' as LightNeed, label: t('needLevels.lightLow'), indicatorCount: 1 },
+                  { value: 'Medium' as LightNeed, label: t('needLevels.lightMedium'), indicatorCount: 2 },
+                  { value: 'High' as LightNeed, label: t('needLevels.lightHigh'), indicatorCount: 3 },
                 ]}
                 onChange={setEditLightNeed}
                 renderIndicator={(filled) => (
@@ -2492,7 +2508,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
             </div>
             <div className="shrink-0 mt-4">
               <button type="button" onClick={saveEdit} disabled={editDays.length === 0} className="btn-primary btn-green flex w-full shrink-0 items-center justify-center rounded-full border-2 border-black cursor-pointer disabled:opacity-40" style={{ background: GREEN, minHeight: 48, height: 48 }}>
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>SAVE CHANGES</span>
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('plantDetails.saveChanges')}</span>
               </button>
             </div>
           </div>
@@ -2565,6 +2581,7 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
   onMarkWatered: (id: string) => void
   onMarkAll: () => void
 }) {
+  const { t } = useTranslation()
   const today = new Date()
   const grouped: Record<number, Plant[]> = {}
   plants.forEach((p) => {
@@ -2584,9 +2601,9 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
     <div className="flex flex-col h-full" style={{ background: BG }}>
       <div className="app-header shrink-0">
         <div className="flex flex-col">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000', lineHeight: 1.2 }}>WATERING</p>
+          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000', lineHeight: 1.2 }}>{t('watering.title')}</p>
           <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#888' }}>
-            {todayPlantCount} {todayPlantCount === 1 ? 'PLANT' : 'PLANTS'}
+            {t('watering.plantCount', { count: todayPlantCount })}
           </p>
         </div>
       </div>
@@ -2600,7 +2617,7 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
             style={{ background: GREEN, height: 48 }}
           >
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
-              MARK ALL {todayPlantCount} PLANTS TODAY AS WATERED
+              {t('watering.markAll', { count: todayPlantCount })}
             </span>
           </button>
         </div>
@@ -2619,7 +2636,7 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
             >
               <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
-                  {isToday ? 'TODAY ROUTINE' : `${dayName} ROUTINE`}
+                  {isToday ? t('watering.todayRoutine') : t('watering.dayRoutine', { day: dayName })}
                 </p>
                 {isToday && (
                   <span
@@ -2631,7 +2648,7 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
                 )}
               </div>
               {dayPlants.length === 0 && (
-                <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>No plants assigned</p>
+                <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('watering.noPlantsAssigned')}</p>
               )}
               {dayPlants.map((p) => {
                 const fills = waterNeedFills(p.waterNeed)
@@ -2679,7 +2696,7 @@ function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, 
                         onClick={() => onMarkWatered(p.id)}
                         className="ml-auto shrink-0 flex items-center justify-center rounded-full size-10 cursor-pointer active:scale-90 transition-all border-2 border-black"
                         style={{ background: p.isWateredToday ? 'white' : GREEN }}
-                        aria-label={p.isWateredToday ? 'Plant watered' : 'Mark as watered'}
+                        aria-label={p.isWateredToday ? t('watering.watered') : t('watering.markWatered')}
                       >
                         {p.isWateredToday ? (
                           <svg fill="none" height="27" viewBox="0 0 27 27" width="27">
@@ -3060,6 +3077,7 @@ function FeedbackForm() {
 function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, onShowPro }: {
   plants: Plant[]; settings: AppSettings; onSave: (s: AppSettings) => void; onExport: () => void; onReset: () => void; onClose: () => void; onShowPro: () => void
 }) {
+  const { t } = useTranslation()
   const [s, setS] = useState(settings)
   useEffect(() => { onSave(s) }, [s])
 
@@ -3081,7 +3099,7 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
       <div className="app-header shrink-0">
-        <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000' }}>SETTINGS</p>
+        <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000' }}>{t('settings.title')}</p>
         <button type="button" onClick={onClose}
           className="relative bg-black flex items-center justify-center rounded-full shrink-0 cursor-pointer border-2 border-black"
           style={{ width: 38, height: 38 }}
@@ -3093,17 +3111,21 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
       </div>
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-6 pb-6">
+        <div className="px-5">
+          <LanguageSelector variant="segmented" />
+        </div>
+
         {/* ── Notification Reminder & Routines ── */}
         <div className="flex flex-col gap-3 px-5">
           <div className="section-header" style={{ fontSize: 14, lineHeight: 0 }}>
-            <p style={{ lineHeight: 'normal', marginBottom: 0 }}>Notification</p>
-            <p style={{ lineHeight: 'normal' }}>Reminder &amp; Routines</p>
+            <p style={{ lineHeight: 'normal', marginBottom: 0 }}>{t('settings.notification')}</p>
+            <p style={{ lineHeight: 'normal' }}>{t('settings.reminderRoutines')}</p>
           </div>
 
           {/* Weekly water schedule */}
           <div className="flex flex-col gap-2 py-3">
-            <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>WEEKLY WATER SCHEDULE</p>
-            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>Choose which days you&apos;d like to water</p>
+            <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>{t('settings.weeklySchedule')}</p>
+            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('settings.chooseDays')}</p>
             <div className="flex items-start justify-between w-full">
               {DAYS.map((d, i) => {
                 const on = s.globalWaterSchedule.includes(d)
@@ -3134,18 +3156,18 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
 
         {/* ── Data & Privacy ── */}
         <div className="flex flex-col gap-3 px-5">
-          <p className="section-header" style={{ fontSize: 14 }}>Data &amp; Privacy</p>
+          <p className="section-header" style={{ fontSize: 14 }}>{t('settings.dataPrivacy')}</p>
           <div className="neo-card relative rounded-2xl w-full" style={{ height: 109 }}>
             {/* Export row */}
             <p className="absolute font-['Unbounded:Black',sans-serif]"
               style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', left: 14, top: 27 }}>
-              EXPORT JUNGLE DATA (JSON)
+              {t('settings.exportData')}
             </p>
             <button type="button" onClick={onExport}
               className="absolute bg-white border-2 border-black flex gap-3 items-center px-[11px] py-[3px] rounded-full cursor-pointer"
               style={{ height: 35, right: 14, top: 15 }}
             >
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>EXPORT</p>
+              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{t('settings.export')}</p>
               <div className="flex-none rotate-180" style={{ width: 13.28, height: 14 }}>
                 <svg fill="none" height="14" viewBox="0 0 13.2793 14" width="13.2793">
                   <path d={svgSettings.p218111f0} fill="black" />
@@ -3155,36 +3177,36 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
             {/* Reset row */}
             <p className="absolute"
               style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: RED, left: 14, top: 71 }}>
-              RESET APP DATA
+              {t('settings.resetData')}
             </p>
             <button onClick={onReset}
               className="absolute bg-white flex items-center px-[11px] py-[3px] rounded-full cursor-pointer active:scale-95 border-2"
               style={{ height: 35, right: 14, top: 59, borderColor: RED }}
             >
-              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: RED }}>RESET</p>
+              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: RED }}>{t('settings.reset')}</p>
             </button>
           </div>
         </div>
 
         {/* ── Send Feedback ── */}
         <div className="flex flex-col gap-3 px-5">
-          <p className="section-header" style={{ fontSize: 14 }}>Send Feedback</p>
+          <p className="section-header" style={{ fontSize: 14 }}>{t('settings.sendFeedback')}</p>
           <FeedbackForm />
         </div>
 
         {/* ── MY JUNGLE PRO STATUS ── */}
         <div className="flex flex-col gap-3 px-5">
-          <p className="section-header" style={{ fontSize: 14 }}>MY JUNGLE PRO STATUS</p>
+          <p className="section-header" style={{ fontSize: 14 }}>{t('settings.proStatus')}</p>
           <div className="flex flex-col gap-2 py-3 w-full">
             {/* Free tier card */}
             <FreeTierCard
-              title={s.isPro ? 'PRO MEMBER' : 'FREE TIER'}
+              title={s.isPro ? t('settings.proMember') : t('settings.freeTier')}
               plantsUsed={plantsUsed}
               plantsMax={plantsMax}
               footer={
                 s.isPro
-                  ? 'Unlimited plants · All features unlocked.'
-                  : `${plantsMax - plantsUsed} plants slot remaining on free tier.`
+                  ? t('settings.proFooter')
+                  : t('settings.freeFooter', { count: plantsMax - plantsUsed })
               }
             />
             {/* Unlock button */}
@@ -3193,7 +3215,7 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
                 className="btn-primary btn-green relative flex items-center justify-center rounded-full w-full cursor-pointer border-2 border-black"
                 style={{ background: GREEN, height: 58 }}
               >
-                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>UNLOCK PRO FOREVER — $5.99</p>
+                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>{t('settings.unlockPro')}</p>
               </button>
             )}
           </div>

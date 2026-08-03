@@ -1,4 +1,6 @@
 import { parseImageDataUrl } from '@/lib/analyzePlant'
+import { getAppLanguage } from '@/i18n'
+import type { AppLanguage } from '@/i18n/languages'
 import { clampHealthScore } from '@/lib/health-log'
 
 export interface AnalyzePlantHealthApiResponse {
@@ -35,6 +37,7 @@ function buildNonJsonErrorMessage(status: number, text: string): string {
 
 export async function analyzePlantHealthImage(
   imageSource: string,
+  language: AppLanguage = getAppLanguage(),
 ): Promise<{ ok: true; data: AnalyzePlantHealthApiResponse } | { ok: false; error: string }> {
   const { imageBase64, mimeType } = parseImageDataUrl(imageSource)
 
@@ -43,7 +46,7 @@ export async function analyzePlantHealthImage(
     response = await fetch('/api/analyze-plant-health', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64, mimeType }),
+      body: JSON.stringify({ imageBase64, mimeType, language }),
     })
   } catch (error) {
     console.error('[myJungle] analyze-plant-health network error:', error)

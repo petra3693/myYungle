@@ -74,15 +74,34 @@ function getRequestBody(req: VercelRequest): {
   imageBase64?: string
   mimeType?: string
   preferredDays?: string[]
+  language?: string
 } {
   if (req.body && typeof req.body === 'object') {
     return req.body as {
       imageBase64?: string
       mimeType?: string
       preferredDays?: string[]
+      language?: string
     }
   }
   return {}
+}
+
+function normalizeLanguage(value: unknown): 'en' | 'de' | 'hu' {
+  const lang = String(value ?? 'en').toLowerCase()
+  if (lang === 'de' || lang === 'hu') return lang
+  return 'en'
+}
+
+function languagePromptInstruction(language: 'en' | 'de' | 'hu'): string {
+  switch (language) {
+    case 'de':
+      return 'Write careNotes in German.'
+    case 'hu':
+      return 'Write careNotes in Hungarian.'
+    default:
+      return 'Write careNotes in English.'
+  }
 }
 
 function normalizePreferredDays(preferredDays: unknown): string[] {
@@ -96,10 +115,11 @@ function normalizePreferredDays(preferredDays: unknown): string[] {
   return valid.length > 0 ? valid : [...FULL_DAY_NAMES]
 }
 
-function buildAnalyzePrompt(preferredDays: string[]): string {
+function buildAnalyzePrompt(preferredDays: string[], language: 'en' | 'de' | 'hu'): string {
   const dayList = preferredDays.join(', ')
   return [
     'Identify the plant in this image, determine its water requirement (light, moderate, or heavy), light requirement, and provide care instructions.',
+    languagePromptInstruction(language),
     '',
     'Determine lightNeed as:',
     '- low: low light / shade-tolerant plants',
@@ -171,12 +191,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'GEMINI_API_KEY environment variable is missing on Vercel' })
   }
 
-  const { imageBase64, mimeType = 'image/jpeg', preferredDays: rawPreferredDays } = getRequestBody(req)
+  const { imageBase64, mimeType = 'image/jpeg', preferredDays: rawPreferredDays, language: rawLanguage } = getRequestBody(req)
   if (!imageBase64 || typeof imageBase64 !== 'string') {
     return res.status(400).json({ error: 'No image provided' })
   }
 
   const preferredDays = normalizePreferredDays(rawPreferredDays)
+  const language = normalizeLanguage(rawLanguage)
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
@@ -189,7 +210,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     }
 
-    const prompt = buildAnalyzePrompt(preferredDays)
+    const prompt = buildAnalyzePrompt(preferredDays, language)
     const text = await generatePlantAnalysis(genAI, prompt, imagePart)
 
     let plantData: AnalyzePlantResult

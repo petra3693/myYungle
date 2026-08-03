@@ -1,3 +1,5 @@
+import { getAppLanguage } from '@/i18n'
+import type { AppLanguage } from '@/i18n/languages'
 import type { AnalyzePlantResult } from '@/server/analyzePlantHandler'
 
 export interface AnalyzePlantApiResponse extends AnalyzePlantResult {}
@@ -44,6 +46,7 @@ function buildNonJsonErrorMessage(status: number, text: string): string {
 export async function analyzePlantImage(
   imageSource: string,
   preferredDays: string[] = [],
+  language: AppLanguage = getAppLanguage(),
 ): Promise<{ ok: true; data: AnalyzePlantApiResponse } | { ok: false; error: string }> {
   const { imageBase64, mimeType } = parseImageDataUrl(imageSource)
 
@@ -56,6 +59,7 @@ export async function analyzePlantImage(
         imageBase64,
         mimeType,
         preferredDays: preferredDays.length > 0 ? preferredDays : undefined,
+        language,
       }),
     })
   } catch (error) {

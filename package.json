@@ -12,10 +12,12 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "i18next": "^26.3.6",
     "idb-keyval": "^6.3.0",
     "lucide-react": "^1.28.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-i18next": "^17.0.11",
     "zod": "^4.4.3"
   },
   "devDependencies": {

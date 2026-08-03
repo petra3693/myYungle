@@ -1,6 +1,25 @@
 import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai'
 import { z } from 'zod'
 
+type AppLanguage = 'en' | 'de' | 'hu'
+
+function normalizeAppLanguage(value: unknown): AppLanguage {
+  const lang = String(value ?? 'en').toLowerCase()
+  if (lang === 'de' || lang === 'hu') return lang
+  return 'en'
+}
+
+function languagePromptInstruction(language: AppLanguage): string {
+  switch (language) {
+    case 'de':
+      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in German.'
+    case 'hu':
+      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in Hungarian.'
+    default:
+      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in English.'
+  }
+}
+
 function clampHealthScore(score: number): number {
   return Math.max(0, Math.min(100, Math.round(score)))
 }
@@ -8,6 +27,7 @@ function clampHealthScore(score: number): number {
 export const analyzePlantHealthPayloadSchema = z.object({
   imageBase64: z.string().min(1, 'No image provided'),
   mimeType: z.string().default('image/jpeg'),
+  language: z.enum(['en', 'de', 'hu']).optional(),
 })
 
 export interface AnalyzePlantHealthResult {
@@ -65,7 +85,8 @@ export async function handleAnalyzePlantHealthRequest(
   }
 
   try {
-    const { imageBase64, mimeType } = parsed.data
+    const { imageBase64, mimeType, language: rawLanguage } = parsed.data
+    const language = normalizeAppLanguage(rawLanguage)
     const genAI = new GoogleGenerativeAI(apiKey)
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '')
     const imagePart = { inlineData: { data: cleanBase64, mimeType } }
@@ -73,7 +94,8 @@ export async function handleAnalyzePlantHealthRequest(
       'Analyze this plant photo for diseases, pests, nutrient deficiencies, watering issues, or other health problems. ' +
       'Return healthScore as an integer from 0 to 100 (100 = perfectly healthy). ' +
       'Set diagnosis to a short label like "Healthy", "Overwatered", "Spider mites", or "Leaf spot". ' +
-      'Provide brief, actionable treatmentNotes under 400 characters.'
+      'Provide brief, actionable treatmentNotes under 400 characters. ' +
+      languagePromptInstruction(language)
 
     const text = await generateHealthAnalysis(genAI, prompt, imagePart)
     const healthData = JSON.parse(text) as AnalyzePlantHealthResult

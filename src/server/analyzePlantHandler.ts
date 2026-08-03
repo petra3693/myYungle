@@ -1,10 +1,30 @@
 import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai'
 import { z } from 'zod'
 
+type AppLanguage = 'en' | 'de' | 'hu'
+
+function normalizeAppLanguage(value: unknown): AppLanguage {
+  const lang = String(value ?? 'en').toLowerCase()
+  if (lang === 'de' || lang === 'hu') return lang
+  return 'en'
+}
+
+function languagePromptInstruction(language: AppLanguage): string {
+  switch (language) {
+    case 'de':
+      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in German.'
+    case 'hu':
+      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in Hungarian.'
+    default:
+      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in English.'
+  }
+}
+
 export const analyzePlantPayloadSchema = z.object({
   imageBase64: z.string().min(1, 'No image provided'),
   mimeType: z.string().default('image/jpeg'),
   preferredDays: z.array(z.string()).optional(),
+  language: z.enum(['en', 'de', 'hu']).optional(),
 })
 
 export type AnalyzePlantPayload = z.infer<typeof analyzePlantPayloadSchema>
@@ -84,10 +104,11 @@ function normalizePreferredDays(preferredDays: string[] | undefined): string[] {
   return valid.length > 0 ? valid : [...FULL_DAY_NAMES]
 }
 
-function buildAnalyzePrompt(preferredDays: string[]): string {
+function buildAnalyzePrompt(preferredDays: string[], language: ReturnType<typeof normalizeAppLanguage>): string {
   const dayList = preferredDays.join(', ')
   return [
     'Identify the plant in this image, determine its water requirement (light, moderate, or heavy), light requirement, and provide care instructions.',
+    languagePromptInstruction(language),
     '',
     'Determine lightNeed as:',
     '- low: low light / shade-tolerant plants',
@@ -164,8 +185,9 @@ export async function handleAnalyzePlantRequest(
   }
 
   try {
-    const { imageBase64, mimeType, preferredDays: rawPreferredDays } = parsed.data
+    const { imageBase64, mimeType, preferredDays: rawPreferredDays, language: rawLanguage } = parsed.data
     const preferredDays = normalizePreferredDays(rawPreferredDays)
+    const language = normalizeAppLanguage(rawLanguage)
     const genAI = new GoogleGenerativeAI(apiKey)
 
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '')
@@ -176,7 +198,7 @@ export async function handleAnalyzePlantRequest(
       },
     }
 
-    const prompt = buildAnalyzePrompt(preferredDays)
+    const prompt = buildAnalyzePrompt(preferredDays, language)
     const text = await generatePlantAnalysis(genAI, prompt, imagePart)
     const plantData = JSON.parse(text) as AnalyzePlantResult
 
