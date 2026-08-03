@@ -88,7 +88,7 @@ function ProFeatureCard({ feature }: { feature: ProFeature }) {
                     fontWeight: 600,
                     fontSize: 9,
                     color: '#000',
-                    background: isAi ? GREEN : '#EFEFEF',
+                    background: '#EFEFEF',
                     lineHeight: 1.2,
                   }}
                 >

@@ -515,14 +515,15 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
         <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000' }}>MYJUNGLE</span>
       </div>
 
-      <LanguageSelector variant="cards" />
-
       <div className="text-center my-[20px] shrink-0 flex flex-col gap-1 w-full">
         <span className="section-header" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>{t('onboarding.weeklySchedule')}</span>
         <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000' }}>{t('onboarding.chooseDays')}</span>
       </div>
 
-      <div className="flex flex-col gap-1.5 flex-1 min-h-0 justify-center w-full">
+      <div className="flex flex-col gap-3 flex-1 min-h-0 w-full">
+        <LanguageSelector showSubtitle />
+
+        <div className="flex flex-col gap-1.5 flex-1 min-h-0 justify-center w-full">
         {DAYS.map((d, i) => {
           const on = selectedDays.includes(i)
           return (
@@ -530,8 +531,8 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
               key={d}
               type="button"
               onClick={() => toggleDay(i)}
-              className="neo-pill relative flex items-center justify-between w-full cursor-pointer shrink-0"
-              style={{ background: on ? GREEN : 'white', paddingLeft: 16, paddingRight: 16, paddingTop: 5, paddingBottom: 5 }}
+              className={`neo-pill relative flex items-center justify-between w-full cursor-pointer shrink-0 transition-all ${on ? 'option-selected' : ''}`}
+              style={{ background: on ? undefined : 'white', paddingLeft: 16, paddingRight: 16, paddingTop: 5, paddingBottom: 5 }}
             >
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</span>
               {on ? (
@@ -544,6 +545,7 @@ function OnboardingScreen({ settings, onSave }: { settings: AppSettings; onSave:
             </button>
           )
         })}
+        </div>
       </div>
 
       <div className="my-[20px] shrink-0 flex flex-row items-center justify-between w-full gap-4">
@@ -1002,8 +1004,8 @@ function CustomScheduleModal({
                   key={d}
                   type="button"
                   onClick={() => toggleDraftDay(i)}
-                  className="neo-pill relative w-full cursor-pointer active:scale-[0.99] transition-all rounded-full border-2 border-black"
-                  style={{ background: on ? GREEN : '#F3F4F6' }}
+                  className={`neo-pill relative w-full cursor-pointer active:scale-[0.99] transition-all rounded-full border-2 border-black ${on ? 'option-selected' : ''}`}
+                  style={{ background: on ? undefined : '#F3F4F6' }}
                 >
                   <div className="flex items-center justify-between px-5 py-2">
                     <div className="flex items-center gap-2">
@@ -1098,8 +1100,9 @@ function WateringScheduleSection({
 
   function frequencyOptionClass(checked: boolean, highlighted: boolean) {
     const base = 'neo-pill relative w-full transition-all rounded-full border-2 border-black cursor-pointer active:scale-[0.99]'
-    if (checked || highlighted) return `${base} filled-day`
-    return `${base}`
+    if (checked) return `${base} option-selected`
+    if (highlighted) return `${base} option-ai-hint`
+    return base
   }
 
   return (
@@ -1123,13 +1126,14 @@ function WateringScheduleSection({
           const on = days.includes(i)
           const disabled = !isCustomSchedule && !globalIndices.includes(i)
           const aiHighlighted = aiHighlightedDays?.includes(i) ?? false
+          const dayClass = on ? 'option-selected' : aiHighlighted ? 'option-ai-hint' : ''
           return (
             <button
               key={d}
               type="button"
               onClick={() => onToggleDay(i)}
               disabled={disabled}
-              className={`neo-pill relative w-full transition-all rounded-full border-2 border-black ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-[0.99]'} ${on || aiHighlighted ? 'filled-day' : ''}`}
+              className={`neo-pill relative w-full transition-all rounded-full border-2 border-black ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-[0.99]'} ${dayClass}`}
               style={{ background: disabled && !on ? '#E5E5E5' : on || aiHighlighted ? undefined : '#F3F4F6' }}
             >
               <div className="flex items-center justify-between px-5 py-1.5">
@@ -1227,7 +1231,7 @@ function NeedLevelSegmentPicker<T extends string>({
       <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', whiteSpace: 'pre' }}>
         {label}
       </span>
-      <div className="neo-input relative rounded-[12px] w-full filled-field" style={{ height: 37 }}>
+      <div className="neo-input relative rounded-[12px] w-full" style={{ height: 37 }}>
         <div className="flex items-center h-full px-[4px]">
           {options.map((option) => {
             const on = value === option.value
@@ -1236,16 +1240,16 @@ function NeedLevelSegmentPicker<T extends string>({
                 key={option.value}
                 type="button"
                 onClick={() => onChange(option.value)}
-                className={`flex items-center justify-center gap-[2px] py-[10px] rounded-full cursor-pointer active:scale-95 transition-all ${on ? 'filled-segment' : ''}`}
+                className={`flex items-center justify-center gap-[2px] py-[10px] rounded-full cursor-pointer active:scale-95 transition-all ${on ? 'option-segment-selected' : ''}`}
                 style={{
                   flex: on ? '0 0 auto' : '1 0 0',
                   width: on ? 135 : undefined,
                   height: 37,
-                  background: 'transparent',
+                  background: on ? undefined : 'transparent',
                   border: on ? '2px solid black' : '2px solid transparent',
                 }}
               >
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: on ? '#fff' : '#000' }}>
                   {option.label.toUpperCase()}
                 </span>
                 {Array.from({ length: option.indicatorCount }).map((_, idx) => (
@@ -1428,7 +1432,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   const dropletPath = svgAdd.p13e3d5f0
 
   function WaterDroplet({ filled }: { filled: boolean }) {
-    const c = filled ? 'black' : GREEN
+    const c = filled ? 'black' : '#888'
     return (
       <svg fill="none" height="12" viewBox="0 0 12 12" width="12">
         <path d={dropletPath} fill={c} stroke={c} strokeLinecap="round" strokeWidth="2" />
@@ -1442,7 +1446,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
         size={12}
         strokeWidth={2.25}
         aria-hidden
-        className={filled ? 'text-black' : 'text-[#00FF66]'}
+        className={filled ? 'text-black' : 'text-[#888]'}
         fill={filled ? 'black' : 'none'}
       />
     )
@@ -1550,7 +1554,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             {/* Plant Name */}
             <div className="flex flex-col gap-[6px] w-full">
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('addPlant.plantName').toUpperCase()}</span>
-              <div className={`neo-input relative rounded-[12px] w-full ${name.trim() ? 'filled-field' : ''}`}>
+              <div className="neo-input relative rounded-[12px] w-full">
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -1564,7 +1568,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             {/* Room Location */}
             <div className="flex flex-col gap-[6px] w-full">
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('addPlant.room').toUpperCase()}</span>
-              <div className={`neo-input relative rounded-[12px] w-full ${room.trim() ? 'filled-field' : ''}`}>
+              <div className="neo-input relative rounded-[12px] w-full">
                 <input
                   value={room}
                   onChange={(e) => setRoom(e.target.value)}
@@ -1578,7 +1582,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             {/* Care Note */}
             <div className="flex flex-col gap-[6px] w-full">
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>{t('addPlant.careNote')}</span>
-              <div className={`neo-input relative rounded-[12px] w-full ${note.trim() ? 'filled-field' : ''}`} style={{ height: 96 }}>
+              <div className="neo-input relative rounded-[12px] w-full" style={{ height: 96 }}>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -2500,7 +2504,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                     size={12}
                     strokeWidth={2.25}
                     aria-hidden
-                    className={filled ? 'text-black' : 'text-[#00FF66]'}
+                    className={filled ? 'text-black' : 'text-[#888]'}
                     fill={filled ? 'black' : 'none'}
                   />
                 )}
@@ -3112,7 +3116,7 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-6 pb-6">
         <div className="px-5">
-          <LanguageSelector variant="segmented" />
+          <LanguageSelector />
         </div>
 
         {/* ── Notification Reminder & Routines ── */}
@@ -3131,8 +3135,8 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
                 const on = s.globalWaterSchedule.includes(d)
                 return (
                   <button key={d} onClick={() => toggleDay(i)}
-                    className="neo-pill relative flex flex-col gap-1 items-center py-[10px] shrink-0 w-[44px] cursor-pointer active:scale-95 transition-all"
-                    style={{ background: on ? GREEN : 'white' }}
+                    className={`neo-pill relative flex flex-col gap-1 items-center py-[10px] shrink-0 w-[44px] cursor-pointer active:scale-95 transition-all ${on ? 'option-selected' : ''}`}
+                    style={{ background: on ? undefined : 'white' }}
                   >
                     <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{d}</p>
                     {on ? (
