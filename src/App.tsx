@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Camera, Sparkles } from 'lucide-react'
 import { submitFeedback } from '@/lib/submitFeedback'
 import { analyzePlantImage, mapWaterNeedToForm } from '@/lib/analyzePlant'
+import { pickWateringDaysForNeed } from '@/lib/wateringSchedule'
 import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, type StorageResult } from '@/lib/plantStorage'
 import { clearAllPhotos, deletePlantPhotos, getPhotoBlob } from '@/lib/photoStore'
 import PlantPhoto from '@/components/PlantPhoto'
@@ -1000,6 +1001,7 @@ function WateringScheduleSection({
   onToggleDay,
   onOpenCustomModal,
   onResetToDefault,
+  aiHighlightedDays,
 }: {
   days: number[]
   isCustomSchedule: boolean
@@ -1007,6 +1009,7 @@ function WateringScheduleSection({
   onToggleDay: (index: number) => void
   onOpenCustomModal: () => void
   onResetToDefault: () => void
+  aiHighlightedDays?: number[]
 }) {
   return (
     <div className="flex flex-col gap-2 w-full">
@@ -1028,14 +1031,15 @@ function WateringScheduleSection({
         {DAYS.map((d, i) => {
           const on = days.includes(i)
           const disabled = !isCustomSchedule && !globalIndices.includes(i)
+          const aiFilled = on && (aiHighlightedDays?.includes(i) ?? false)
           return (
             <button
               key={d}
               type="button"
               onClick={() => onToggleDay(i)}
               disabled={disabled}
-              className={`neo-pill relative w-full transition-all rounded-full border-2 border-black ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-[0.99]'}`}
-              style={{ background: on ? GREEN : disabled ? '#E5E5E5' : '#F3F4F6' }}
+              className={`neo-pill relative w-full transition-all rounded-full border-2 border-black ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-[0.99]'} ${aiFilled ? 'ai-filled-day' : ''}`}
+              style={{ background: on && !aiFilled ? GREEN : disabled ? '#E5E5E5' : on ? undefined : '#F3F4F6' }}
             >
               <div className="flex items-center justify-between px-5 py-1.5">
                 <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: disabled && !on ? '#888' : '#000' }}>{d}</span>
@@ -1095,6 +1099,8 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   const [saving, setSaving] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [aiFilledFields, setAiFilledFields] = useState({ name: false, note: false, waterNeed: false, schedule: false })
+  const [aiSuggestedDays, setAiSuggestedDays] = useState<number[]>([])
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const canAdd = canAddMorePlants(plants.length, settings.isPro)
@@ -1129,9 +1135,18 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
         setAnalyzeError(result.error)
         return
       }
+      const mappedNeed = mapWaterNeedToForm(result.data.waterNeed)
+      const { days: suggestedDays, isCustomSchedule: customSchedule } = pickWateringDaysForNeed(
+        result.data.waterNeed,
+        globalIndices,
+      )
       setName(result.data.name)
-      setWaterNeed(mapWaterNeedToForm(result.data.waterNeed))
+      setWaterNeed(mappedNeed)
       setNote(result.data.careNotes.slice(0, 500))
+      setDays(suggestedDays)
+      setIsCustomSchedule(customSchedule)
+      setAiSuggestedDays(suggestedDays)
+      setAiFilledFields({ name: true, note: true, waterNeed: true, schedule: true })
     } catch (error) {
       console.error('[myJungle] Plant analysis error:', error)
       setAnalyzeError(
@@ -1142,7 +1157,13 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     }
   }
 
+  function clearAiScheduleHighlight() {
+    setAiFilledFields((prev) => ({ ...prev, schedule: false }))
+    setAiSuggestedDays([])
+  }
+
   function toggleDay(i: number) {
+    clearAiScheduleHighlight()
     if (!isCustomSchedule && !globalIndices.includes(i)) {
       setShowScheduleModal(true)
       return
@@ -1161,12 +1182,14 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   }
 
   function applyCustomSchedule(selected: number[]) {
+    clearAiScheduleHighlight()
     setDays(selected)
     setIsCustomSchedule(true)
     setShowScheduleModal(false)
   }
 
   function resetToGeneralSchedule() {
+    clearAiScheduleHighlight()
     setDays(globalIndices)
     setIsCustomSchedule(false)
     setShowScheduleModal(false)
@@ -1245,54 +1268,60 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
               className="hidden"
               onChange={handlePhotoInputChange}
             />
-            <div className="flex items-center gap-[16px] p-[16px]">
-              {/* Photo placeholder */}
-              <div className="bg-[#F7F7F7] relative rounded-full shrink-0 size-[64px] overflow-hidden border-2 border-black flex items-center justify-center">
+            <div className="flex flex-col items-center gap-[16px] p-[16px]">
+              <div className="bg-[#F7F7F7] relative rounded-full shrink-0 size-[80px] overflow-hidden border-2 border-black flex items-center justify-center">
                 {photo ? (
                   <img src={photo} alt="Selected plant" className="w-full h-full object-cover" />
                 ) : (
-                  <svg fill="none" height="24" viewBox="0 0 24 24" width="24" aria-hidden>
+                  <svg fill="none" height="28" viewBox="0 0 24 24" width="28" aria-hidden>
                     <path d={svgAdd.p22b7c700} fill="black" />
                   </svg>
                 )}
               </div>
-              {/* Upload action */}
-              <div className="flex flex-col gap-[6px] flex-1 min-w-0">
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Your Plant&apos;s Photo</span>
-                <div className="flex flex-wrap items-center gap-[6px]">
-                  <button
-                    type="button"
-                    onClick={() => setShowPhotoPicker(true)}
-                    className="btn-primary btn-green inline-flex items-center justify-center gap-1 rounded-full border-2 border-black cursor-pointer px-3 py-1.5"
-                    style={{ background: GREEN, minHeight: 28 }}
-                  >
-                    <svg fill="none" height="12" viewBox="0 0 20 20" width="12" aria-hidden className="shrink-0">
-                      <path d={svgAdd.p3e11a380} stroke="black" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                    </svg>
-                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', lineHeight: 1 }}>
-                      TAKE PHOTO
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { void handleAnalyzeWithAi() }}
-                    disabled={!photo || analyzing}
-                    className="inline-flex items-center justify-center gap-1 rounded-full border-2 border-black cursor-pointer px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-                    style={{ background: '#fff', minHeight: 28 }}
-                  >
-                    <Sparkles size={12} strokeWidth={2.5} aria-hidden className="shrink-0" />
-                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', lineHeight: 1 }}>
-                      {analyzing ? 'ANALYZING...' : 'ANALYZE WITH AI'}
-                    </span>
-                  </button>
-                </div>
-                {analyzeError && (
-                  <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: RED }} role="alert">
-                    {analyzeError}
-                  </p>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowPhotoPicker(true)}
+                className="btn-primary btn-green inline-flex items-center justify-center gap-1.5 rounded-full border-2 border-black cursor-pointer px-4 py-2"
+                style={{ background: GREEN, minHeight: 36 }}
+              >
+                <svg fill="none" height="14" viewBox="0 0 20 20" width="14" aria-hidden className="shrink-0">
+                  <path d={svgAdd.p3e11a380} stroke="black" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                </svg>
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', lineHeight: 1 }}>
+                  TAKE PHOTO
+                </span>
+              </button>
             </div>
+          </div>
+
+          {/* Gemini AI analyze — prominent centered CTA */}
+          <div className="w-full flex flex-col items-center gap-[8px]">
+            <button
+              type="button"
+              onClick={() => { void handleAnalyzeWithAi() }}
+              disabled={!photo || analyzing}
+              className="gemini-analyze-btn relative w-full max-w-[340px] flex items-center justify-center gap-2 px-6 py-4"
+            >
+              <span className="gemini-analyze-btn__shine" aria-hidden />
+              <Sparkles size={18} strokeWidth={2.5} aria-hidden className="shrink-0 relative z-10 text-white drop-shadow-sm" />
+              <span
+                className="relative z-10"
+                style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#fff', lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}
+              >
+                {analyzing ? 'ANALYZING WITH AI…' : 'ANALYZE WITH AI'}
+              </span>
+              <Sparkles size={18} strokeWidth={2.5} aria-hidden className="shrink-0 relative z-10 text-white drop-shadow-sm" />
+            </button>
+            {!photo && (
+              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}>
+                Add a photo first to identify your plant with Gemini
+              </p>
+            )}
+            {analyzeError && (
+              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: RED }} role="alert">
+                {analyzeError}
+              </p>
+            )}
           </div>
 
           {showPhotoPicker && (
@@ -1314,9 +1343,13 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             {/* Plant Name */}
             <div className="flex flex-col gap-[6px] w-full">
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>PLANT NAME *</span>
-              <div className="neo-input relative rounded-[12px] w-full">
+              <div className={`neo-input relative rounded-[12px] w-full ${aiFilledFields.name ? 'ai-filled-field' : ''}`}>
                 <input
-                  value={name} onChange={(e) => setName(e.target.value)}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    setAiFilledFields((prev) => ({ ...prev, name: false }))
+                  }}
                   placeholder="Pilea Peperomioides"
                   className="w-full p-[14px] outline-none bg-transparent rounded-[12px]"
                   style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}
@@ -1340,12 +1373,16 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             {/* Care Note */}
             <div className="flex flex-col gap-[6px] w-full">
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Care Note (max 500 Ca.)</span>
-              <div className="neo-input relative rounded-[12px] w-full" style={{ height: 96 }}>
+              <div className={`neo-input relative rounded-[12px] w-full ${aiFilledFields.note ? 'ai-filled-field' : ''}`} style={{ height: 96 }}>
                 <textarea
-                  value={note} onChange={(e) => setNote(e.target.value)}
+                  value={note}
+                  onChange={(e) => {
+                    setNote(e.target.value)
+                    setAiFilledFields((prev) => ({ ...prev, note: false }))
+                  }}
                   placeholder="Optional care notes for this plant"
                   className="w-full h-full p-[14px] outline-none bg-transparent rounded-[12px] resize-none"
-                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#888' }}
+                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: aiFilledFields.note ? '#000' : '#888' }}
                 />
               </div>
             </div>
@@ -1358,6 +1395,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             onToggleDay={toggleDay}
             onOpenCustomModal={() => setShowScheduleModal(true)}
             onResetToDefault={resetToGeneralSchedule}
+            aiHighlightedDays={aiFilledFields.schedule ? aiSuggestedDays : undefined}
           />
 
           <CustomScheduleModal
@@ -1375,21 +1413,25 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', whiteSpace: 'pre' }}>
               {`How much water does your plant need?  *`}
             </span>
-            <div className="neo-input relative rounded-[12px] w-full" style={{ height: 37 }}>
+            <div className={`neo-input relative rounded-[12px] w-full ${aiFilledFields.waterNeed ? 'ai-filled-field' : ''}`} style={{ height: 37 }}>
               <div className="flex items-center h-full px-[4px]">
                 {(['Light', 'Moderate', 'Heavy'] as WaterNeed[]).map((w) => {
                   const on = waterNeed === w
                   const dropCount = w === 'Light' ? 1 : w === 'Moderate' ? 2 : 3
+                  const aiSegment = aiFilledFields.waterNeed && on
                   return (
                     <button
                       key={w}
-                      onClick={() => setWaterNeed(w)}
-                      className="flex items-center justify-center gap-[2px] py-[10px] rounded-full cursor-pointer active:scale-95 transition-all"
+                      onClick={() => {
+                        setWaterNeed(w)
+                        setAiFilledFields((prev) => ({ ...prev, waterNeed: false }))
+                      }}
+                      className={`flex items-center justify-center gap-[2px] py-[10px] rounded-full cursor-pointer active:scale-95 transition-all ${aiSegment ? 'ai-filled-segment' : ''}`}
                       style={{
                         flex: on ? '0 0 auto' : '1 0 0',
                         width: on ? 135 : undefined,
                         height: 37,
-                        background: on ? GREEN : 'transparent',
+                        background: on && !aiSegment ? GREEN : 'transparent',
                         border: on ? '2px solid black' : '2px solid transparent',
                       }}
                     >
