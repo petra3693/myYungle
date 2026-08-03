@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { Camera } from 'lucide-react'
+import { Camera, Sparkles } from 'lucide-react'
 import { submitFeedback } from '@/lib/submitFeedback'
+import { analyzePlantImage, mapWaterNeedToForm } from '@/lib/analyzePlant'
 import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, type StorageResult } from '@/lib/plantStorage'
 import { clearAllPhotos, deletePlantPhotos, getPhotoBlob } from '@/lib/photoStore'
 import PlantPhoto from '@/components/PlantPhoto'
@@ -1092,6 +1093,8 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const canAdd = canAddMorePlants(plants.length, settings.isPro)
@@ -1113,6 +1116,25 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     const file = e.target.files?.[0]
     if (file) handlePhotoFile(file)
     e.target.value = ''
+    setAnalyzeError(null)
+  }
+
+  async function handleAnalyzeWithAi() {
+    if (!photo || analyzing) return
+    setAnalyzeError(null)
+    setAnalyzing(true)
+    try {
+      const result = await analyzePlantImage(photo)
+      if (!result.ok) {
+        setAnalyzeError(result.error)
+        return
+      }
+      setName(result.data.name)
+      setWaterNeed(mapWaterNeedToForm(result.data.waterNeed))
+      setNote(result.data.careNotes.slice(0, 500))
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   function toggleDay(i: number) {
@@ -1232,19 +1254,38 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
               {/* Upload action */}
               <div className="flex flex-col gap-[6px] flex-1 min-w-0">
                 <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Your Plant&apos;s Photo</span>
-                <button
-                  type="button"
-                  onClick={() => setShowPhotoPicker(true)}
-                  className="btn-primary btn-green inline-flex items-center justify-center gap-1 rounded-full border-2 border-black cursor-pointer self-start px-3 py-1.5"
-                  style={{ background: GREEN, minHeight: 28 }}
-                >
-                  <svg fill="none" height="12" viewBox="0 0 20 20" width="12" aria-hidden className="shrink-0">
-                    <path d={svgAdd.p3e11a380} stroke="black" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                  </svg>
-                  <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', lineHeight: 1 }}>
-                    TAKE PHOTO
-                  </span>
-                </button>
+                <div className="flex flex-wrap items-center gap-[6px]">
+                  <button
+                    type="button"
+                    onClick={() => setShowPhotoPicker(true)}
+                    className="btn-primary btn-green inline-flex items-center justify-center gap-1 rounded-full border-2 border-black cursor-pointer px-3 py-1.5"
+                    style={{ background: GREEN, minHeight: 28 }}
+                  >
+                    <svg fill="none" height="12" viewBox="0 0 20 20" width="12" aria-hidden className="shrink-0">
+                      <path d={svgAdd.p3e11a380} stroke="black" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                    </svg>
+                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', lineHeight: 1 }}>
+                      TAKE PHOTO
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { void handleAnalyzeWithAi() }}
+                    disabled={!photo || analyzing}
+                    className="inline-flex items-center justify-center gap-1 rounded-full border-2 border-black cursor-pointer px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                    style={{ background: '#fff', minHeight: 28 }}
+                  >
+                    <Sparkles size={12} strokeWidth={2.5} aria-hidden className="shrink-0" />
+                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', lineHeight: 1 }}>
+                      {analyzing ? 'ANALYZING...' : 'ANALYZE WITH AI'}
+                    </span>
+                  </button>
+                </div>
+                {analyzeError && (
+                  <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: RED }} role="alert">
+                    {analyzeError}
+                  </p>
+                )}
               </div>
             </div>
           </div>

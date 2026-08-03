@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
       figmaReactRefreshBoundaryFallback(),
       figmaMakeKitPlugin({ storiesGlob: '/src/**/*.stories.{ts,tsx,js,jsx}' }),
       feedbackApiDevPlugin(env),
+      analyzePlantApiDevPlugin(env),
     ],
     resolve: {
       alias: {
@@ -83,6 +84,48 @@ function feedbackApiDevPlugin(env: Record<string, string>): Plugin {
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ success: false, error: 'Failed to send feedback. Please try again later.' }))
+        }
+      })
+    },
+  }
+}
+
+/** Dev-only POST /api/analyze-plant — mirrors Vercel serverless route in `api/analyze-plant.ts`. */
+function analyzePlantApiDevPlugin(env: Record<string, string>): Plugin {
+  return {
+    name: 'analyze-plant-api-dev',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const url = req.url?.split('?')[0]
+        if (url !== '/api/analyze-plant') return next()
+
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Method not allowed' }))
+          return
+        }
+
+        try {
+          const chunks: Buffer[] = []
+          for await (const chunk of req) {
+            chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+          }
+          const raw = Buffer.concat(chunks).toString('utf8')
+          const body = raw ? JSON.parse(raw) : {}
+
+          process.env.GEMINI_API_KEY = env.GEMINI_API_KEY ?? process.env.GEMINI_API_KEY
+
+          const { handleAnalyzePlantRequest } = await import('./src/server/analyzePlantHandler')
+          const result = await handleAnalyzePlantRequest(body)
+          res.statusCode = result.status
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify(result.body))
+        } catch {
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Failed to analyze plant image' }))
         }
       })
     },
