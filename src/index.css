@@ -210,17 +210,17 @@
     pointer-events: none;
   }
 
-  .ai-filled-field {
+  .filled-field {
     background: var(--color-neo-watered) !important;
     box-shadow: inset 0 0 0 2px var(--color-neo-green);
   }
 
-  .ai-filled-segment {
+  .filled-segment {
     background: var(--color-neo-watered) !important;
     box-shadow: inset 0 0 0 2px var(--color-neo-green);
   }
 
-  .ai-filled-day {
+  .filled-day {
     background: var(--color-neo-watered) !important;
     box-shadow: inset 0 0 0 2px var(--color-neo-green);
   }

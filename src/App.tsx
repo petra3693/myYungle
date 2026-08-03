@@ -826,15 +826,15 @@ function PhotoActionSheet({
 }) {
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} aria-hidden />
+      <div className="fixed inset-0 z-[100] bg-black/40" onClick={onClose} aria-hidden />
       <div
-        className="fixed inset-x-0 bottom-0 z-50 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        className="fixed inset-x-0 z-[100] px-4 bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px)+0.75rem)]"
         role="dialog"
         aria-modal="true"
         aria-label="Choose photo source"
       >
-        <div className="flex flex-col gap-2 w-full max-w-lg mx-auto">
-          <div className="neo-card flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white">
+        <div className="flex flex-col gap-2 w-full max-w-lg mx-auto pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+          <div className="neo-card flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white shadow-lg">
             <button
               type="button"
               onClick={onTakePhoto}
@@ -855,7 +855,7 @@ function PhotoActionSheet({
           <button
             type="button"
             onClick={onClose}
-            className="neo-card flex w-full items-center justify-center rounded-2xl border-2 border-black bg-white px-4 py-4 cursor-pointer active:bg-[#F7F7F7]"
+            className="neo-card relative z-[100] flex w-full items-center justify-center rounded-2xl border-2 border-black bg-white px-4 py-4 mb-1 cursor-pointer active:bg-[#F7F7F7] shadow-lg"
             style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 16, color: '#000' }}
           >
             Cancel
@@ -1001,7 +1001,6 @@ function WateringScheduleSection({
   onToggleDay,
   onOpenCustomModal,
   onResetToDefault,
-  aiHighlightedDays,
 }: {
   days: number[]
   isCustomSchedule: boolean
@@ -1009,7 +1008,6 @@ function WateringScheduleSection({
   onToggleDay: (index: number) => void
   onOpenCustomModal: () => void
   onResetToDefault: () => void
-  aiHighlightedDays?: number[]
 }) {
   return (
     <div className="flex flex-col gap-2 w-full">
@@ -1031,15 +1029,14 @@ function WateringScheduleSection({
         {DAYS.map((d, i) => {
           const on = days.includes(i)
           const disabled = !isCustomSchedule && !globalIndices.includes(i)
-          const aiFilled = on && (aiHighlightedDays?.includes(i) ?? false)
           return (
             <button
               key={d}
               type="button"
               onClick={() => onToggleDay(i)}
               disabled={disabled}
-              className={`neo-pill relative w-full transition-all rounded-full border-2 border-black ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-[0.99]'} ${aiFilled ? 'ai-filled-day' : ''}`}
-              style={{ background: on && !aiFilled ? GREEN : disabled ? '#E5E5E5' : on ? undefined : '#F3F4F6' }}
+              className={`neo-pill relative w-full transition-all rounded-full border-2 border-black ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-[0.99]'} ${on ? 'filled-day' : ''}`}
+              style={{ background: disabled && !on ? '#E5E5E5' : on ? undefined : '#F3F4F6' }}
             >
               <div className="flex items-center justify-between px-5 py-1.5">
                 <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: disabled && !on ? '#888' : '#000' }}>{d}</span>
@@ -1099,8 +1096,6 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   const [saving, setSaving] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
-  const [aiFilledFields, setAiFilledFields] = useState({ name: false, note: false, waterNeed: false, schedule: false })
-  const [aiSuggestedDays, setAiSuggestedDays] = useState<number[]>([])
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const canAdd = canAddMorePlants(plants.length, settings.isPro)
@@ -1145,8 +1140,6 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
       setNote(result.data.careNotes.slice(0, 500))
       setDays(suggestedDays)
       setIsCustomSchedule(customSchedule)
-      setAiSuggestedDays(suggestedDays)
-      setAiFilledFields({ name: true, note: true, waterNeed: true, schedule: true })
     } catch (error) {
       console.error('[myJungle] Plant analysis error:', error)
       setAnalyzeError(
@@ -1157,13 +1150,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     }
   }
 
-  function clearAiScheduleHighlight() {
-    setAiFilledFields((prev) => ({ ...prev, schedule: false }))
-    setAiSuggestedDays([])
-  }
-
   function toggleDay(i: number) {
-    clearAiScheduleHighlight()
     if (!isCustomSchedule && !globalIndices.includes(i)) {
       setShowScheduleModal(true)
       return
@@ -1182,14 +1169,12 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   }
 
   function applyCustomSchedule(selected: number[]) {
-    clearAiScheduleHighlight()
     setDays(selected)
     setIsCustomSchedule(true)
     setShowScheduleModal(false)
   }
 
   function resetToGeneralSchedule() {
-    clearAiScheduleHighlight()
     setDays(globalIndices)
     setIsCustomSchedule(false)
     setShowScheduleModal(false)
@@ -1343,13 +1328,10 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             {/* Plant Name */}
             <div className="flex flex-col gap-[6px] w-full">
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>PLANT NAME *</span>
-              <div className={`neo-input relative rounded-[12px] w-full ${aiFilledFields.name ? 'ai-filled-field' : ''}`}>
+              <div className={`neo-input relative rounded-[12px] w-full ${name.trim() ? 'filled-field' : ''}`}>
                 <input
                   value={name}
-                  onChange={(e) => {
-                    setName(e.target.value)
-                    setAiFilledFields((prev) => ({ ...prev, name: false }))
-                  }}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder="Pilea Peperomioides"
                   className="w-full p-[14px] outline-none bg-transparent rounded-[12px]"
                   style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}
@@ -1360,12 +1342,13 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             {/* Room Location */}
             <div className="flex flex-col gap-[6px] w-full">
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>ROOM LOCATION</span>
-              <div className="neo-input relative rounded-[12px] w-full">
+              <div className={`neo-input relative rounded-[12px] w-full ${room.trim() ? 'filled-field' : ''}`}>
                 <input
-                  value={room} onChange={(e) => setRoom(e.target.value)}
+                  value={room}
+                  onChange={(e) => setRoom(e.target.value)}
                   placeholder="e.g. Living Room, Kitchen"
                   className="w-full p-[14px] outline-none bg-transparent rounded-[12px]"
-                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#888' }}
+                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: room.trim() ? '#000' : '#888' }}
                 />
               </div>
             </div>
@@ -1373,16 +1356,13 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             {/* Care Note */}
             <div className="flex flex-col gap-[6px] w-full">
               <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>Care Note (max 500 Ca.)</span>
-              <div className={`neo-input relative rounded-[12px] w-full ${aiFilledFields.note ? 'ai-filled-field' : ''}`} style={{ height: 96 }}>
+              <div className={`neo-input relative rounded-[12px] w-full ${note.trim() ? 'filled-field' : ''}`} style={{ height: 96 }}>
                 <textarea
                   value={note}
-                  onChange={(e) => {
-                    setNote(e.target.value)
-                    setAiFilledFields((prev) => ({ ...prev, note: false }))
-                  }}
+                  onChange={(e) => setNote(e.target.value)}
                   placeholder="Optional care notes for this plant"
                   className="w-full h-full p-[14px] outline-none bg-transparent rounded-[12px] resize-none"
-                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: aiFilledFields.note ? '#000' : '#888' }}
+                  style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: note.trim() ? '#000' : '#888' }}
                 />
               </div>
             </div>
@@ -1395,7 +1375,6 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             onToggleDay={toggleDay}
             onOpenCustomModal={() => setShowScheduleModal(true)}
             onResetToDefault={resetToGeneralSchedule}
-            aiHighlightedDays={aiFilledFields.schedule ? aiSuggestedDays : undefined}
           />
 
           <CustomScheduleModal
@@ -1413,25 +1392,21 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', whiteSpace: 'pre' }}>
               {`How much water does your plant need?  *`}
             </span>
-            <div className={`neo-input relative rounded-[12px] w-full ${aiFilledFields.waterNeed ? 'ai-filled-field' : ''}`} style={{ height: 37 }}>
+            <div className="neo-input relative rounded-[12px] w-full filled-field" style={{ height: 37 }}>
               <div className="flex items-center h-full px-[4px]">
                 {(['Light', 'Moderate', 'Heavy'] as WaterNeed[]).map((w) => {
                   const on = waterNeed === w
                   const dropCount = w === 'Light' ? 1 : w === 'Moderate' ? 2 : 3
-                  const aiSegment = aiFilledFields.waterNeed && on
                   return (
                     <button
                       key={w}
-                      onClick={() => {
-                        setWaterNeed(w)
-                        setAiFilledFields((prev) => ({ ...prev, waterNeed: false }))
-                      }}
-                      className={`flex items-center justify-center gap-[2px] py-[10px] rounded-full cursor-pointer active:scale-95 transition-all ${aiSegment ? 'ai-filled-segment' : ''}`}
+                      onClick={() => setWaterNeed(w)}
+                      className={`flex items-center justify-center gap-[2px] py-[10px] rounded-full cursor-pointer active:scale-95 transition-all ${on ? 'filled-segment' : ''}`}
                       style={{
                         flex: on ? '0 0 auto' : '1 0 0',
                         width: on ? 135 : undefined,
                         height: 37,
-                        background: on && !aiSegment ? GREEN : 'transparent',
+                        background: 'transparent',
                         border: on ? '2px solid black' : '2px solid transparent',
                       }}
                     >
