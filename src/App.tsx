@@ -611,11 +611,20 @@ function WeeklyStrip({ plants, todayIdx }: { plants: Plant[]; todayIdx: number }
 
 // ─── Plant Card ───────────────────────────────────────────────────────────────
 
-function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
-  plant: Plant; onTap: () => void; onDelete: () => void; onWater: () => void; todayIdx: number
+function PlantCard({ plant, onTap, onDeleteRequest, onWater, todayIdx, swipeResetToken = 0 }: {
+  plant: Plant
+  onTap: () => void
+  onDeleteRequest: () => void
+  onWater: () => void
+  todayIdx: number
+  swipeResetToken?: number
 }) {
   const startX = useRef(0)
   const [swiped, setSwiped] = useState(false)
+
+  useEffect(() => {
+    setSwiped(false)
+  }, [swipeResetToken])
   const waterNeedCount = plant.waterNeed === 'Heavy' ? 3 : plant.waterNeed === 'Moderate' ? 2 : 1
   // isWateredToday: mint-green card bg + white btn + green droplet
   // unisWateredToday: white card bg + green btn + black checkmark
@@ -627,9 +636,10 @@ function PlantCard({ plant, onTap, onDelete, onWater, todayIdx }: {
       <div
         className="absolute inset-y-0 right-0 flex items-center justify-center cursor-pointer"
         style={{ width: 95, background: RED }}
-        onClick={onDelete}
+        onClick={(e) => { e.stopPropagation(); onDeleteRequest() }}
+        aria-label={`Delete ${plant.name}`}
       >
-        <svg fill="none" height="28" viewBox="46 27 27 28" width="27">
+        <svg fill="none" height="28" viewBox="46 27 27 28" width="27" aria-hidden>
           <path d={svgPaths2.p36f8ca80} fill="white" />
         </svg>
       </div>
@@ -695,8 +705,30 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
   plants: Plant[]; settings: AppSettings; onSelectPlant: (p: Plant) => void;
   onDeletePlant: (id: string) => void; onWaterPlant: (id: string) => void; onGoAdd: () => void; onSettings: () => void; onShowPro: () => void; todayIdx: number
 }) {
+  const [plantToDelete, setPlantToDelete] = useState<Plant | null>(null)
+  const [swipeResetTokens, setSwipeResetTokens] = useState<Record<string, number>>({})
   const needsWater = plants.filter((p) => isPlantDueToday(p, todayIdx) && !p.isWateredToday)
   const limitReached = isFreeTierLimitReached(plants.length, settings.isPro)
+
+  function requestDeletePlant(plant: Plant) {
+    setPlantToDelete(plant)
+  }
+
+  function cancelDeletePlant() {
+    if (plantToDelete) {
+      setSwipeResetTokens((prev) => ({
+        ...prev,
+        [plantToDelete.id]: (prev[plantToDelete.id] ?? 0) + 1,
+      }))
+    }
+    setPlantToDelete(null)
+  }
+
+  function confirmDeletePlant() {
+    if (!plantToDelete) return
+    onDeletePlant(plantToDelete.id)
+    setPlantToDelete(null)
+  }
 
   return (
     <div className="flex flex-col h-full" style={{ background: BG }}>
@@ -748,9 +780,25 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 w-full">
               {plants.map((p) => (
-                <PlantCard key={p.id} plant={p} onTap={() => onSelectPlant(p)} onDelete={() => onDeletePlant(p.id)} onWater={() => onWaterPlant(p.id)} todayIdx={todayIdx} />
+                <PlantCard
+                  key={p.id}
+                  plant={p}
+                  onTap={() => onSelectPlant(p)}
+                  onDeleteRequest={() => requestDeletePlant(p)}
+                  onWater={() => onWaterPlant(p.id)}
+                  todayIdx={todayIdx}
+                  swipeResetToken={swipeResetTokens[p.id] ?? 0}
+                />
               ))}
             </div>
+          )}
+
+          {plantToDelete && (
+            <DeletePlantConfirmModal
+              plantName={plantToDelete.name}
+              onCancel={cancelDeletePlant}
+              onConfirm={confirmDeletePlant}
+            />
           )}
 
           {/* Add plant / Upgrade CTA */}
@@ -1700,6 +1748,102 @@ function DetailModal({
   )
 }
 
+function DeletePlantConfirmModal({
+  plantName,
+  onCancel,
+  onConfirm,
+}: {
+  plantName: string
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const closingRef = useRef(false)
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setIsOpen(true))
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') closeWithAnimation(onCancel)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onCancel])
+
+  function closeWithAnimation(action: () => void) {
+    if (closingRef.current) return
+    closingRef.current = true
+    setIsOpen(false)
+    window.setTimeout(action, 220)
+  }
+
+  return (
+    <>
+      <div
+        className={`confirm-modal-backdrop ${isOpen ? 'is-open' : ''}`}
+        onClick={() => closeWithAnimation(onCancel)}
+        aria-hidden
+      />
+      <div className="confirm-modal-wrap">
+        <div
+          className={`confirm-modal-panel neo-card rounded-2xl border-2 border-black bg-white px-4 pt-4 pb-6 flex flex-col gap-4 ${isOpen ? 'is-open' : ''}`}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-plant-title"
+          aria-describedby="delete-plant-desc"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between shrink-0">
+            <span
+              id="delete-plant-title"
+              style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000', textTransform: 'uppercase' }}
+            >
+              Delete Plant?
+            </span>
+            <button
+              type="button"
+              onClick={() => closeWithAnimation(onCancel)}
+              className="flex items-center justify-center size-8 rounded-full border-2 border-black bg-black cursor-pointer"
+              aria-label="Close delete confirmation"
+            >
+              <svg fill="none" height="14" viewBox="0 0 18 18" width="14" aria-hidden>
+                <path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          <p
+            id="delete-plant-desc"
+            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}
+          >
+            Are you sure you want to delete {plantName}? This action cannot be undone.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => closeWithAnimation(onCancel)}
+              className="flex-1 h-11 rounded-full border-2 border-black bg-white cursor-pointer"
+              style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10 }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => closeWithAnimation(onConfirm)}
+              className="flex-1 h-11 rounded-full border-2 cursor-pointer"
+              style={{ borderColor: RED, background: RED, color: '#fff', fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10 }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 function GrowthStatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="growth-stat-card flex-1">
@@ -2248,15 +2392,11 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
       />
 
       {showDeleteConfirm && (
-        <DetailModal title="Delete Plant?" onClose={() => setShowDeleteConfirm(false)}>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}>
-            This will permanently remove {plant.name} from your jungle.
-          </p>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setShowDeleteConfirm(false)} className="flex-1 h-11 rounded-full border-2 border-black bg-white cursor-pointer" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10 }}>Cancel</button>
-            <button type="button" onClick={() => { setShowDeleteConfirm(false); onDelete() }} className="flex-1 h-11 rounded-full border-2 cursor-pointer" style={{ borderColor: RED, color: RED, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, background: '#fff' }}>Delete</button>
-          </div>
-        </DetailModal>
+        <DeletePlantConfirmModal
+          plantName={plant.name}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={() => { setShowDeleteConfirm(false); onDelete() }}
+        />
       )}
 
       {showLogGrowth && (

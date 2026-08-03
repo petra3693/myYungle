@@ -515,3 +515,44 @@ html {
 ::-webkit-scrollbar {
   display: none;
 }
+
+.confirm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(0 0 0 / 0%);
+  transition: background-color 0.22s ease;
+  pointer-events: none;
+}
+
+.confirm-modal-backdrop.is-open {
+  background: rgb(0 0 0 / 40%);
+  pointer-events: auto;
+}
+
+.confirm-modal-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: none;
+}
+
+.confirm-modal-panel {
+  width: 100%;
+  max-width: 28rem;
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+}
+
+.confirm-modal-panel.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
