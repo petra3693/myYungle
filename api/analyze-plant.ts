@@ -16,7 +16,7 @@ interface AnalyzePlantResult {
   careNotes: string
 }
 
-const GEMINI_MODELS = ['gemini-1.5-flash-latest', 'gemini-2.0-flash'] as const
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'] as const
 
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,
