@@ -1,4 +1,5 @@
 export type WaterNeed = 'Light' | 'Moderate' | 'Heavy'
+export type LightNeed = 'Low' | 'Medium' | 'High'
 export type WateringFrequency = 'weekly' | 'biweekly' | 'monthly'
 export type DayCode = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN'
 export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'
@@ -93,6 +94,7 @@ export interface Plant {
   wateringFrequency: WateringFrequency
   wateringCycleAnchor: string | null
   waterNeed: WaterNeed
+  lightNeed: LightNeed
   photo: string
   lastWateredAt: string | null
   previousWateredAt: string | null

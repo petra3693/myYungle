@@ -99,3 +99,10 @@ export function mapWaterNeedToForm(value: string): 'Light' | 'Moderate' | 'Heavy
   if (normalized === 'heavy') return 'Heavy'
   return 'Moderate'
 }
+
+export function mapLightNeedToForm(value: string): 'Low' | 'Medium' | 'High' {
+  const normalized = value.toLowerCase()
+  if (normalized === 'low') return 'Low'
+  if (normalized === 'high') return 'High'
+  return 'Medium'
+}

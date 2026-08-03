@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { Camera, Sparkles } from 'lucide-react'
+import { Camera, Sparkles, Sun } from 'lucide-react'
 import { submitFeedback } from '@/lib/submitFeedback'
-import { analyzePlantImage, mapWaterNeedToForm } from '@/lib/analyzePlant'
+import { analyzePlantImage, mapLightNeedToForm, mapWaterNeedToForm } from '@/lib/analyzePlant'
 import { mapRecommendedDaysToIndices } from '@/lib/wateringSchedule'
 import {
   cycleAnchorForFrequency,
@@ -18,7 +18,7 @@ import PhotoActionSheet from '@/components/photo-action-sheet'
 import type { HealthLogSubmitData } from '@/lib/health-log'
 import { clampHealthScore } from '@/lib/health-log'
 import { migrateLegacyCheckIn } from '@/lib/health-calculator'
-import type { AppSettings, DayCode, DayOfWeek, HealthCheckIn, HistoryEntry, Plant, WaterNeed, WateringFrequency } from '@/types/plant'
+import type { AppSettings, DayCode, DayOfWeek, HealthCheckIn, HistoryEntry, LightNeed, Plant, WaterNeed, WateringFrequency } from '@/types/plant'
 import svgPaths from '@/imports/NewDesign2-1/svg-cm3nd9oy62'
 import svgPaths2 from '@/imports/MyjungleSettimgs-2/svg-u9kpmn74e6'
 import svgAdd from '@/imports/MyjungleAddPlant/svg-fer892chf7'
@@ -141,6 +141,7 @@ function normalizePlant(raw: Plant & { watered?: boolean; lastWatered?: string |
   const wateringDays = [...(raw.wateringDays ?? [])].sort((a, b) => a - b)
   const scheduleDays = raw.scheduleDays?.length ? sortSchedule(raw.scheduleDays) : indicesToSchedule(wateringDays)
   const waterNeed: WaterNeed = raw.waterNeed === 'Light' || raw.waterNeed === 'Heavy' ? raw.waterNeed : 'Moderate'
+  const lightNeed: LightNeed = raw.lightNeed === 'Low' || raw.lightNeed === 'High' ? raw.lightNeed : 'Medium'
   const photo = typeof raw.photo === 'string' && raw.photo.length > 0
     ? raw.photo
     : PLANT_PHOTOS[Math.floor(Math.random() * PLANT_PHOTOS.length)]
@@ -158,6 +159,7 @@ function normalizePlant(raw: Plant & { watered?: boolean; lastWatered?: string |
       : 'weekly',
     wateringCycleAnchor: raw.wateringCycleAnchor ?? null,
     waterNeed,
+    lightNeed,
     photo,
     lastWateredAt: raw.lastWateredAt ?? raw.lastWatered ?? null,
     previousWateredAt: raw.previousWateredAt ?? null,
@@ -1175,6 +1177,59 @@ function WateringScheduleSection({
   )
 }
 
+// ─── Need level segmented pickers (water / light) ─────────────────────────────
+
+function NeedLevelSegmentPicker<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  renderIndicator,
+}: {
+  label: string
+  value: T
+  options: { value: T; label: string; indicatorCount: number }[]
+  onChange: (value: T) => void
+  renderIndicator: (filled: boolean) => React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-[8px] w-full">
+      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', whiteSpace: 'pre' }}>
+        {label}
+      </span>
+      <div className="neo-input relative rounded-[12px] w-full filled-field" style={{ height: 37 }}>
+        <div className="flex items-center h-full px-[4px]">
+          {options.map((option) => {
+            const on = value === option.value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onChange(option.value)}
+                className={`flex items-center justify-center gap-[2px] py-[10px] rounded-full cursor-pointer active:scale-95 transition-all ${on ? 'filled-segment' : ''}`}
+                style={{
+                  flex: on ? '0 0 auto' : '1 0 0',
+                  width: on ? 135 : undefined,
+                  height: 37,
+                  background: 'transparent',
+                  border: on ? '2px solid black' : '2px solid transparent',
+                }}
+              >
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>
+                  {option.label.toUpperCase()}
+                </span>
+                {Array.from({ length: option.indicatorCount }).map((_, idx) => (
+                  <span key={idx}>{renderIndicator(on)}</span>
+                ))}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Screen 5: Add New ───────────────────────────────────────────────────────
 
 function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobalSchedule }: {
@@ -1189,6 +1244,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   const [isCustomSchedule, setIsCustomSchedule] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [waterNeed, setWaterNeed] = useState<WaterNeed>('Moderate')
+  const [lightNeed, setLightNeed] = useState<LightNeed>('Medium')
   const [wateringFrequency, setWateringFrequency] = useState<WateringFrequency>('weekly')
   const [aiHighlightedDays, setAiHighlightedDays] = useState<number[]>([])
   const [aiHighlightedFrequency, setAiHighlightedFrequency] = useState<WateringFrequency | null>(null)
@@ -1242,6 +1298,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
       const frequency = result.data.frequency ?? 'weekly'
       setName(result.data.name)
       setWaterNeed(mappedNeed)
+      setLightNeed(mapLightNeedToForm(result.data.lightNeed))
       setNote(result.data.careNotes.slice(0, 500))
       setDays(suggestedDays)
       setIsCustomSchedule(customSchedule)
@@ -1318,6 +1375,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
         wateringFrequency,
         wateringCycleAnchor: cycleAnchorForFrequency(wateringFrequency, null),
         waterNeed,
+        lightNeed,
         photo: photoUrl,
         lastWateredAt: null,
         previousWateredAt: null,
@@ -1344,6 +1402,18 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
       <svg fill="none" height="12" viewBox="0 0 12 12" width="12">
         <path d={dropletPath} fill={c} stroke={c} strokeLinecap="round" strokeWidth="2" />
       </svg>
+    )
+  }
+
+  function LightSunIcon({ filled }: { filled: boolean }) {
+    return (
+      <Sun
+        size={12}
+        strokeWidth={2.25}
+        aria-hidden
+        className={filled ? 'text-black' : 'text-[#00FF66]'}
+        fill={filled ? 'black' : 'none'}
+      />
     )
   }
 
@@ -1512,39 +1582,29 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             onEditGlobalSchedule={onEditGlobalSchedule}
           />
 
-          {/* Water needs segmented */}
-          <div className="flex flex-col gap-[8px] w-full">
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase', whiteSpace: 'pre' }}>
-              {`How much water does your plant need?  *`}
-            </span>
-            <div className="neo-input relative rounded-[12px] w-full filled-field" style={{ height: 37 }}>
-              <div className="flex items-center h-full px-[4px]">
-                {(['Light', 'Moderate', 'Heavy'] as WaterNeed[]).map((w) => {
-                  const on = waterNeed === w
-                  const dropCount = w === 'Light' ? 1 : w === 'Moderate' ? 2 : 3
-                  return (
-                    <button
-                      key={w}
-                      onClick={() => setWaterNeed(w)}
-                      className={`flex items-center justify-center gap-[2px] py-[10px] rounded-full cursor-pointer active:scale-95 transition-all ${on ? 'filled-segment' : ''}`}
-                      style={{
-                        flex: on ? '0 0 auto' : '1 0 0',
-                        width: on ? 135 : undefined,
-                        height: 37,
-                        background: 'transparent',
-                        border: on ? '2px solid black' : '2px solid transparent',
-                      }}
-                    >
-                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{w.toUpperCase()}</span>
-                      {Array.from({ length: dropCount }).map((_, idx) => (
-                        <WaterDroplet key={idx} filled={on} />
-                      ))}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
+          <NeedLevelSegmentPicker
+            label="How much water does your plant need?  *"
+            value={waterNeed}
+            options={[
+              { value: 'Light' as WaterNeed, label: 'Light', indicatorCount: 1 },
+              { value: 'Moderate' as WaterNeed, label: 'Moderate', indicatorCount: 2 },
+              { value: 'Heavy' as WaterNeed, label: 'Heavy', indicatorCount: 3 },
+            ]}
+            onChange={setWaterNeed}
+            renderIndicator={(filled) => <WaterDroplet filled={filled} />}
+          />
+
+          <NeedLevelSegmentPicker
+            label="How much light does your plant need?  *"
+            value={lightNeed}
+            options={[
+              { value: 'Low' as LightNeed, label: 'Low', indicatorCount: 1 },
+              { value: 'Medium' as LightNeed, label: 'Medium', indicatorCount: 2 },
+              { value: 'High' as LightNeed, label: 'High', indicatorCount: 3 },
+            ]}
+            onChange={setLightNeed}
+            renderIndicator={(filled) => <LightSunIcon filled={filled} />}
+          />
 
           {/* Free tier bar */}
           {!settings.isPro && (
@@ -2051,6 +2111,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
   const [editDays, setEditDays] = useState<number[]>(scheduleIndicesFromPlant(plant))
   const [editIsCustomSchedule, setEditIsCustomSchedule] = useState(plant.isCustomSchedule)
   const [editWateringFrequency, setEditWateringFrequency] = useState<WateringFrequency>(plant.wateringFrequency ?? 'weekly')
+  const [editLightNeed, setEditLightNeed] = useState<LightNeed>(plant.lightNeed ?? 'Medium')
   const [growthNote, setGrowthNote] = useState('')
   const [growthHeight, setGrowthHeight] = useState('')
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -2124,6 +2185,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
       isCustomSchedule: editIsCustomSchedule,
       wateringFrequency: editWateringFrequency,
       wateringCycleAnchor: nextAnchor,
+      lightNeed: editLightNeed,
     })
     setShowEdit(false)
   }
@@ -2165,6 +2227,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
     setEditDays(scheduleIndicesFromPlant(plant))
     setEditIsCustomSchedule(plant.isCustomSchedule)
     setEditWateringFrequency(plant.wateringFrequency ?? 'weekly')
+    setEditLightNeed(plant.lightNeed ?? 'Medium')
     setShowEdit(true)
   }
 
@@ -2370,6 +2433,25 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                 onFrequencyChange={setEditWateringFrequency}
                 onOpenCustomModal={() => setShowScheduleModal(true)}
                 onResetToDefault={resetEditToGeneralSchedule}
+              />
+              <NeedLevelSegmentPicker
+                label="How much light does your plant need?  *"
+                value={editLightNeed}
+                options={[
+                  { value: 'Low' as LightNeed, label: 'Low', indicatorCount: 1 },
+                  { value: 'Medium' as LightNeed, label: 'Medium', indicatorCount: 2 },
+                  { value: 'High' as LightNeed, label: 'High', indicatorCount: 3 },
+                ]}
+                onChange={setEditLightNeed}
+                renderIndicator={(filled) => (
+                  <Sun
+                    size={12}
+                    strokeWidth={2.25}
+                    aria-hidden
+                    className={filled ? 'text-black' : 'text-[#00FF66]'}
+                    fill={filled ? 'black' : 'none'}
+                  />
+                )}
               />
             </div>
             <div className="shrink-0 mt-4">

@@ -13,6 +13,7 @@ interface VercelResponse {
 interface AnalyzePlantResult {
   name: string
   waterNeed: 'light' | 'moderate' | 'heavy'
+  lightNeed: 'low' | 'medium' | 'high'
   careNotes: string
   recommendedDays: string[]
   frequency: 'weekly' | 'biweekly' | 'monthly'
@@ -43,6 +44,12 @@ const responseSchema: Schema = {
       enum: ['light', 'moderate', 'heavy'],
       description: 'Water requirement: light, moderate, or heavy',
     },
+    lightNeed: {
+      type: SchemaType.STRING,
+      format: 'enum',
+      enum: ['low', 'medium', 'high'],
+      description: 'Light requirement: low (low light), medium (indirect/medium light), or high (direct sunlight)',
+    },
     careNotes: {
       type: SchemaType.STRING,
       description: 'Short care instructions and tips',
@@ -60,7 +67,7 @@ const responseSchema: Schema = {
       description: 'How often to water: weekly, biweekly (every 2 weeks), or monthly (every 4 weeks)',
     },
   },
-  required: ['name', 'waterNeed', 'careNotes', 'recommendedDays', 'frequency'],
+  required: ['name', 'waterNeed', 'lightNeed', 'careNotes', 'recommendedDays', 'frequency'],
 }
 
 function getRequestBody(req: VercelRequest): {
@@ -92,7 +99,12 @@ function normalizePreferredDays(preferredDays: unknown): string[] {
 function buildAnalyzePrompt(preferredDays: string[]): string {
   const dayList = preferredDays.join(', ')
   return [
-    'Identify the plant in this image, determine its water requirement (light, moderate, or heavy), and provide care instructions.',
+    'Identify the plant in this image, determine its water requirement (light, moderate, or heavy), light requirement, and provide care instructions.',
+    '',
+    'Determine lightNeed as:',
+    '- low: low light / shade-tolerant plants',
+    '- medium: medium or bright indirect light',
+    '- high: high light / direct sunlight',
     '',
     `The user's globally active preferred watering days are: ${dayList}.`,
     'Select the MINIMUM necessary days from ONLY these preferred days to maximize schedule stacking:',
@@ -112,6 +124,13 @@ function normalizeFrequency(value: unknown): AnalyzePlantResult['frequency'] {
   if (normalized === 'biweekly') return 'biweekly'
   if (normalized === 'monthly') return 'monthly'
   return 'weekly'
+}
+
+function normalizeLightNeed(value: unknown): AnalyzePlantResult['lightNeed'] {
+  const normalized = String(value ?? '').toLowerCase()
+  if (normalized === 'low') return 'low'
+  if (normalized === 'high') return 'high'
+  return 'medium'
 }
 
 async function generatePlantAnalysis(
@@ -180,7 +199,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to parse AI analysis response.' })
     }
 
-    if (!plantData.name || !plantData.waterNeed || !plantData.careNotes) {
+    if (!plantData.name || !plantData.waterNeed || !plantData.lightNeed || !plantData.careNotes) {
       return res.status(500).json({ error: 'Incomplete analysis result from AI.' })
     }
 
@@ -189,6 +208,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Invalid water need in AI response.' })
     }
 
+    const lightNeed = normalizeLightNeed(plantData.lightNeed)
+
     const recommendedDays = Array.isArray(plantData.recommendedDays)
       ? plantData.recommendedDays.filter((d): d is string => typeof d === 'string' && d.trim().length > 0)
       : []
@@ -196,6 +217,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       name: plantData.name.trim(),
       waterNeed,
+      lightNeed,
       careNotes: plantData.careNotes.trim(),
       recommendedDays,
       frequency: normalizeFrequency(plantData.frequency),
