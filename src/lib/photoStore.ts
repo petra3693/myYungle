@@ -1,5 +1,5 @@
 import { createStore, del, get, keys, set } from 'idb-keyval'
-import type { HistoryEntry } from '@/types/plant'
+import type { HistoryEntry, PlantHealthLog } from '@/types/plant'
 
 const photoDb = createStore('myjungle-photos-db', 'photos')
 const IDB_PREFIX = 'idb://'
@@ -24,6 +24,10 @@ export function historyPhotoKey(plantId: string, entryId: string): string {
   return `hist:${plantId}:${entryId}`
 }
 
+export function healthLogPhotoKey(plantId: string, logId: string): string {
+  return `health:${plantId}:${logId}`
+}
+
 export async function storePhotoBlob(key: string, dataUrl: string): Promise<string> {
   await set(key, dataUrl, photoDb)
   return toIndexedPhotoRef(key)
@@ -39,9 +43,14 @@ export async function deletePhotoKey(key: string): Promise<void> {
   await del(key, photoDb)
 }
 
-export async function deletePlantPhotos(plantId: string, history: HistoryEntry[]): Promise<void> {
+export async function deletePlantPhotos(
+  plantId: string,
+  history: HistoryEntry[],
+  healthLogs: PlantHealthLog[] = [],
+): Promise<void> {
   await deletePhotoKey(plantPhotoKey(plantId))
   await Promise.all(history.map((entry) => deletePhotoKey(historyPhotoKey(plantId, entry.id))))
+  await Promise.all(healthLogs.map((log) => deletePhotoKey(healthLogPhotoKey(plantId, log.id))))
 }
 
 export async function clearAllPhotos(): Promise<void> {

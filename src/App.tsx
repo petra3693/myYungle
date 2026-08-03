@@ -7,6 +7,8 @@ import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, t
 import { clearAllPhotos, deletePlantPhotos, getPhotoBlob } from '@/lib/photoStore'
 import PlantPhoto from '@/components/PlantPhoto'
 import PlantHealthTracker from '@/components/plant-health-tracker'
+import PhotoActionSheet from '@/components/photo-action-sheet'
+import type { HealthLogSubmitData } from '@/components/health-analysis-sheet'
 import type { CheckInSubmitData } from '@/components/check-in-sheet'
 import { migrateLegacyCheckIn } from '@/lib/health-calculator'
 import type { AppSettings, DayCode, DayOfWeek, HealthCheckIn, HistoryEntry, Plant, WaterNeed } from '@/types/plant'
@@ -101,6 +103,23 @@ function scheduleIndicesFromPlant(plant: Pick<Plant, 'wateringDays' | 'scheduleD
   return [...plant.wateringDays].sort((a, b) => a - b)
 }
 
+function normalizeHealthLog(raw: unknown): Plant['healthLogs'][number] | null {
+  if (!raw || typeof raw !== 'object') return null
+  const log = raw as Partial<Plant['healthLogs'][number]>
+  if (!log.id || !log.timestamp || !log.diagnosis) return null
+  const severity = log.severity === 'high' || log.severity === 'medium' ? log.severity : 'low'
+  return {
+    id: String(log.id),
+    timestamp: String(log.timestamp),
+    photo: typeof log.photo === 'string' ? log.photo : '',
+    diagnosis: String(log.diagnosis),
+    treatmentNotes: typeof log.treatmentNotes === 'string' ? log.treatmentNotes : '',
+    severity,
+    isHealthy: Boolean(log.isHealthy),
+    analyzedByAI: Boolean(log.analyzedByAI),
+  }
+}
+
 function normalizePlant(raw: Plant & { watered?: boolean; lastWatered?: string | null; isCustomSchedule?: boolean; scheduleDays?: DayCode[] }): Plant {
   const wateringDays = [...(raw.wateringDays ?? [])].sort((a, b) => a - b)
   const scheduleDays = raw.scheduleDays?.length ? sortSchedule(raw.scheduleDays) : indicesToSchedule(wateringDays)
@@ -124,6 +143,9 @@ function normalizePlant(raw: Plant & { watered?: boolean; lastWatered?: string |
     history: Array.isArray(raw.history) ? raw.history : [],
     checkIns: Array.isArray(raw.checkIns)
       ? raw.checkIns.map(migrateLegacyCheckIn).filter((c): c is HealthCheckIn => c != null)
+      : [],
+    healthLogs: Array.isArray(raw.healthLogs)
+      ? raw.healthLogs.map(normalizeHealthLog).filter((log): log is Plant['healthLogs'][number] => log != null)
       : [],
     isWateredToday: raw.isWateredToday ?? raw.watered ?? false,
   }
@@ -815,57 +837,6 @@ function FreeTierCard({
 
 // ─── Photo Picker ─────────────────────────────────────────────────────────────
 
-function PhotoActionSheet({
-  onClose,
-  onTakePhoto,
-  onChooseLibrary,
-}: {
-  onClose: () => void
-  onTakePhoto: () => void
-  onChooseLibrary: () => void
-}) {
-  return (
-    <>
-      <div className="fixed inset-0 z-[100] bg-black/40" onClick={onClose} aria-hidden />
-      <div
-        className="fixed inset-x-0 z-[100] px-4 bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px)+0.75rem)]"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Choose photo source"
-      >
-        <div className="flex flex-col gap-2 w-full max-w-lg mx-auto pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
-          <div className="neo-card flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white shadow-lg">
-            <button
-              type="button"
-              onClick={onTakePhoto}
-              className="flex w-full items-center justify-center border-b-2 border-black px-4 py-4 cursor-pointer active:bg-[#F7F7F7]"
-              style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 16, color: '#000' }}
-            >
-              Take Photo
-            </button>
-            <button
-              type="button"
-              onClick={onChooseLibrary}
-              className="flex w-full items-center justify-center px-4 py-4 cursor-pointer active:bg-[#F7F7F7]"
-              style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 16, color: '#000' }}
-            >
-              Choose from Library
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="neo-card relative z-[100] flex w-full items-center justify-center rounded-2xl border-2 border-black bg-white px-4 py-4 mb-1 cursor-pointer active:bg-[#F7F7F7] shadow-lg"
-            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 16, color: '#000' }}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </>
-  )
-}
-
 // ─── Custom Schedule ──────────────────────────────────────────────────────────
 
 const CHECK_PATH = svgAdd.p2c13d500
@@ -1203,6 +1174,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
         previousWateredAt: null,
         history: [],
         checkIns: [],
+        healthLogs: [],
         isWateredToday: false,
       }
 
@@ -1954,6 +1926,25 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
     setShowLogGrowth(false)
   }
 
+  function saveHealthLog(data: HealthLogSubmitData) {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    const timestamp = new Date().toISOString()
+    const log = {
+      id,
+      timestamp,
+      photo: data.photo,
+      diagnosis: data.diagnosis,
+      treatmentNotes: data.treatmentNotes,
+      severity: data.severity,
+      isHealthy: data.isHealthy,
+      analyzedByAI: data.analyzedByAI,
+    }
+    onUpdate({
+      ...plant,
+      healthLogs: [log, ...(plant.healthLogs ?? [])],
+    })
+  }
+
   function saveCheckIn(data: CheckInSubmitData) {
     const timestamp = new Date().toISOString()
     const checkIn: HealthCheckIn = {
@@ -2096,7 +2087,9 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
               isPro={isPro}
               onUpgrade={onShowPro}
               onSaveCheckIn={saveCheckIn}
+              onSaveHealthLog={saveHealthLog}
               onRecordWatering={onMarkWatered}
+              onPhotoClick={openLightbox}
             />
 
             <button
@@ -2905,7 +2898,7 @@ export default function App() {
 
   function handleDeletePlant(id: string) {
     const removed = plants.find((p) => p.id === id)
-    if (removed) void deletePlantPhotos(removed.id, plantHistory(removed))
+    if (removed) void deletePlantPhotos(removed.id, plantHistory(removed), removed.healthLogs ?? [])
     setPlants((prev) => prev.filter((p) => p.id !== id))
     setScreen('main'); setSelectedPlant(null)
   }

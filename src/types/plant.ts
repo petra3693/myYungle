@@ -71,6 +71,17 @@ export interface HistoryEntry {
   heightCm?: number
 }
 
+export interface PlantHealthLog {
+  id: string
+  timestamp: string
+  photo: string
+  diagnosis: string
+  treatmentNotes: string
+  severity: 'low' | 'medium' | 'high'
+  isHealthy: boolean
+  analyzedByAI: boolean
+}
+
 export interface Plant {
   id: string
   name: string
@@ -85,6 +96,7 @@ export interface Plant {
   previousWateredAt: string | null
   history: HistoryEntry[]
   checkIns: HealthCheckIn[]
+  healthLogs: PlantHealthLog[]
   isWateredToday: boolean
 }
 

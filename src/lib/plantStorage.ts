@@ -5,6 +5,7 @@ import {
   PHOTO_MAX_DIMENSION,
 } from '@/lib/imageCompress'
 import {
+  healthLogPhotoKey,
   historyPhotoKey,
   isIndexedPhotoRef,
   plantPhotoKey,
@@ -41,7 +42,13 @@ export async function preparePlantsForStorage(plants: Plant[]): Promise<Plant[]>
           photo: await offloadInlinePhoto(historyPhotoKey(plant.id, entry.id), entry.photo),
         })),
       )
-      return { ...plant, photo, history }
+      const healthLogs = await Promise.all(
+        (plant.healthLogs ?? []).map(async (log) => ({
+          ...log,
+          photo: await offloadInlinePhoto(healthLogPhotoKey(plant.id, log.id), log.photo),
+        })),
+      )
+      return { ...plant, photo, history, healthLogs }
     }),
   )
 }
@@ -54,6 +61,10 @@ function plantsForLiteStorage(plants: Plant[]): Plant[] {
     history: (plant.history ?? []).map((entry) => ({
       ...entry,
       photo: isIndexedPhotoRef(entry.photo) || !isInlinePhoto(entry.photo) ? entry.photo : plant.photo,
+    })),
+    healthLogs: (plant.healthLogs ?? []).map((log) => ({
+      ...log,
+      photo: isIndexedPhotoRef(log.photo) || !isInlinePhoto(log.photo) ? log.photo : plant.photo,
     })),
   }))
 }

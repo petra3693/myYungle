@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import CheckInSheet, { type CheckInSubmitData } from '@/components/check-in-sheet'
+import HealthAnalysisSheet, { type HealthLogSubmitData } from '@/components/health-analysis-sheet'
+import PlantPhoto from '@/components/PlantPhoto'
 import {
   calculateHealthScore,
   formatCheckInBadge,
@@ -9,7 +11,7 @@ import {
   getLatestCheckIn,
   isFullyHealthy,
 } from '@/lib/health-calculator'
-import type { HealthCheckIn, Plant } from '@/types/plant'
+import type { HealthCheckIn, Plant, PlantHealthLog } from '@/types/plant'
 
 const GREEN = '#00FF66'
 const DETAIL_MINT_LIGHT = '#D9FFE8'
@@ -38,6 +40,26 @@ function useClientCheckInLabel(lastCheckIn: HealthCheckIn | null): string {
     setLabel(formatCheckInBadge(lastCheckIn))
   }, [lastCheckIn?.timestamp, lastCheckIn])
   return label
+}
+
+function useClientLogDate(timestamp: string): string {
+  const [label, setLabel] = useState('')
+  useEffect(() => {
+    setLabel(
+      new Date(timestamp).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+    )
+  }, [timestamp])
+  return label
+}
+
+function severityStyle(severity: PlantHealthLog['severity']): { bg: string; color: string; label: string } {
+  if (severity === 'high') return { bg: '#FEE2E2', color: '#991B1B', label: 'High' }
+  if (severity === 'medium') return { bg: '#FEF3C7', color: '#92400E', label: 'Medium' }
+  return { bg: DETAIL_MINT_LIGHT, color: '#047857', label: 'Low' }
 }
 
 function LockIcon({ size = 28 }: { size?: number }) {
@@ -116,24 +138,104 @@ function FullReportModal({ checkIn, onClose }: { checkIn: HealthCheckIn; onClose
   )
 }
 
+function HealthLogTimelineItem({ log, onPhotoClick }: { log: PlantHealthLog; onPhotoClick?: (photo: string) => void }) {
+  const dateLabel = useClientLogDate(log.timestamp)
+  const severity = severityStyle(log.severity)
+
+  return (
+    <div className="flex gap-3 w-full min-w-0">
+      <button
+        type="button"
+        onClick={() => onPhotoClick?.(log.photo)}
+        className="shrink-0 size-14 rounded-xl border-2 border-black overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
+        aria-label={`View health photo from ${dateLabel}`}
+      >
+        <PlantPhoto photo={log.photo} alt="" className="w-full h-full object-cover" />
+      </button>
+      <div className="flex flex-col gap-1 min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 12, color: '#666' }}>{dateLabel}</span>
+          {log.analyzedByAI && (
+            <span
+              className="rounded-full border border-black px-2 py-0.5"
+              style={{ background: '#EEF2FF', fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 9, color: '#4338CA' }}
+            >
+              AI
+            </span>
+          )}
+          <span
+            className="rounded-full border border-black px-2 py-0.5"
+            style={{ background: severity.bg, fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 9, color: severity.color }}
+          >
+            {severity.label}
+          </span>
+        </div>
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>
+          {log.diagnosis}
+        </span>
+        {log.treatmentNotes && (
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#444', lineHeight: 1.4 }} className="line-clamp-2">
+            {log.treatmentNotes}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function HealthLogTimeline({
+  logs,
+  onPhotoClick,
+}: {
+  logs: PlantHealthLog[]
+  onPhotoClick?: (photo: string) => void
+}) {
+  if (logs.length === 0) {
+    return (
+      <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#888', lineHeight: 1.4 }}>
+        No health check-ins yet. Log a photo check to track progress over time.
+      </p>
+    )
+  }
+
+  const sorted = [...logs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+  return (
+    <div className="flex flex-col gap-4 w-full">
+      {sorted.map((log, index) => (
+        <div key={log.id} className="flex flex-col gap-3 w-full">
+          <HealthLogTimelineItem log={log} onPhotoClick={onPhotoClick} />
+          {index < sorted.length - 1 && <div className="h-px w-full bg-black/10" aria-hidden />}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 interface PlantHealthTrackerProps {
   plant: Plant
   isPro: boolean
   onUpgrade: () => void
   onSaveCheckIn: (data: CheckInSubmitData) => void
+  onSaveHealthLog: (data: HealthLogSubmitData) => void
   onRecordWatering?: () => void
+  onPhotoClick?: (photo: string) => void
 }
 
 function HealthTrackerBody({
   plant,
   previewMode = false,
   onOpenCheckIn,
+  onOpenHealthAnalysis,
   onRecordWatering,
+  onPhotoClick,
 }: {
   plant: Plant
   previewMode?: boolean
   onOpenCheckIn: () => void
+  onOpenHealthAnalysis: () => void
   onRecordWatering?: () => void
+  onPhotoClick?: (photo: string) => void
 }) {
   const [showReport, setShowReport] = useState(false)
   const lastCheckIn = previewMode ? PREVIEW_CHECK_IN : getLatestCheckIn(plant.checkIns)
@@ -141,6 +243,7 @@ function HealthTrackerBody({
   const summaryGrid = getDiagnosisSummaryGrid(lastCheckIn)
   const actionCtas = lastCheckIn ? getHealthActionCtas(lastCheckIn) : []
   const allHealthy = lastCheckIn ? isFullyHealthy(lastCheckIn) : false
+  const healthLogs = previewMode ? [] : (plant.healthLogs ?? [])
 
   function handleCtaClick(id: string) {
     if (id === 'water') {
@@ -247,6 +350,20 @@ function HealthTrackerBody({
 
       <button
         type="button"
+        onClick={onOpenHealthAnalysis}
+        className="gemini-analyze-btn relative w-full flex items-center justify-center gap-2 px-6 py-3.5"
+      >
+        <span className="gemini-analyze-btn__shine" aria-hidden />
+        <span
+          className="relative z-10"
+          style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#fff', lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}
+        >
+          LOG HEALTH WITH AI PHOTO
+        </span>
+      </button>
+
+      <button
+        type="button"
         onClick={onOpenCheckIn}
         className="btn-primary btn-green flex w-full items-center justify-center rounded-full border-2 border-black cursor-pointer"
         style={{ background: GREEN, height: 52, boxShadow: '2px 2px 0px 0px rgba(0,0,0,1)' }}
@@ -255,6 +372,13 @@ function HealthTrackerBody({
           Run Comprehensive Diagnosis
         </span>
       </button>
+
+      <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-3 w-full">
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>
+          Health Timeline
+        </span>
+        <HealthLogTimeline logs={healthLogs} onPhotoClick={onPhotoClick} />
+      </div>
 
       {showReport && lastCheckIn && (
         <FullReportModal checkIn={lastCheckIn} onClose={() => setShowReport(false)} />
@@ -268,9 +392,12 @@ export default function PlantHealthTracker({
   isPro,
   onUpgrade,
   onSaveCheckIn,
+  onSaveHealthLog,
   onRecordWatering,
+  onPhotoClick,
 }: PlantHealthTrackerProps) {
   const [showCheckIn, setShowCheckIn] = useState(false)
+  const [showHealthAnalysis, setShowHealthAnalysis] = useState(false)
 
   const lastCheckIn = isPro ? getLatestCheckIn(plant.checkIns) : PREVIEW_CHECK_IN
   const health = calculateHealthScore(lastCheckIn)
@@ -284,9 +411,22 @@ export default function PlantHealthTracker({
     setShowCheckIn(true)
   }
 
+  function handleOpenHealthAnalysis() {
+    if (!isPro) {
+      onUpgrade()
+      return
+    }
+    setShowHealthAnalysis(true)
+  }
+
   function handleSubmitCheckIn(data: CheckInSubmitData) {
     onSaveCheckIn(data)
     setShowCheckIn(false)
+  }
+
+  function handleSubmitHealthLog(data: HealthLogSubmitData) {
+    onSaveHealthLog(data)
+    setShowHealthAnalysis(false)
   }
 
   return (
@@ -312,11 +452,22 @@ export default function PlantHealthTracker({
           </div>
 
           {isPro ? (
-            <HealthTrackerBody plant={plant} onOpenCheckIn={handleOpenCheckIn} onRecordWatering={onRecordWatering} />
+            <HealthTrackerBody
+              plant={plant}
+              onOpenCheckIn={handleOpenCheckIn}
+              onOpenHealthAnalysis={handleOpenHealthAnalysis}
+              onRecordWatering={onRecordWatering}
+              onPhotoClick={onPhotoClick}
+            />
           ) : (
             <div className="relative min-h-[380px]">
               <div className="pro-section-preview">
-                <HealthTrackerBody plant={plant} previewMode onOpenCheckIn={handleOpenCheckIn} />
+                <HealthTrackerBody
+                  plant={plant}
+                  previewMode
+                  onOpenCheckIn={handleOpenCheckIn}
+                  onOpenHealthAnalysis={handleOpenHealthAnalysis}
+                />
               </div>
               <ProSectionLock onUpgrade={onUpgrade} />
             </div>
@@ -330,6 +481,14 @@ export default function PlantHealthTracker({
           lastCheckIn={getLatestCheckIn(plant.checkIns)}
           onClose={() => setShowCheckIn(false)}
           onSubmit={handleSubmitCheckIn}
+        />
+      )}
+
+      {showHealthAnalysis && isPro && (
+        <HealthAnalysisSheet
+          plantName={plant.name}
+          onClose={() => setShowHealthAnalysis(false)}
+          onSubmit={handleSubmitHealthLog}
         />
       )}
     </>
