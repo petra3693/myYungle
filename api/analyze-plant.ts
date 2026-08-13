@@ -42,7 +42,8 @@ interface AnalyzePlantPayload {
 // Constants
 // ---------------------------------------------------------------------------
 
-const GEMINI_MODEL = 'gemini-1.5-flash'
+const GEMINI_MODEL = 'gemini-1.5-flash-latest'
+const GEMINI_REQUEST_OPTIONS = { apiVersion: 'v1' } as const
 const MAX_INLINE_BASE64_CHARS = 5_500_000
 const BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/
 
@@ -576,13 +577,16 @@ async function generatePlantAnalysis(
   prompt: string,
   imagePart: { inlineData: { data: string; mimeType: string } },
 ): Promise<string> {
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema,
+  const model = genAI.getGenerativeModel(
+    {
+      model: GEMINI_MODEL,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema,
+      },
     },
-  })
+    GEMINI_REQUEST_OPTIONS,
+  )
 
   const result = await model.generateContent([prompt, imagePart])
   return result.response.text()
