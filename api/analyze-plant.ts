@@ -1,5 +1,3 @@
-import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai'
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -42,7 +40,8 @@ interface AnalyzePlantPayload {
 // Constants
 // ---------------------------------------------------------------------------
 
-const GEMINI_MODEL = 'gemini-1.5-flash-latest'
+const GEMINI_MODEL = 'gemini-1.5-flash'
+const GEMINI_GENERATE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 const MAX_INLINE_BASE64_CHARS = 5_500_000
 const BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/
 
@@ -56,53 +55,53 @@ const FULL_DAY_NAMES = [
   'Sunday',
 ]
 
-const responseSchema: Schema = {
-  type: SchemaType.OBJECT,
+const responseSchema = {
+  type: 'OBJECT',
   properties: {
     name: {
-      type: SchemaType.STRING,
+      type: 'STRING',
       description: 'Common plant name. Use "Unknown Plant" if uncertain.',
     },
     waterNeed: {
-      type: SchemaType.STRING,
+      type: 'STRING',
       format: 'enum',
       enum: ['light', 'moderate', 'heavy'],
       description: 'Water requirement: light, moderate, or heavy',
     },
     lightNeed: {
-      type: SchemaType.STRING,
+      type: 'STRING',
       format: 'enum',
       enum: ['low', 'medium', 'high'],
       description: 'Light requirement: low, medium, or high',
     },
     careNotes: {
-      type: SchemaType.STRING,
+      type: 'STRING',
       description: 'Short care instructions and tips',
     },
     recommendedDays: {
-      type: SchemaType.ARRAY,
-      items: { type: SchemaType.STRING },
+      type: 'ARRAY',
+      items: { type: 'STRING' },
       description: 'Watering days as full English day names from the preferred list',
     },
     frequency: {
-      type: SchemaType.STRING,
+      type: 'STRING',
       format: 'enum',
       enum: ['weekly', 'biweekly', 'monthly'],
       description: 'How often to water: weekly, biweekly, or monthly',
     },
     confidence: {
-      type: SchemaType.STRING,
+      type: 'STRING',
       format: 'enum',
       enum: ['low', 'medium', 'high'],
       description: 'Identification confidence. Use low for blurry/dark/uncertain photos.',
     },
     isToxicToPets: {
-      type: SchemaType.BOOLEAN,
+      type: 'BOOLEAN',
       description:
         'True if toxic to cats or dogs when ingested; false if generally pet-safe; omit or null if uncertain.',
     },
     toxicityNotes: {
-      type: SchemaType.STRING,
+      type: 'STRING',
       description:
         'Brief pet toxicity note for cats/dogs (max 200 chars). Empty when safe or unknown.',
     },
@@ -164,14 +163,14 @@ function parsePayload(body: unknown): { ok: true; data: AnalyzePlantPayload } | 
 // ---------------------------------------------------------------------------
 
 function stripDataUrlPrefix(value: string): string {
-  const trimmed = value.trim()
-  if (trimmed.startsWith('data:')) {
-    const commaIndex = trimmed.indexOf(',')
-    if (commaIndex !== -1) {
-      return trimmed.slice(commaIndex + 1).replace(/\s/g, '')
-    }
+  const compact = String(value ?? '').trim().replace(/\s/g, '')
+  const dataImageMatch = compact.match(/^data:image\/[a-z0-9.+-]+;base64,(.+)$/i)
+  if (dataImageMatch?.[1]) return dataImageMatch[1]
+  if (compact.startsWith('data:')) {
+    const commaIndex = compact.indexOf(',')
+    if (commaIndex !== -1) return compact.slice(commaIndex + 1)
   }
-  return trimmed.replace(/\s/g, '')
+  return compact
 }
 
 function normalizeGeminiMimeType(mimeType: string | undefined | null): GeminiSupportedMime {
@@ -571,21 +570,61 @@ function buildAnalyzePrompt(preferredDays: string[], language: AppLanguage): str
   ].join('\n')
 }
 
+function extractGeminiCandidateText(data: unknown): string {
+  if (!data || typeof data !== 'object') return ''
+  const text = (data as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+  }).candidates?.[0]?.content?.parts?.[0]?.text
+  return typeof text === 'string' ? text.trim() : ''
+}
+
 async function generatePlantAnalysis(
-  genAI: GoogleGenerativeAI,
+  apiKey: string,
   prompt: string,
   imagePart: { inlineData: { data: string; mimeType: string } },
 ): Promise<string> {
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema,
+  const url = `${GEMINI_GENERATE_URL}?key=${encodeURIComponent(apiKey)}`
+  const base64ImageData = stripDataUrlPrefix(imagePart.inlineData.data)
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: prompt },
+            {
+              inline_data: {
+                mime_type: imagePart.inlineData.mimeType,
+                data: base64ImageData,
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema,
+      },
+    }),
   })
 
-  const result = await model.generateContent([prompt, imagePart])
-  return result.response.text()
+  const data: unknown = await response.json()
+  if (!response.ok) {
+    const message =
+      data && typeof data === 'object' && 'error' in data
+        ? String((data as { error?: { message?: string } }).error?.message ?? '')
+        : ''
+    throw new Error(message || `Gemini request failed (${response.status}).`)
+  }
+
+  const text = extractGeminiCandidateText(data)
+  if (!text) {
+    throw new Error('Gemini returned an empty response.')
+  }
+  return text
 }
 
 // ---------------------------------------------------------------------------
@@ -614,9 +653,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const language = normalizeAppLanguage(rawLanguage)
 
     const imagePart = toGeminiInlineDataPart(imageBase64, mimeType)
-    const genAI = new GoogleGenerativeAI(apiKey)
     const prompt = buildAnalyzePrompt(preferredDays, language)
-    const text = await generatePlantAnalysis(genAI, prompt, imagePart)
+    const text = await generatePlantAnalysis(apiKey, prompt, imagePart)
     const result = parseGeminiPlantAnalysisText(text, preferredDays, language)
 
     return res.status(200).json({ success: true, ...result })
