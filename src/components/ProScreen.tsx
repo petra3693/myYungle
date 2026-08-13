@@ -4,7 +4,7 @@ import { History, Sparkles, Sprout, Stethoscope } from 'lucide-react'
 import svgPro from '@/imports/MyjungleProPaywall/svg-frfo2l2sh3'
 
 const GREEN = '#00FF66'
-const BG = '#F7F7F7'
+const BG = '#EFEFEF'
 
 export interface ProFeature {
   id: string

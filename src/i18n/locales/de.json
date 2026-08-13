@@ -8,7 +8,15 @@
     "subtitle": "Wähle deine bevorzugte Sprache",
     "en": "English",
     "de": "Deutsch",
-    "hu": "Magyar"
+    "hu": "Magyar",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ja": "日本語",
+    "zh": "中文（简体）"
   },
   "tabs": {
     "home": "MY JUNGLE",
@@ -26,8 +34,9 @@
     "start": "START"
   },
   "home": {
-    "plantsNeedWater": "{{count}} PFLANZEN BRAUCHEN HEUTE WASSER!",
-    "plantsNeedWater_one": "{{count}} PFLANZE BRAUCHT HEUTE WASSER!",
+    "allPlantsWatered": "HEUTE MÜSSEN KEINE PFLANZEN GEGEOSSEN WERDEN!",
+    "plantsNeedWater": "{{count}} PFLANZEN WARTEN HEUTE AUF WASSER!",
+    "plantsNeedWater_one": "{{count}} PFLANZE WARTET HEUTE AUF WASSER!",
     "weeklySchedule": "WÖCHENTLICHER GIEßPLAN",
     "mySpecimens": "MEINE PFLANZEN ({{count}})",
     "noPlants": "Noch keine Pflanzen. Tippe unten, um eine hinzuzufügen!",
@@ -81,7 +90,8 @@
     "onSchedule": "Im Plan",
     "needsWater": "Braucht Wasser",
     "markWatered": "GEGossen",
-    "deletePlant": "Pflanze löschen",
+    "watered": "GEGEOSSEN",
+    "deletePlant": "PFLANZE LÖSCHEN",
     "editPlant": "Pflanze bearbeiten",
     "plantName": "Pflanzenname",
     "room": "Raum",
@@ -92,7 +102,8 @@
     "never": "Nie",
     "today": "Heute",
     "daysAgo": "vor {{count}} Tagen",
-    "daysAgo_one": "vor {{count}} Tag"
+    "daysAgo_one": "vor {{count}} Tag",
+    "unnamedPlant": "Unbenannte Pflanze"
   },
   "watering": {
     "title": "GIEßEN",
@@ -104,12 +115,24 @@
     "dayRoutine": "{{day}} ROUTINE",
     "noPlantsAssigned": "Keine Pflanzen zugewiesen",
     "markWatered": "Als gegossen markieren",
-    "watered": "Pflanze gegossen"
+    "watered": "Pflanze gegossen",
+    "scheduleTitle": "GIEGELPLAN",
+    "needsWaterToday": "{{count}} Pflanzen brauchen heute Wasser",
+    "needsWaterToday_one": "{{count}} Pflanze braucht heute Wasser",
+    "markAllToday": "ALLE HEUTE GIESSEN ({{count}})",
+    "sectionToday": "HEUTE"
   },
   "health": {
     "title": "Gesundheits-Tracker",
     "checkedToday": "Heute geprüft · {{score}}%",
-    "scanToCheck": "Scanne, um die Gesundheit zu prüfen",
+    "scanToCheck": "SCAN ZUR PRÜFUNG",
+    "overallHealthScore": "Gesamt-Gesundheitswert",
+    "thrivingConditions": "Gedeiht unter den aktuellen Bedingungen",
+    "recordHealthCheck": "GESUNDHEITSPRÜFUNG SPEICHERN",
+    "observationToday": "Heute",
+    "observationDaysAgo": "vor {{count}} Tagen",
+    "observationDaysAgo_one": "vor {{count}} Tag",
+    "observationWeekAgo": "vor 1 Woche",
     "checkHealthWithAi": "GESUNDHEIT MIT KI PRÜFEN",
     "analyzing": "ANALYSIERE…",
     "proFeature": "PRO-FUNKTION",
@@ -149,8 +172,10 @@
     "chooseDays": "Wähle die Tage, an denen du gießen möchtest",
     "dataPrivacy": "Daten & Datenschutz",
     "exportData": "Daten exportieren",
+    "exportSubtitle": "Lade deinen Dschungel als JSON herunter",
     "export": "EXPORT",
-    "resetData": "Daten zurücksetzen",
+    "resetData": "App-Daten zurücksetzen",
+    "resetSubtitle": "Alle Pflanzen und Einstellungen löschen",
     "reset": "RESET",
     "sendFeedback": "Feedback senden",
     "proStatus": "MY JUNGLE PRO STATUS",
@@ -315,7 +340,8 @@
     "resetData": "Alle App-Daten zurücksetzen?"
   },
   "analyze": {
-    "failed": "Foto konnte nicht analysiert werden. Bitte erneut versuchen."
+    "failed": "Foto konnte nicht analysiert werden. Bitte erneut versuchen.",
+    "lowConfidence": "Pflanze mit geringer Sicherheit erkannt — prüfe Name und Pflegehinweise oder nimm ein klareres Foto."
   },
   "months": {
     "short": {
@@ -354,5 +380,17 @@
       "contactTitle": "Kontakt",
       "contactBody": "Für Produktfragen nutze das Feedback-Formular in der App."
     }
+  },
+  "toxicity": {
+    "title": "Giftigkeit für Haustiere",
+    "question": "Ist diese Pflanze für Katzen oder Hunde giftig?",
+    "unknown": "Unbekannt",
+    "safe": "Haustiersicher",
+    "toxic": "Giftig",
+    "notesLabel": "Giftigkeitshinweise",
+    "notesPlaceholder": "z. B. Leicht giftig für Katzen bei Verschlucken",
+    "badgeSafe": "Haustiersicher",
+    "badgeToxic": "Giftig für Haustiere",
+    "badgeUnknown": "Giftigkeit unbekannt"
   }
 }

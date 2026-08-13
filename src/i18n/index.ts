@@ -1,8 +1,6 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
-import de from '@/i18n/locales/de.json'
-import en from '@/i18n/locales/en.json'
-import hu from '@/i18n/locales/hu.json'
+import { translationCatalog } from '@/i18n/messages'
 import {
   LANGUAGE_STORAGE_KEY,
   normalizeAppLanguage,
@@ -19,9 +17,17 @@ function readStoredLanguage(): AppLanguage {
 
 void i18n.use(initReactI18next).init({
   resources: {
-    en: { translation: en },
-    de: { translation: de },
-    hu: { translation: hu },
+    en: { translation: translationCatalog.en },
+    de: { translation: translationCatalog.de },
+    hu: { translation: translationCatalog.hu },
+    es: { translation: translationCatalog.es },
+    fr: { translation: translationCatalog.fr },
+    it: { translation: translationCatalog.it },
+    pt: { translation: translationCatalog.pt },
+    nl: { translation: translationCatalog.nl },
+    pl: { translation: translationCatalog.pl },
+    ja: { translation: translationCatalog.ja },
+    zh: { translation: translationCatalog.zh },
   },
   lng: readStoredLanguage(),
   fallbackLng: 'en',

@@ -1,31 +1,49 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Sparkles } from 'lucide-react'
 import PhotoActionSheet from '@/components/photo-action-sheet'
-import PlantPhoto from '@/components/PlantPhoto'
 import { getAppLanguage } from '@/i18n'
 import { analyzePlantHealthImage } from '@/lib/analyzePlantHealth'
 import {
   getLatestHealthLog,
   healthScoreSummary,
-  isHealthCheckedToday,
   type HealthLogSubmitData,
 } from '@/lib/health-log'
 import { readAndCompressPhotoFile } from '@/lib/plantStorage'
 import type { Plant, PlantHealthLog } from '@/types/plant'
 
 const GREEN = '#00FF66'
-const DETAIL_MINT_LIGHT = '#D9FFE8'
 
 const PREVIEW_HEALTH_LOG: PlantHealthLog = {
   id: 'preview-health-log',
   timestamp: new Date().toISOString(),
   photo: '',
-  healthScore: 88,
-  diagnosis: 'Healthy',
-  treatmentNotes: 'Keep bright indirect light and maintain even moisture.',
+  healthScore: 92,
+  diagnosis: 'Leaf Vitality: Lush & Vibrant',
+  treatmentNotes: 'Thriving in current conditions.',
   analyzedByAI: true,
 }
+
+const PREVIEW_OBSERVATIONS: PlantHealthLog[] = [
+  PREVIEW_HEALTH_LOG,
+  {
+    id: 'preview-health-log-2',
+    timestamp: new Date(Date.now() - 2 * 86400000).toISOString(),
+    photo: '',
+    healthScore: 88,
+    diagnosis: 'Soil Condition: Moist & Balanced',
+    treatmentNotes: '',
+    analyzedByAI: true,
+  },
+  {
+    id: 'preview-health-log-3',
+    timestamp: new Date(Date.now() - 7 * 86400000).toISOString(),
+    photo: '',
+    healthScore: 72,
+    diagnosis: 'Minor Dust on Leaves — Cleaned',
+    treatmentNotes: '',
+    analyzedByAI: false,
+  },
+]
 
 function LockIcon({ size = 28 }: { size?: number }) {
   return (
@@ -71,66 +89,33 @@ function HealthGauge({ score }: { score: number | null }) {
   const displayScore = score ?? 0
   const offset = c - (displayScore / 100) * c
   return (
-    <svg height="88" viewBox="0 0 88 88" width="88" aria-hidden>
+    <svg height="88" viewBox="0 0 88 88" width="88" aria-hidden className="shrink-0">
       <circle className="health-gauge-track" cx="44" cy="44" r={r} />
       {score != null && (
         <circle className="health-gauge-fill" cx="44" cy="44" r={r} strokeDasharray={c} strokeDashoffset={offset} />
       )}
-      <text fill="#fff" fontFamily="Unbounded, sans-serif" fontSize="16" fontWeight="900" textAnchor="middle" x="44" y="48">
+      <text fill="#000" fontFamily="Unbounded, sans-serif" fontSize="16" fontWeight="900" textAnchor="middle" x="44" y="48">
         {score != null ? `${score}%` : '—'}
       </text>
     </svg>
   )
 }
 
-function HealthLogTimelineItem({ log, onPhotoClick }: { log: PlantHealthLog; onPhotoClick?: (photo: string) => void }) {
-  const { t } = useTranslation()
-  const dateLabel = new Date(log.timestamp).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-
-  return (
-    <div className="flex gap-3 w-full min-w-0">
-      <button
-        type="button"
-        onClick={() => onPhotoClick?.(log.photo)}
-        className="shrink-0 size-14 rounded-xl border-2 border-black overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
-        aria-label={t('health.viewPhoto', { date: dateLabel })}
-      >
-        <PlantPhoto photo={log.photo} alt="" className="w-full h-full object-cover" />
-      </button>
-      <div className="flex flex-col gap-1 min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 12, color: '#666' }}>{dateLabel}</span>
-          <span
-            className="rounded-full border border-black px-2 py-0.5"
-            style={{ background: DETAIL_MINT_LIGHT, fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 9, color: '#047857' }}
-          >
-            {log.healthScore}%
-          </span>
-          <span
-            className="rounded-full border border-black px-2 py-0.5"
-            style={{ background: '#EEF2FF', fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 9, color: '#4338CA' }}
-          >
-            {t('health.aiBadge')}
-          </span>
-        </div>
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>
-          {log.diagnosis}
-        </span>
-        {log.treatmentNotes && (
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#444', lineHeight: 1.4 }} className="line-clamp-2">
-            {log.treatmentNotes}
-          </p>
-        )}
-      </div>
-    </div>
-  )
+function observationDotClass(score: number): string {
+  if (score >= 80) return 'health-observation-dot--green'
+  if (score >= 60) return 'health-observation-dot--yellow'
+  return 'health-observation-dot--red'
 }
 
-function HealthLogTimeline({ logs, onPhotoClick }: { logs: PlantHealthLog[]; onPhotoClick?: (photo: string) => void }) {
+function relativeObservationTime(iso: string, translate: (key: string, options?: { count?: number }) => string): string {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
+  if (diff <= 0) return translate('health.observationToday')
+  if (diff === 1) return translate('health.observationDaysAgo_one', { count: 1 })
+  if (diff < 7) return translate('health.observationDaysAgo', { count: diff })
+  return translate('health.observationWeekAgo')
+}
+
+function HealthObservationsList({ logs }: { logs: PlantHealthLog[] }) {
   const { t } = useTranslation()
 
   if (logs.length === 0) {
@@ -144,11 +129,22 @@ function HealthLogTimeline({ logs, onPhotoClick }: { logs: PlantHealthLog[]; onP
   const sorted = [...logs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
   return (
-    <div className="flex flex-col gap-4 w-full">
-      {sorted.map((log, index) => (
-        <div key={log.id} className="flex flex-col gap-3 w-full">
-          <HealthLogTimelineItem log={log} onPhotoClick={onPhotoClick} />
-          {index < sorted.length - 1 && <div className="h-px w-full bg-black/10" aria-hidden />}
+    <div className="flex flex-col w-full">
+      {sorted.slice(0, 5).map((log) => (
+        <div key={log.id} className="health-observation-row">
+          <span className={`health-observation-dot ${observationDotClass(log.healthScore)}`} aria-hidden />
+          <p
+            className="flex-1 min-w-0"
+            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#000', lineHeight: 1.4 }}
+          >
+            {log.diagnosis}
+          </p>
+          <span
+            className="shrink-0"
+            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}
+          >
+            {relativeObservationTime(log.timestamp, t)}
+          </span>
         </div>
       ))}
     </div>
@@ -166,14 +162,60 @@ interface PlantHealthTrackerProps {
 function HealthTrackerBody({
   plant,
   previewMode = false,
-  onSaveHealthLog,
-  onPhotoClick,
+  onOpenScan,
+  analyzing,
 }: {
   plant: Plant
   previewMode?: boolean
-  onSaveHealthLog: (data: HealthLogSubmitData) => void
-  onPhotoClick?: (photo: string) => void
+  onOpenScan: () => void
+  analyzing: boolean
 }) {
+  const { t } = useTranslation()
+
+  const healthLogs = previewMode ? PREVIEW_OBSERVATIONS : (plant.healthLogs ?? [])
+  const latestLog = previewMode ? PREVIEW_HEALTH_LOG : getLatestHealthLog(plant.healthLogs)
+  const healthScore = latestLog?.healthScore ?? null
+  const summary = healthScoreSummary(healthScore, latestLog?.diagnosis ?? null, t)
+
+  return (
+    <div className="flex flex-col gap-4 w-full">
+      {/* Gradient hero — preserved per design exception */}
+      <div className="health-ai-hero flex flex-row items-center gap-4 p-4 w-full text-left">
+        <span className="health-ai-hero__shine" aria-hidden />
+        <HealthGauge score={healthScore} />
+        <div className="relative z-10 flex flex-col gap-1 min-w-0 flex-1">
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#fff', textTransform: 'uppercase', textShadow: '0 1px 3px rgba(0,0,0,0.35)' }}>
+            {t('health.overallHealthScore')}
+          </span>
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: 'rgba(255,255,255,0.92)', lineHeight: 1.45 }}>
+            {healthScore != null && healthScore >= 80 ? t('health.thrivingConditions') : summary}
+          </p>
+        </div>
+      </div>
+
+      <HealthObservationsList logs={healthLogs} />
+
+      <button
+        type="button"
+        onClick={onOpenScan}
+        disabled={analyzing || previewMode}
+        className="btn-primary btn-green relative flex items-center justify-center rounded-full w-full min-h-[48px] cursor-pointer border-2 border-black disabled:opacity-70 disabled:cursor-not-allowed"
+        style={{ background: GREEN }}
+      >
+        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>
+          {analyzing ? t('health.analyzing') : t('health.recordHealthCheck')}
+        </span>
+      </button>
+    </div>
+  )
+}
+
+export default function PlantHealthTracker({
+  plant,
+  isPro,
+  onUpgrade,
+  onSaveHealthLog,
+}: PlantHealthTrackerProps) {
   const { t } = useTranslation()
   const [showPhotoPicker, setShowPhotoPicker] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
@@ -181,13 +223,7 @@ function HealthTrackerBody({
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
 
-  const healthLogs = previewMode ? [PREVIEW_HEALTH_LOG] : (plant.healthLogs ?? [])
-  const latestLog = previewMode ? PREVIEW_HEALTH_LOG : getLatestHealthLog(plant.healthLogs)
-  const healthScore = latestLog?.healthScore ?? null
-  const checkedToday = previewMode ? true : isHealthCheckedToday(latestLog)
-
   async function handlePhotoFile(file: File) {
-    if (previewMode) return
     setAnalyzeError(null)
     setAnalyzing(true)
     try {
@@ -206,9 +242,7 @@ function HealthTrackerBody({
       })
     } catch (error) {
       console.error('[myJungle] Health analysis error:', error)
-      setAnalyzeError(
-        error instanceof Error ? error.message : t('analyze.failed'),
-      )
+      setAnalyzeError(error instanceof Error ? error.message : t('analyze.failed'))
     } finally {
       setAnalyzing(false)
     }
@@ -221,85 +255,60 @@ function HealthTrackerBody({
   }
 
   function openPhotoPicker() {
-    if (previewMode || analyzing) return
+    if (!isPro) {
+      onUpgrade()
+      return
+    }
+    if (analyzing) return
     setAnalyzeError(null)
     setShowPhotoPicker(true)
   }
 
   return (
-    <>
+    <div className="plant-detail-section-card relative shrink-0 w-full overflow-hidden">
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInputChange} />
       <input ref={libraryInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoInputChange} />
 
-      <div className="health-ai-hero flex flex-col items-center gap-4 p-5 w-full text-center">
-        <span className="health-ai-hero__shine" aria-hidden />
-        <div className="relative z-10 flex flex-col items-center gap-3 w-full">
-          <Sparkles size={22} strokeWidth={2.5} className="text-white drop-shadow-sm" aria-hidden />
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
-            {t('health.aiScanTitle')}
+      <div className="flex flex-col gap-4 p-4">
+        <div className="flex items-center justify-between gap-3 w-full min-w-0">
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
+            {t('health.title')}
           </span>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: 'rgba(255,255,255,0.92)', lineHeight: 1.45, maxWidth: 280 }}>
-            {t('health.aiScanSubtitle')}
-          </p>
-
-          <div className="rounded-2xl border-2 border-black bg-white/15 backdrop-blur-sm p-3 flex items-center gap-4 w-full max-w-[320px]">
-            <HealthGauge score={healthScore} />
-            <div className="flex flex-col gap-1 min-w-0 text-left">
-              <span
-                className="inline-flex self-start rounded-full px-2.5 py-0.5 border border-black"
-                style={{
-                  background: checkedToday ? DETAIL_MINT_LIGHT : '#FFF4E5',
-                  fontFamily: 'Geist, sans-serif',
-                  fontWeight: 700,
-                  fontSize: 10,
-                  color: checkedToday ? '#047857' : '#92400E',
-                }}
-              >
-                {checkedToday ? t('health.checkedTodayShort') : t('health.notCheckedToday')}
-              </span>
-              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#fff', lineHeight: 1.4 }}>
-                {healthScoreSummary(healthScore, latestLog?.diagnosis ?? null, t)}
-              </span>
-            </div>
-          </div>
-
           <button
             type="button"
             onClick={openPhotoPicker}
-            disabled={analyzing || previewMode}
-            className="relative z-10 w-full max-w-[320px] flex items-center justify-center gap-2 rounded-full border-2 border-black px-6 py-3.5 cursor-pointer active:scale-[0.98] transition-transform disabled:opacity-70 disabled:cursor-not-allowed"
-            style={{ background: '#fff', boxShadow: '3px 3px 0px 0px rgba(0,0,0,1)' }}
+            disabled={analyzing}
+            className="settings-chip-btn shrink-0 max-w-[55%] truncate"
           >
-            <Sparkles size={16} strokeWidth={2.5} aria-hidden className="shrink-0 text-[#4285F4]" />
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>
-              {analyzing ? t('health.analyzing') : t('health.checkHealthWithAi')}
-            </span>
+            {t('health.scanToCheck')}
           </button>
-
-          {analyzeError && (
-            <p className="relative z-10" style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#FEE2E2' }} role="alert">
-              {analyzeError}
-            </p>
-          )}
         </div>
-      </div>
 
-      {latestLog?.treatmentNotes && (
-        <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-2 w-full">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>
-            {t('health.latestCareAdvice')}
-          </span>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}>
-            {latestLog.treatmentNotes}
+        {isPro ? (
+          <HealthTrackerBody
+            plant={plant}
+            onOpenScan={openPhotoPicker}
+            analyzing={analyzing}
+          />
+        ) : (
+          <div className="relative min-h-[320px]">
+            <div className="pro-section-preview">
+              <HealthTrackerBody
+                plant={plant}
+                previewMode
+                onOpenScan={() => {}}
+                analyzing={false}
+              />
+            </div>
+            <ProSectionLock onUpgrade={onUpgrade} />
+          </div>
+        )}
+
+        {analyzeError && (
+          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#ff2d55' }} role="alert">
+            {analyzeError}
           </p>
-        </div>
-      )}
-
-      <div className="neo-card rounded-2xl border-2 border-black bg-white p-4 flex flex-col gap-3 w-full">
-        <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>
-          {t('health.timeline')}
-        </span>
-        <HealthLogTimeline logs={healthLogs} onPhotoClick={onPhotoClick} />
+        )}
       </div>
 
       {showPhotoPicker && (
@@ -315,54 +324,6 @@ function HealthTrackerBody({
           }}
         />
       )}
-    </>
-  )
-}
-
-export default function PlantHealthTracker({
-  plant,
-  isPro,
-  onUpgrade,
-  onSaveHealthLog,
-  onPhotoClick,
-}: PlantHealthTrackerProps) {
-  const { t } = useTranslation()
-  const latestLog = isPro ? getLatestHealthLog(plant.healthLogs) : PREVIEW_HEALTH_LOG
-  const checkedToday = isPro ? isHealthCheckedToday(latestLog) : true
-  const healthScore = latestLog?.healthScore ?? null
-
-  return (
-    <div className="neo-card relative rounded-3xl shrink-0 w-full overflow-hidden">
-      <div className="flex flex-col gap-4 p-4">
-        <div className="flex items-center justify-between gap-3 w-full min-w-0">
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
-            {t('health.title')}
-          </span>
-          <span
-            className="shrink-0 rounded-full px-3 py-1 border-2 border-black max-w-[55%] truncate"
-            style={{
-              background: checkedToday ? DETAIL_MINT_LIGHT : '#FFF4E5',
-              fontFamily: 'Geist, sans-serif',
-              fontWeight: 700,
-              fontSize: 11,
-              color: checkedToday ? '#047857' : '#92400E',
-            }}
-          >
-            {checkedToday && healthScore != null ? t('health.checkedToday', { score: healthScore }) : t('health.scanToCheck')}
-          </span>
-        </div>
-
-        {isPro ? (
-          <HealthTrackerBody plant={plant} onSaveHealthLog={onSaveHealthLog} onPhotoClick={onPhotoClick} />
-        ) : (
-          <div className="relative min-h-[420px]">
-            <div className="pro-section-preview">
-              <HealthTrackerBody plant={plant} previewMode onSaveHealthLog={() => {}} />
-            </div>
-            <ProSectionLock onUpgrade={onUpgrade} />
-          </div>
-        )}
-      </div>
     </div>
   )
 }

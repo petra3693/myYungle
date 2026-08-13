@@ -32,7 +32,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
     return (
       <div
         className="flex flex-col items-center justify-center gap-4 min-h-dvh px-6 text-center"
-        style={{ background: '#F7F7F7', fontFamily: 'Geist, sans-serif' }}
+        style={{ background: '#EFEFEF', fontFamily: 'Geist, sans-serif' }}
       >
         <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000' }}>
           MYJUNGLE HIT A SNAG

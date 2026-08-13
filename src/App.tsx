@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Capacitor } from '@capacitor/core'
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor'
-import { Camera, ChevronRight, Sparkles, Sun } from 'lucide-react'
+import { AlertTriangle, Camera, Check, ChevronRight, PawPrint, Sparkles, Star, Sun } from 'lucide-react'
 import LanguageSelector from '@/components/LanguageSelector'
 import i18n, { getAppLanguage } from '@/i18n'
 import { formatWateringDayTags, fullDayLabel, shortDayLabel, translateRoomLabel } from '@/i18n/labels'
@@ -18,8 +18,12 @@ import {
   isPlantDueToday,
 } from '@/lib/wateringDue'
 import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, type StorageResult } from '@/lib/plantStorage'
+import { sortPlantsForHomeList } from '@/lib/plantSort'
+import { useFlipReorder } from '@/hooks/useFlipReorder'
 import { clearAllPhotos, deletePlantPhotos, getPhotoBlob } from '@/lib/photoStore'
 import PlantPhoto from '@/components/PlantPhoto'
+import WateringBanner from '@/components/watering-banner'
+import WateringScreen from '@/components/WateringScheduleScreen'
 import PlantHealthTracker from '@/components/plant-health-tracker'
 import PhotoActionSheet from '@/components/photo-action-sheet'
 import type { HealthLogSubmitData } from '@/lib/health-log'
@@ -30,7 +34,6 @@ import svgPaths from '@/imports/NewDesign2-1/svg-cm3nd9oy62'
 import svgPaths2 from '@/imports/MyjungleSettimgs-2/svg-u9kpmn74e6'
 import svgAdd from '@/imports/MyjungleAddPlant/svg-fer892chf7'
 import svgDetail from '@/imports/MyjungleAddPlant-1/svg-op7ttlkxgr'
-import svgBatch from '@/imports/MyjungleBatchChecklist/svg-yfmp6xfqu5'
 import LegalDocumentScreen, { type LegalDocument } from '@/components/LegalDocumentScreen'
 import ProScreen from '@/components/ProScreen'
 import svgSettings from '@/imports/MyjungleSettings/svg-doomn8mxv7'
@@ -47,7 +50,7 @@ type TabScreen = 'home' | 'add' | 'watering' | 'settings'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const GREEN = '#00FF66'
-const BG = '#F7F7F7'
+const BG = '#EFEFEF'
 const BLACK = '#000000'
 const RED = '#FF2D55'
 const WATERED_BG = '#D9FFE8'
@@ -155,8 +158,8 @@ function normalizePlant(raw: Plant & { watered?: boolean; lastWatered?: string |
 
   return {
     id: String(raw.id ?? Date.now()),
-    name: raw.name?.trim() || 'Unnamed Plant',
-    room: raw.room?.trim() || 'Unknown',
+    name: raw.name?.trim() || i18n.t('plantDetails.unnamedPlant'),
+    room: raw.room?.trim() || i18n.t('rooms.unknown'),
     careNote: raw.careNote ?? '',
     wateringDays: scheduleToIndices(scheduleDays),
     scheduleDays,
@@ -178,6 +181,8 @@ function normalizePlant(raw: Plant & { watered?: boolean; lastWatered?: string |
       ? raw.healthLogs.map(normalizeHealthLog).filter((log): log is Plant['healthLogs'][number] => log != null)
       : [],
     isWateredToday: raw.isWateredToday ?? raw.watered ?? false,
+    isToxicToPets: raw.isToxicToPets === true ? true : raw.isToxicToPets === false ? false : null,
+    toxicityNotes: typeof raw.toxicityNotes === 'string' ? raw.toxicityNotes : '',
   }
 }
 
@@ -276,16 +281,20 @@ function getLightNeedFills(need: LightNeed): number {
   return need === 'High' ? 3 : need === 'Medium' ? 2 : 1
 }
 
-function DetailSunIcon({ filled, size = 12 }: { filled: boolean; size?: number }) {
+function DetailStarIcon({ filled, size = 14 }: { filled: boolean; size?: number }) {
   return (
-    <Sun
+    <Star
       size={size}
-      strokeWidth={2.25}
+      strokeWidth={2}
       aria-hidden
-      className={filled ? 'text-[#00FF66] shrink-0' : 'text-[#C4C4C4] shrink-0'}
-      fill={filled ? GREEN : 'none'}
+      className={filled ? 'shrink-0 text-[#FFB800] fill-[#FFB800]' : 'shrink-0 text-[#C4C4C4]'}
     />
   )
+}
+
+function formatLastWateredShort(iso: string | null): string {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 }
 
 function getTodayDayIndex(): number { return (new Date().getDay() + 6) % 7 }
@@ -297,16 +306,6 @@ function useTodayDayIndex(): number | null {
   return todayIdx
 }
 
-function getPlantsForDay(plants: Plant[], dayIdx: number, referenceDate = new Date()): Plant[] {
-  return plants.filter((p) => isPlantDueOnDay(p, dayIdx, referenceDate))
-}
-
-function getWateringDayOrder(globalWaterSchedule: string[], plants: Plant[], todayIdx: number): number[] {
-  const fromGlobal = scheduleToIndices(globalWaterSchedule)
-  const fromPlants = [...new Set(plants.flatMap((p) => p.wateringDays))]
-  const allDays = [...new Set([...fromGlobal, ...fromPlants, todayIdx])].sort((a, b) => a - b)
-  return [todayIdx, ...allDays.filter((d) => d !== todayIdx)]
-}
 function todayISO() { return new Date().toISOString().split('T')[0] }
 function formatDate(iso: string) { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
 
@@ -404,7 +403,7 @@ function TabBar({
     { id: 'settings', label: t('tabs.settings'), path: svgPaths2.p1eebb470, stroke: false },
   ]
   return (
-    <nav className="neo-tab-bar fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-black" aria-label={t('common.mainNav')}>
+    <nav className="neo-tab-bar fixed bottom-0 left-0 right-0 z-50 border-t-2 border-black" aria-label={t('common.mainNav')}>
       <div className="neo-tab-bar-inner">
       {tabs.map((tabItem) => {
         const on = tabItem.id === active
@@ -693,7 +692,12 @@ function PlantCard({ plant, onTap, onDeleteRequest, onWater, todayIdx, swipeRese
       {/* Card slides left to reveal delete */}
       <div
         className="flex items-center gap-3 px-4 py-3 cursor-pointer relative w-full"
-        style={{ background: cardBg, transform: swiped ? 'translateX(-95px)' : 'none', transition: 'transform .22s cubic-bezier(0.4,0,0.2,1)', zIndex: 1 }}
+        style={{
+          background: cardBg,
+          transform: swiped ? 'translateX(-95px)' : 'none',
+          transition: 'transform .22s cubic-bezier(0.4,0,0.2,1), background .28s ease',
+          zIndex: 1,
+        }}
         onTouchStart={(e) => { startX.current = e.touches[0].clientX }}
         onTouchEnd={(e) => {
           const dx = startX.current - e.changedTouches[0].clientX
@@ -755,6 +759,12 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
   const { t } = useTranslation()
   const [plantToDelete, setPlantToDelete] = useState<Plant | null>(null)
   const [swipeResetTokens, setSwipeResetTokens] = useState<Record<string, number>>({})
+  const sortedPlants = useMemo(
+    () => sortPlantsForHomeList(plants, { todayIdx }),
+    [plants, todayIdx],
+  )
+  const sortedPlantIds = useMemo(() => sortedPlants.map((p) => p.id), [sortedPlants])
+  const plantListRef = useFlipReorder(sortedPlantIds)
   const needsWater = plants.filter((p) => isPlantDueToday(p, todayIdx) && !p.isWateredToday)
   const limitReached = isFreeTierLimitReached(plants.length, settings.isPro)
 
@@ -798,22 +808,17 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto home-dashboard-scroll">
         {/* Alert banner */}
         <div className="px-5 pt-4 pb-3">
-          <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 border-black" style={{ background: GREEN }}>
-            <SvgDroplet24 />
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000', lineHeight: 1.2 }}>
-              {t('home.plantsNeedWater', { count: needsWater.length })}
-            </span>
-          </div>
+          <WateringBanner count={needsWater.length} />
         </div>
 
         {/* Weekly strip */}
         <WeeklyStrip plants={plants} todayIdx={todayIdx} />
 
         {/* Specimens */}
-        <div className="px-5">
+        <div className="px-5 home-dashboard-content">
           <div className="flex items-center justify-between mb-3">
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
               {t('home.mySpecimens', { count: plants.length })}
@@ -821,22 +826,25 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
           </div>
 
           {plants.length === 0 ? (
-            <div className="flex flex-col items-center py-12 opacity-40">
-              <SvgDrop />
-              <div style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', marginTop: 12 }}>{t('home.noPlants')}</div>
+            <div className="home-empty-state">
+              <div className="home-empty-state__icon" aria-hidden>
+                <SvgDrop />
+              </div>
+              <p className="home-empty-state__text">{t('home.noPlants')}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 w-full">
-              {plants.map((p) => (
-                <PlantCard
-                  key={p.id}
-                  plant={p}
-                  onTap={() => onSelectPlant(p)}
-                  onDeleteRequest={() => requestDeletePlant(p)}
-                  onWater={() => onWaterPlant(p.id)}
-                  todayIdx={todayIdx}
-                  swipeResetToken={swipeResetTokens[p.id] ?? 0}
-                />
+            <div ref={plantListRef} className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 w-full">
+              {sortedPlants.map((p) => (
+                <div key={p.id} data-flip-id={p.id} className="min-w-0">
+                  <PlantCard
+                    plant={p}
+                    onTap={() => onSelectPlant(p)}
+                    onDeleteRequest={() => requestDeletePlant(p)}
+                    onWater={() => onWaterPlant(p.id)}
+                    todayIdx={todayIdx}
+                    swipeResetToken={swipeResetTokens[p.id] ?? 0}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -853,7 +861,7 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
           <button
             type="button"
             onClick={limitReached ? onShowPro : onGoAdd}
-            className={`w-full flex items-center justify-center rounded-full border-2 border-black mb-4 cursor-pointer transition-all min-h-[52px] py-3.5 px-6 ${
+            className={`home-add-plant-btn w-full flex items-center justify-center rounded-full border-2 border-black cursor-pointer transition-all min-h-[52px] py-3.5 px-6 ${
               limitReached ? 'btn-primary bg-[#EFEFEF]' : 'btn-primary btn-green'
             }`}
             style={{ background: limitReached ? '#EFEFEF' : GREEN }}
@@ -1293,6 +1301,99 @@ function NeedLevelSegmentPicker<T extends string>({
   )
 }
 
+type PetToxicityChoice = 'unknown' | 'safe' | 'toxic'
+
+function petToxicityFromBoolean(value: boolean | null | undefined): PetToxicityChoice {
+  if (value === true) return 'toxic'
+  if (value === false) return 'safe'
+  return 'unknown'
+}
+
+function booleanFromPetToxicity(choice: PetToxicityChoice): boolean | null {
+  if (choice === 'toxic') return true
+  if (choice === 'safe') return false
+  return null
+}
+
+function PetToxicityPicker({
+  value,
+  onChange,
+  notes,
+  onNotesChange,
+}: {
+  value: PetToxicityChoice
+  onChange: (value: PetToxicityChoice) => void
+  notes: string
+  onNotesChange: (notes: string) => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="flex flex-col gap-2 w-full">
+      <NeedLevelSegmentPicker
+        label={t('toxicity.question')}
+        value={value}
+        options={[
+          { value: 'unknown' as PetToxicityChoice, label: t('toxicity.unknown'), indicatorCount: 0 },
+          { value: 'safe' as PetToxicityChoice, label: t('toxicity.safe'), indicatorCount: 0 },
+          { value: 'toxic' as PetToxicityChoice, label: t('toxicity.toxic'), indicatorCount: 0 },
+        ]}
+        onChange={onChange}
+        renderIndicator={() => null}
+      />
+      {(value === 'toxic' || notes.trim()) && (
+        <div className="flex flex-col gap-1.5 w-full shrink-0">
+          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
+            {t('toxicity.notesLabel')}
+          </span>
+          <div className="neo-input rounded-[12px] w-full" style={{ minHeight: 72 }}>
+            <textarea
+              value={notes}
+              onChange={(e) => onNotesChange(e.target.value.slice(0, 200))}
+              placeholder={t('toxicity.notesPlaceholder')}
+              className="w-full h-full min-h-[72px] p-[14px] outline-none bg-transparent rounded-[12px] resize-none"
+              style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: notes.trim() ? '#000' : '#888' }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PetToxicityBadge({
+  isToxicToPets,
+  toxicityNotes,
+}: {
+  isToxicToPets: boolean | null
+  toxicityNotes?: string
+}) {
+  const { t } = useTranslation()
+  const status = isToxicToPets === true ? 'toxic' : isToxicToPets === false ? 'safe' : 'unknown'
+  const label =
+    status === 'toxic'
+      ? t('toxicity.badgeToxic')
+      : status === 'safe'
+        ? t('toxicity.badgeSafe')
+        : t('toxicity.badgeUnknown')
+
+  return (
+    <div className={`pet-toxicity-badge pet-toxicity-badge--${status}`} role="status">
+      {status === 'toxic' ? (
+        <AlertTriangle size={18} strokeWidth={2.5} aria-hidden className="shrink-0" />
+      ) : (
+        <PawPrint size={18} strokeWidth={2.5} aria-hidden className="shrink-0" />
+      )}
+      <div className="pet-toxicity-badge__copy min-w-0">
+        <span className="pet-toxicity-badge__title break-words">{label}</span>
+        {toxicityNotes?.trim() && (
+          <p className="pet-toxicity-badge__notes break-words">{toxicityNotes}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Screen 5: Add New ───────────────────────────────────────────────────────
 
 function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobalSchedule }: {
@@ -1318,6 +1419,9 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   const [saving, setSaving] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [analyzeNotice, setAnalyzeNotice] = useState<string | null>(null)
+  const [petToxicity, setPetToxicity] = useState<PetToxicityChoice>('unknown')
+  const [toxicityNotes, setToxicityNotes] = useState('')
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const canAdd = canAddMorePlants(plants.length, settings.isPro)
@@ -1340,11 +1444,13 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     if (file) handlePhotoFile(file)
     e.target.value = ''
     setAnalyzeError(null)
+    setAnalyzeNotice(null)
   }
 
   async function handleAnalyzeWithAi() {
     if (!photo || analyzing) return
     setAnalyzeError(null)
+    setAnalyzeNotice(null)
     setAnalyzing(true)
     try {
       const preferredDays = dayNamesFromIndices(globalIndices)
@@ -1352,6 +1458,9 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
       if (!result.ok) {
         setAnalyzeError(result.error)
         return
+      }
+      if (result.data.confidence === 'low') {
+        setAnalyzeNotice(t('analyze.lowConfidence'))
       }
       const mappedNeed = mapWaterNeedToForm(result.data.waterNeed)
       const { days: suggestedDays, isCustomSchedule: customSchedule } = mapRecommendedDaysToIndices(
@@ -1369,6 +1478,12 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
       setWateringFrequency(frequency)
       setAiHighlightedDays(suggestedDays)
       setAiHighlightedFrequency(frequency !== 'weekly' ? frequency : null)
+      if (result.data.isToxicToPets !== null) {
+        setPetToxicity(petToxicityFromBoolean(result.data.isToxicToPets))
+      }
+      if (result.data.toxicityNotes) {
+        setToxicityNotes(result.data.toxicityNotes.slice(0, 200))
+      }
     } catch (error) {
       console.error('[myJungle] Plant analysis error:', error)
       setAnalyzeError(
@@ -1431,7 +1546,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
       const newPlant: Plant = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         name: name.trim(),
-        room: room.trim() || 'Unknown',
+        room: room.trim() || t('rooms.unknown'),
         careNote: note,
         wateringDays: scheduleToIndices(scheduleDays),
         scheduleDays,
@@ -1447,6 +1562,8 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
         checkIns: [],
         healthLogs: [],
         isWateredToday: false,
+        isToxicToPets: booleanFromPetToxicity(petToxicity),
+        toxicityNotes: toxicityNotes.trim(),
       }
 
       onSave(newPlant)
@@ -1510,7 +1627,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
           {/* Photo uploader */}
           <div className="neo-card rounded-3xl w-full shrink-0">
             <div className="flex flex-col items-center gap-4 p-4">
-              <div className="bg-[#F7F7F7] rounded-full shrink-0 size-20 overflow-hidden border-2 border-black flex items-center justify-center">
+              <div className="bg-white rounded-full shrink-0 size-20 overflow-hidden border-2 border-black flex items-center justify-center">
                 {photo ? (
                   <img src={photo} alt={t('photo.selectedPlant')} className="block w-full h-full object-cover" />
                 ) : (
@@ -1563,6 +1680,11 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
                 {analyzeError}
               </p>
             )}
+            {analyzeNotice && !analyzeError && (
+              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#9a7b00' }} role="status">
+                {analyzeNotice}
+              </p>
+            )}
           </div>
 
           {/* Plant name */}
@@ -1612,6 +1734,13 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
               />
             </div>
           </div>
+
+          <PetToxicityPicker
+            value={petToxicity}
+            onChange={setPetToxicity}
+            notes={toxicityNotes}
+            onNotesChange={setToxicityNotes}
+          />
 
           {/* Water & light */}
           <div className="flex flex-col gap-4 w-full shrink-0">
@@ -1987,7 +2116,7 @@ function DeletePlantConfirmModal({
 
 function GrowthStatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="growth-stat-card flex-1">
+    <div className="plant-detail-stat-cell">
       <span className="detail-stat-label">{label}</span>
       <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000', lineHeight: 1.1 }}>{value}</span>
       {sub && <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 11, color: '#888' }}>{sub}</span>}
@@ -2015,7 +2144,7 @@ function GrowthChart({ points }: { points: { label: string; value: number }[] })
   const polyline = coords.map((c) => `${c.x},${c.y}`).join(' ')
 
   return (
-    <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-3 w-full">
+    <div className="plant-detail-chart w-full">
       <div className="flex items-center justify-between mb-2">
         <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>{t('growth.growthOverTime')}</span>
         <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 11, color: '#888' }}>{t('growth.unitCm')}</span>
@@ -2070,7 +2199,7 @@ function PhotoTimelineStrip({
             <PlantPhoto photo={entry.photo} alt="" className="w-full h-full object-cover" />
             <div className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1.5">
               <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 10, color: '#fff' }}>
-                {formatTimelineChip(entry.date, t)} · {entry.heightCm}{t('growth.unitCm')}
+                {formatTimelineChip(entry.date, t)}
               </span>
             </div>
           </button>
@@ -2103,13 +2232,13 @@ function GrowthHistoryContent({
 
   return (
     <div className="flex flex-col gap-3 w-full">
-      <div className="grid grid-cols-3 gap-2 w-full">
+      <div className="plant-detail-stats-row">
         <GrowthStatCard label={t('growth.daysTracked')} value={`${ageDays}`} sub={t('growth.plantAge')} />
         <GrowthStatCard label={t('growth.totalGrowth')} value={`+${heights.delta} ${t('growth.unitCm')}`} sub={`${heights.start} → ${heights.current} ${t('growth.unitCm')}`} />
         <GrowthStatCard label={t('growth.waterings')} value={`${wateringCount}`} sub={t('growth.consistent', { percent: consistency })} />
       </div>
 
-      <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-3 w-full">
+      <div className="plant-detail-chart w-full">
         <div className="flex items-center justify-between mb-2">
           <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000', textTransform: 'uppercase' }}>{t('growth.consistencyScore')}</span>
           <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: GREEN }}>{consistency}%</span>
@@ -2146,7 +2275,7 @@ function GrowthHistorySection({
 }) {
   const { t } = useTranslation()
   return (
-    <div className="neo-card relative rounded-3xl shrink-0 w-full overflow-hidden">
+    <div className="plant-detail-section-card relative shrink-0 w-full overflow-hidden">
       <div className="flex flex-col gap-4 p-4">
         <div className="flex items-center justify-between gap-3 w-full">
           <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}>
@@ -2198,6 +2327,8 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
   const [editIsCustomSchedule, setEditIsCustomSchedule] = useState(plant.isCustomSchedule)
   const [editWateringFrequency, setEditWateringFrequency] = useState<WateringFrequency>(plant.wateringFrequency ?? 'weekly')
   const [editLightNeed, setEditLightNeed] = useState<LightNeed>(plant.lightNeed ?? 'Medium')
+  const [editPetToxicity, setEditPetToxicity] = useState<PetToxicityChoice>(petToxicityFromBoolean(plant.isToxicToPets))
+  const [editToxicityNotes, setEditToxicityNotes] = useState(plant.toxicityNotes ?? '')
   const [growthNote, setGrowthNote] = useState('')
   const [growthHeight, setGrowthHeight] = useState('')
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -2206,8 +2337,6 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
   const needsWater = isPlantDueToday(plant, todayIdx) && !plant.isWateredToday
   const waterFills = getWaterNeedFills(plant.waterNeed)
   const lightFills = getLightNeedFills(plant.lightNeed ?? 'Medium')
-  const primaryDay = plant.wateringDays[0]
-  const onSchedule = !needsWater
 
   async function handlePhotoFile(file: File, asGrowthLog = false) {
     try {
@@ -2273,6 +2402,8 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
       wateringFrequency: editWateringFrequency,
       wateringCycleAnchor: nextAnchor,
       lightNeed: editLightNeed,
+      isToxicToPets: booleanFromPetToxicity(editPetToxicity),
+      toxicityNotes: editToxicityNotes.trim(),
     })
     setShowEdit(false)
   }
@@ -2315,6 +2446,8 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
     setEditIsCustomSchedule(plant.isCustomSchedule)
     setEditWateringFrequency(plant.wateringFrequency ?? 'weekly')
     setEditLightNeed(plant.lightNeed ?? 'Medium')
+    setEditPetToxicity(petToxicityFromBoolean(plant.isToxicToPets))
+    setEditToxicityNotes(plant.toxicityNotes ?? '')
     setShowEdit(true)
   }
 
@@ -2362,10 +2495,11 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
         <div className="flex-1 overflow-y-auto w-full pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
           {/* Full-bleed hero photo */}
           <div
-            className="relative shrink-0 w-full overflow-hidden"
-            style={{ height: 'calc(219px + env(safe-area-inset-top, 0px))' }}
+            className="plant-detail-hero relative shrink-0 w-full overflow-hidden"
+            style={{ height: 'calc(240px + env(safe-area-inset-top, 0px))' }}
           >
             <PlantPhoto photo={plant.photo} alt={plant.name} className="absolute inset-0 w-full h-full object-cover" />
+            <div className="plant-detail-hero__scrim absolute inset-0 pointer-events-none" aria-hidden />
             <button
               type="button"
               onClick={onBack}
@@ -2382,100 +2516,96 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                 <path clipRule="evenodd" d={svgDetail.p3b43000} fill="white" fillRule="evenodd" />
               </svg>
             </button>
-            <div className="absolute bottom-3 left-4 z-10">
-              <span className="detail-tag detail-tag-filled">{plant.name}</span>
+            <div className="absolute bottom-4 left-4 z-10 max-w-[70%]">
+              <h1 className="plant-detail-hero__name">{plant.name.toUpperCase()}</h1>
             </div>
+            {plant.isWateredToday && (
+              <div className="plant-detail-hero__watered absolute z-10 bottom-4 right-4">
+                <Check size={14} strokeWidth={3} aria-hidden />
+                <span>{t('plantDetails.watered')}</span>
+              </div>
+            )}
+            {!plant.isWateredToday && needsWater && (
+              <button
+                type="button"
+                onClick={onMarkWatered}
+                className="plant-detail-hero__watered plant-detail-hero__watered--action absolute z-10 bottom-4 right-4 cursor-pointer active:scale-95"
+              >
+                <span>{t('plantDetails.markWatered')}</span>
+              </button>
+            )}
           </div>
-          <div className="w-full border-b-2 border-black shrink-0" aria-hidden />
 
           <div className="content-stretch flex flex-col gap-4 items-start px-5 pt-4 pb-6 relative w-full">
 
-            {/* Species info card */}
-            <div className="neo-card relative rounded-3xl shrink-0 w-full">
-              <div className="flex flex-col gap-4 p-4">
-                <div className="flex items-start justify-between gap-3 w-full">
-                  <div className="flex flex-col gap-2 min-w-0">
-                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>{plant.name}</span>
-                    <div className="flex flex-wrap gap-2">
-                      {plant.isCustomSchedule ? (
-                        <button type="button" className="detail-tag detail-tag-filled cursor-default">{t('plantDetails.customSchedule')}</button>
-                      ) : null}
-                      <button type="button" className="detail-tag detail-tag-outline cursor-default">{translateRoomLabel(t, plant.room).toUpperCase()}</button>
-                      {primaryDay != null && (
-                        <button type="button" className="detail-tag detail-tag-filled cursor-default">{shortDayLabel(t, primaryDay)}</button>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={openEditModal}
-                    className="flex items-center justify-center shrink-0 size-9 rounded-full border-2 border-black bg-white cursor-pointer active:scale-95"
-                    aria-label={t('plantDetails.edit')}
-                  >
-                    <svg fill="none" height="15" viewBox="0 0 16 15" width="16">
-                      <path d={svgDetail.p3c709780} fill="black" />
-                    </svg>
-                  </button>
-                </div>
+            {/* Location & schedule tags */}
+            <div className="flex flex-wrap gap-2 items-center w-full">
+              <span className="detail-tag detail-tag-outline">{translateRoomLabel(t, plant.room).toUpperCase()}</span>
+              {plant.wateringDays.map((dayIdx) => (
+                <span key={dayIdx} className="detail-tag detail-tag-filled">
+                  {shortDayLabel(t, DAYS[dayIdx])}
+                </span>
+              ))}
+              {plant.isCustomSchedule && (
+                <span className="detail-tag detail-tag-outline">{t('plantDetails.customSchedule')}</span>
+              )}
+              <button
+                type="button"
+                onClick={openEditModal}
+                className="ml-auto flex items-center justify-center shrink-0 size-9 rounded-full border-2 border-black bg-white cursor-pointer active:scale-95"
+                aria-label={t('plantDetails.edit')}
+              >
+                <svg fill="none" height="15" viewBox="0 0 16 15" width="16" aria-hidden>
+                  <path d={svgDetail.p3c709780} fill="black" />
+                </svg>
+              </button>
+            </div>
 
-                <div className="grid grid-cols-2 gap-3 w-full">
-                  <div className="detail-mini-card bg-white">
-                    <span className="detail-stat-label">{t('plantDetails.waterLevel')}</span>
-                    <div className="flex flex-col gap-1.5 min-w-0">
-                      <div className="flex gap-1 items-end">
-                        {[0, 1, 2].map((i) => (
-                          <SvgDropSmall key={i} color={GREEN} filled={i < waterFills} />
-                        ))}
-                      </div>
-                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000', lineHeight: 1.2 }}>
-                        {formatWaterLevelLabel(plant.waterNeed, t)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="detail-mini-card bg-white">
-                    <span className="detail-stat-label">{t('plantDetails.lightLevel')}</span>
-                    <div className="flex flex-col gap-1.5 min-w-0">
-                      <div className="flex gap-1 items-end">
-                        {[0, 1, 2].map((i) => (
-                          <DetailSunIcon key={i} filled={i < lightFills} />
-                        ))}
-                      </div>
-                      <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000', lineHeight: 1.2 }}>
-                        {lightLevelLabel(plant.lightNeed ?? 'Medium', t)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="detail-mini-card bg-white col-span-2">
-                    <span className="detail-stat-label">{t('plantDetails.lastWatered')}</span>
-                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
-                      {daysSinceLabel(plant.lastWateredAt, t)}
-                    </span>
-                  </div>
-                </div>
+            <PetToxicityBadge
+              isToxicToPets={plant.isToxicToPets ?? null}
+              toxicityNotes={plant.toxicityNotes}
+            />
 
-                <div className="detail-mini-card w-full" style={{ background: DETAIL_GRAY_LIGHT }}>
-                  <span className="detail-stat-label">{t('plantDetails.careNote')}</span>
-                  <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000', lineHeight: 1.5 }}>
-                    {plant.careNote || t('plantDetails.noCareNotes')}
-                  </p>
+            {/* Plant metrics grid */}
+            <div className="plant-detail-metrics-grid w-full">
+              <div className="plant-detail-metric-cell">
+                <span className="detail-stat-label">{t('plantDetails.waterLevel')}</span>
+                <div className="flex gap-1 items-end">
+                  {[0, 1, 2].map((i) => (
+                    <SvgDropSmall key={i} color={GREEN} filled={i < waterFills} />
+                  ))}
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full shrink-0" style={{ background: onSchedule ? GREEN : RED }} aria-hidden />
-                  <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: '#000' }}>
-                    {onSchedule ? t('plantDetails.onSchedule') : t('plantDetails.needsWater')}
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000', lineHeight: 1.2 }}>
+                  {formatWaterLevelLabel(plant.waterNeed, t)}
+                </span>
+              </div>
+              <div className="plant-detail-metric-cell">
+                <span className="detail-stat-label">{t('plantDetails.lightLevel')}</span>
+                <div className="flex gap-0.5 items-center">
+                  {[0, 1, 2].map((i) => (
+                    <DetailStarIcon key={i} filled={i < lightFills} />
+                  ))}
+                </div>
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000', lineHeight: 1.2 }}>
+                  {lightLevelLabel(plant.lightNeed ?? 'Medium', t)}
+                </span>
+              </div>
+              <div className="plant-detail-metric-cell">
+                <span className="detail-stat-label">{t('plantDetails.lastWatered')}</span>
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 16, color: '#000', lineHeight: 1.2 }}>
+                  {daysSinceLabel(plant.lastWateredAt, t)}
+                </span>
+                {plant.lastWateredAt && (
+                  <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}>
+                    {formatLastWateredShort(plant.lastWateredAt)}
                   </span>
-                  {needsWater && (
-                    <button
-                      type="button"
-                      onClick={onMarkWatered}
-                      className="ml-auto shrink-0 rounded-full border-2 border-black px-3 py-1 cursor-pointer active:scale-95"
-                      style={{ background: GREEN, fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, color: '#000' }}
-                    >
-                      {t('plantDetails.markWatered')}
-                    </button>
-                  )}
-                </div>
+                )}
+              </div>
+              <div className="plant-detail-metric-cell">
+                <span className="detail-stat-label">{t('plantDetails.careNote')}</span>
+                <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#000', lineHeight: 1.45 }}>
+                  {plant.careNote || t('plantDetails.noCareNotes')}
+                </p>
               </div>
             </div>
 
@@ -2493,16 +2623,14 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
               isPro={isPro}
               onUpgrade={onShowPro}
               onSaveHealthLog={saveHealthLog}
-              onPhotoClick={openLightbox}
             />
 
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="btn-secondary bg-white flex w-full h-[52px] items-center justify-center rounded-full cursor-pointer active:scale-[0.98] transition-all border-2"
-              style={{ borderColor: RED }}
+              className="plant-detail-delete-btn flex w-full h-[52px] items-center justify-center rounded-full cursor-pointer active:scale-[0.98] transition-all border-2 bg-white"
             >
-              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: RED }}>{t('plantDetails.deletePlant')}</span>
+              <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: RED, textTransform: 'uppercase' }}>{t('plantDetails.deletePlant')}</span>
             </button>
           </div>
         </div>
@@ -2529,6 +2657,12 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
                 <span className="detail-stat-label">{t('plantDetails.careNote')}</span>
                 <textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={3} className="neo-input rounded-xl border-2 border-black px-3 py-2 w-full resize-none" style={{ fontFamily: 'Geist, sans-serif', fontSize: 14 }} />
               </label>
+              <PetToxicityPicker
+                value={editPetToxicity}
+                onChange={setEditPetToxicity}
+                notes={editToxicityNotes}
+                onNotesChange={setEditToxicityNotes}
+              />
               <WateringScheduleSection
                 days={editDays}
                 isCustomSchedule={editIsCustomSchedule}
@@ -2625,153 +2759,7 @@ function PlantDetailScreen({ plant, isPro, globalWaterSchedule, onBack, onDelete
   )
 }
 
-// ─── Screen 7: Watering ───────────────────────────────────────────────────────
-
-function WateringScreen({ plants, globalWaterSchedule, todayIdx, onMarkWatered, onMarkAll }: {
-  plants: Plant[]
-  globalWaterSchedule: string[]
-  todayIdx: number | null
-  onMarkWatered: (id: string) => void
-  onMarkAll: () => void
-}) {
-  const { t } = useTranslation()
-  const today = new Date()
-  const grouped: Record<number, Plant[]> = {}
-  plants.forEach((p) => {
-    p.wateringDays.forEach((d) => {
-      const dateForDay = getDateForDayIndex(d, today)
-      if (!isPlantDueOnDay(p, d, dateForDay)) return
-      if (!grouped[d]) grouped[d] = []
-      if (!grouped[d].some((x) => x.id === p.id)) grouped[d].push(p)
-    })
-  })
-
-  const todayPlantCount = todayIdx === null ? 0 : getPlantsForDay(plants, todayIdx).length
-  const orderedDays = todayIdx === null ? scheduleToIndices(globalWaterSchedule) : getWateringDayOrder(globalWaterSchedule, plants, todayIdx)
-  const waterNeedFills = (need: WaterNeed) => (need === 'Light' ? 1 : need === 'Moderate' ? 2 : 3)
-
-  return (
-    <div className="flex flex-col h-full" style={{ background: BG }}>
-      <div className="app-header shrink-0">
-        <div className="flex flex-col">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 20, color: '#000', lineHeight: 1.2 }}>{t('watering.title')}</p>
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#888' }}>
-            {t('watering.plantCount', { count: todayPlantCount })}
-          </p>
-        </div>
-      </div>
-
-      {todayPlantCount > 0 && (
-        <div className="shrink-0 px-5 pb-4">
-          <button
-            type="button"
-            onClick={onMarkAll}
-            className="btn-primary btn-green relative w-full flex items-center justify-center rounded-full border-2 border-black cursor-pointer"
-            style={{ background: GREEN, height: 48 }}
-          >
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>
-              {t('watering.markAll', { count: todayPlantCount })}
-            </span>
-          </button>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto pb-4 flex flex-col gap-5">
-        {orderedDays.map((di) => {
-          const dayPlants = grouped[di] || []
-          const isToday = todayIdx !== null && di === todayIdx
-          const dayName = fullDayLabel(t, di)
-          return (
-            <div
-              key={di}
-              className={`flex flex-col gap-[10px] mx-5 ${isToday ? 'neo-card rounded-2xl p-4 border-2 border-black' : 'px-0'}`}
-              style={isToday ? { background: `${GREEN}40` } : undefined}
-            >
-              <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000' }}>
-                  {isToday ? t('watering.todayRoutine') : t('watering.dayRoutine', { day: dayName })}
-                </p>
-                {isToday && (
-                  <span
-                    className="neo-pill inline-flex items-center px-2 py-0.5 border-2 border-black"
-                    style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 9, background: GREEN, color: '#000' }}
-                  >
-                    {shortDayLabel(t, di)}
-                  </span>
-                )}
-              </div>
-              {dayPlants.length === 0 && (
-                <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('watering.noPlantsAssigned')}</p>
-              )}
-              {dayPlants.map((p) => {
-                const fills = waterNeedFills(p.waterNeed)
-                return (
-                  <div
-                    key={p.id}
-                    className="neo-plant-card relative rounded-2xl shrink-0 w-full overflow-hidden"
-                    style={{ background: p.isWateredToday ? WATERED_BG : 'white' }}
-                  >
-                    <div className="flex items-center gap-3 px-4 py-3 w-full">
-                      <div className="shrink-0 size-[54px] rounded-full overflow-hidden border-2 border-black">
-                        <PlantPhoto alt="" photo={p.photo} className="w-full h-full object-cover" />
-                      </div>
-                      <div className="flex flex-1 flex-col gap-1 min-w-0">
-                        <p
-                          className="overflow-hidden text-ellipsis whitespace-nowrap uppercase"
-                          style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}
-                        >
-                          {p.name}
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          <div className="badge px-1.5 py-0.5" style={{ background: BG }}>
-                            <span style={{ fontSize: 9, color: '#000' }}>{translateRoomLabel(t, p.room).toUpperCase()}</span>
-                          </div>
-                          <div className="badge px-1.5 py-0.5" style={{ background: isToday ? GREEN : BG }}>
-                            <span style={{ fontSize: 9, color: '#000' }}>{isToday ? t('plantDetails.today').toUpperCase() : dayName.toUpperCase()}</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-[5px] h-4 items-end">
-                          {[0, 1, 2].map((i) => (
-                            <div key={i} className="flex items-center justify-center h-5 w-3 shrink-0">
-                              {i < fills ? (
-                                <svg fill="none" height="20" viewBox="0 0 12 20" width="12">
-                                  <path d={svgBatch.p35497c00} fill={GREEN} stroke={GREEN} strokeLinecap="round" strokeWidth="2" />
-                                </svg>
-                              ) : (
-                                <div className="h-5 w-3" />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => onMarkWatered(p.id)}
-                        className="ml-auto shrink-0 flex items-center justify-center rounded-full size-10 cursor-pointer active:scale-90 transition-all border-2 border-black"
-                        style={{ background: p.isWateredToday ? 'white' : GREEN }}
-                        aria-label={p.isWateredToday ? t('watering.watered') : t('watering.markWatered')}
-                      >
-                        {p.isWateredToday ? (
-                          <svg fill="none" height="27" viewBox="0 0 27 27" width="27">
-                            <path d={svgBatch.p64f2600} fill={GREEN} stroke="black" strokeLinecap="round" strokeWidth="2" />
-                          </svg>
-                        ) : (
-                          <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
-                            <path d={svgBatch.p2afd9fa0} stroke={BLACK} strokeLinecap="round" strokeWidth="2" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
+// ─── Screen 7: Watering — see @/components/WateringScheduleScreen.tsx ─────────
 
 // ─── Screen 8: Pro Paywall — see @/components/ProScreen.tsx ──────────────────
 
@@ -2898,18 +2886,116 @@ function NotificationSettingsPanel({
   }
 
   return (
-    <>
-      {/* Push notification */}
-      <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
-        <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>{t('notifications.pushTitle')}</p>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('notifications.pushSubtitle')}</p>
+    <div className="flex flex-col gap-3 w-full">
+      <div className="settings-card">
+        {/* Push notification */}
+        <div className="settings-card-row">
+          <div className="settings-row-copy">
+            <p className="settings-row-title">{t('notifications.pushTitle')}</p>
+            <p className="settings-row-subtitle">{t('notifications.pushSubtitle')}</p>
+          </div>
+          <SettingsToggle on={settings.pushNotifications} onToggle={handlePushToggle} ariaLabel={t('notifications.togglePush')} />
         </div>
-        <SettingsToggle on={settings.pushNotifications} onToggle={handlePushToggle} ariaLabel={t('notifications.togglePush')} />
+
+        {/* Watering reminder time */}
+        <div className="settings-card-row">
+          <div className="settings-row-copy">
+            <p className="settings-row-title">{t('notifications.reminderTime')}</p>
+            <p className="settings-row-subtitle">{t('notifications.alertAt', { tz: effectiveTz })}</p>
+          </div>
+          <label
+            htmlFor="watering-reminder-time"
+            onClick={openTimePicker}
+            className="settings-time-btn"
+          >
+            <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 16, color: '#000' }} aria-hidden>
+              {formatReminderTime(settings.reminderTime)}
+            </span>
+            <svg fill="none" height="15" viewBox="0 0 16 15" width="16" aria-hidden className="shrink-0 pointer-events-none">
+              <path d={svgSettings.p3c709780} fill="black" />
+            </svg>
+            <input
+              id="watering-reminder-time"
+              ref={timeInputRef}
+              type="time"
+              value={formatReminderTime(settings.reminderTime)}
+              onChange={handleReminderTimeChange}
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+              aria-label={t('notifications.reminderTime')}
+            />
+          </label>
+        </div>
+
+        {/* Device timezone sync */}
+        <div className="settings-card-row">
+          <div className="settings-row-copy">
+            <p className="settings-row-title">{t('notifications.timezoneSync')}</p>
+            <p className="settings-row-subtitle">
+              {settings.timezoneAutoSync
+                ? t('notifications.timezoneAutoSynced', { tz: deviceTz })
+                : t('notifications.timezoneManualValue', { tz: settings.timezone })}
+            </p>
+          </div>
+          <SettingsToggle
+            on={settings.timezoneAutoSync}
+            onToggle={() => onChange({
+              timezoneAutoSync: !settings.timezoneAutoSync,
+              timezone: settings.timezoneAutoSync ? settings.timezone : deviceTz,
+            })}
+            ariaLabel={t('notifications.toggleTimezone')}
+          />
+        </div>
+
+        {!settings.timezoneAutoSync && (
+          <div className="settings-card-row settings-card-row--stacked">
+            <select
+              value={settings.timezone}
+              onChange={(e) => onChange({ timezone: e.target.value })}
+              className="neo-input w-full min-h-[44px] rounded-xl border-2 border-black px-3 outline-none bg-white"
+              style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 14, color: '#000' }}
+            >
+              {timezoneOptions.map((tz) => (
+                <option key={tz} value={tz}>{tz}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Sound alerts */}
+        <div className="settings-card-row">
+          <div className="settings-row-copy">
+            <p className="settings-row-title">{t('notifications.soundAlerts')}</p>
+            <p className="settings-row-subtitle">{t('notifications.soundSubtitle')}</p>
+          </div>
+          <SettingsToggle
+            on={settings.soundAlerts}
+            onToggle={() => onChange({ soundAlerts: !settings.soundAlerts })}
+            ariaLabel={t('notifications.toggleSound')}
+          />
+        </div>
+
+        {/* Haptic feedback */}
+        <div className="settings-card-row">
+          <div className="settings-row-copy">
+            <p className="settings-row-title">{t('notifications.haptic')}</p>
+            <p className="settings-row-subtitle">{t('notifications.hapticSubtitle')}</p>
+          </div>
+          <SettingsToggle
+            on={settings.hapticFeedback}
+            onToggle={() => {
+              const next = !settings.hapticFeedback
+              onChange({ hapticFeedback: next })
+              if (next && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+                navigator.vibrate(10)
+              }
+            }}
+            ariaLabel={t('notifications.toggleHaptic')}
+          />
+        </div>
       </div>
 
       {permissionDenied && (
-        <div className="neo-card rounded-2xl border-2 border-black bg-white p-3 flex flex-col gap-2">
+        <div className="settings-card p-3 flex flex-col gap-2">
           <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 13, color: RED, lineHeight: 1.4 }}>
             {t('notifications.blocked')}
           </p>
@@ -2924,116 +3010,17 @@ function NotificationSettingsPanel({
         </div>
       )}
 
-      {/* Watering reminder time */}
-      <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
-        <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>{t('notifications.reminderTime')}</p>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('notifications.alertAt', { tz: effectiveTz })}</p>
-        </div>
-        <label
-          htmlFor="watering-reminder-time"
-          onClick={openTimePicker}
-          className="relative bg-white border-2 border-black flex items-center justify-center gap-2 min-w-[100px] min-h-[44px] px-4 py-2 rounded-full shrink-0 h-11 whitespace-nowrap cursor-pointer active:scale-[0.98]"
-        >
-          <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 16, color: '#000' }} aria-hidden>
-            {formatReminderTime(settings.reminderTime)}
-          </span>
-          <svg fill="none" height="15" viewBox="0 0 16 15" width="16" aria-hidden className="shrink-0 pointer-events-none">
-            <path d={svgSettings.p3c709780} fill="black" />
-          </svg>
-          <input
-            id="watering-reminder-time"
-            ref={timeInputRef}
-            type="time"
-            value={formatReminderTime(settings.reminderTime)}
-            onChange={handleReminderTimeChange}
-            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-            aria-label={t('notifications.reminderTime')}
-          />
-        </label>
-      </div>
-
-      {/* Device timezone sync */}
-      <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
-        <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>{t('notifications.timezoneSync')}</p>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>
-            {settings.timezoneAutoSync
-              ? t('notifications.timezoneAutoSynced', { tz: deviceTz })
-              : t('notifications.timezoneManualValue', { tz: settings.timezone })}
-          </p>
-        </div>
-        <SettingsToggle
-          on={settings.timezoneAutoSync}
-          onToggle={() => onChange({
-            timezoneAutoSync: !settings.timezoneAutoSync,
-            timezone: settings.timezoneAutoSync ? settings.timezone : deviceTz,
-          })}
-          ariaLabel={t('notifications.toggleTimezone')}
-        />
-      </div>
-
-      {!settings.timezoneAutoSync && (
-        <div className="neo-input rounded-xl border-2 border-black w-full min-h-[44px]">
-          <select
-            value={settings.timezone}
-            onChange={(e) => onChange({ timezone: e.target.value })}
-            className="w-full h-11 px-3 bg-transparent outline-none rounded-xl"
-            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 14, color: '#000' }}
-          >
-            {timezoneOptions.map((tz) => (
-              <option key={tz} value={tz}>{tz}</option>
-            ))}
-          </select>
-        </div>
+      <button
+        type="button"
+        onClick={handleTestNotification}
+        className="settings-action-btn"
+      >
+        {t('notifications.sendTest')}
+      </button>
+      {testResult && (
+        <p className="settings-row-subtitle">{testResult}</p>
       )}
-
-      {/* Sound alerts */}
-      <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
-        <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>{t('notifications.soundAlerts')}</p>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('notifications.soundSubtitle')}</p>
-        </div>
-        <SettingsToggle
-          on={settings.soundAlerts}
-          onToggle={() => onChange({ soundAlerts: !settings.soundAlerts })}
-          ariaLabel={t('notifications.toggleSound')}
-        />
-      </div>
-
-      {/* Haptic feedback */}
-      <div className="flex gap-4 items-center py-3 w-full min-h-[44px]">
-        <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>{t('notifications.haptic')}</p>
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('notifications.hapticSubtitle')}</p>
-        </div>
-        <SettingsToggle
-          on={settings.hapticFeedback}
-          onToggle={() => {
-            const next = !settings.hapticFeedback
-            onChange({ hapticFeedback: next })
-            if (next && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-              navigator.vibrate(10)
-            }
-          }}
-          ariaLabel={t('notifications.toggleHaptic')}
-        />
-      </div>
-
-      {/* Test notification */}
-      <div className="flex flex-col gap-2 py-2 w-full">
-        <button
-          type="button"
-          onClick={handleTestNotification}
-          className="btn-secondary flex w-full min-h-[44px] items-center justify-center rounded-full border-2 border-black bg-white cursor-pointer active:scale-[0.98]"
-        >
-          <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('notifications.sendTest')}</span>
-        </button>
-        {testResult && (
-          <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}>{testResult}</p>
-        )}
-      </div>
-    </>
+    </div>
   )
 }
 
@@ -3086,9 +3073,9 @@ function FeedbackForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2 pb-3 w-full">
-      <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('feedback.intro')}</p>
+      <p className="settings-row-subtitle" style={{ color: '#888' }}>{t('feedback.intro')}</p>
       {fieldConfig.map(({ key, placeholder }) => (
-        <div key={key} className="neo-input relative rounded-2xl w-full min-h-[46px]">
+        <div key={key} className="settings-card min-h-[46px] flex items-center">
           <input
             value={fields[key]}
             onChange={(e) => {
@@ -3098,7 +3085,7 @@ function FeedbackForm() {
             }}
             placeholder={placeholder}
             disabled={submitting}
-            className="w-full h-[46px] px-5 outline-none bg-transparent rounded-2xl focus:ring-2 focus:ring-[#00FF66] focus:ring-inset disabled:opacity-60"
+            className="w-full h-[46px] px-5 outline-none bg-transparent rounded-2xl focus:ring-2 focus:ring-[#00FF66] focus:ring-inset disabled:opacity-60 placeholder:text-[#888]"
             style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}
           />
         </div>
@@ -3168,37 +3155,39 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto flex flex-col gap-6 pb-6">
+      <div className="flex-1 overflow-y-auto flex flex-col gap-6 settings-screen-scroll">
         <div className="px-5">
           <LanguageSelector />
         </div>
 
         {/* ── Notification Reminder & Routines ── */}
         <div className="flex flex-col gap-3 px-5">
-          <div className="section-header" style={{ fontSize: 14, lineHeight: 0 }}>
+          <div className="section-header" style={{ fontSize: 14, lineHeight: 1.2 }}>
             <p style={{ lineHeight: 'normal', marginBottom: 0 }}>{t('settings.notification')}</p>
             <p style={{ lineHeight: 'normal' }}>{t('settings.reminderRoutines')}</p>
           </div>
 
           {/* Weekly water schedule */}
-          <div className="flex flex-col gap-2 py-3">
-            <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>{t('settings.weeklySchedule')}</p>
-            <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 14, color: '#000' }}>{t('settings.chooseDays')}</p>
+          <div className="flex flex-col gap-2 py-1">
+            <p className="settings-inline-title">{t('settings.weeklySchedule')}</p>
+            <p className="settings-row-subtitle" style={{ color: '#000' }}>{t('settings.chooseDays')}</p>
             <div className="flex items-start justify-between w-full">
               {DAYS.map((d, i) => {
                 const on = s.globalWaterSchedule.includes(d)
                 return (
-                  <button key={d} onClick={() => toggleDay(i)}
-                    className={`neo-pill relative flex flex-col gap-1 items-center py-[10px] shrink-0 w-[44px] cursor-pointer active:scale-95 transition-all ${on ? 'option-selected' : ''}`}
-                    style={{ background: on ? undefined : 'white' }}
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => toggleDay(i)}
+                    className={`settings-day-pill ${on ? 'settings-day-pill--active' : 'settings-day-pill--inactive'}`}
                   >
                     <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{shortDayLabel(t, d)}</p>
                     {on ? (
-                      <svg fill="none" height="18" viewBox="0 0 18 18" width="18">
+                      <svg fill="none" height="18" viewBox="0 0 18 18" width="18" aria-hidden>
                         <path d={svgSettings.p2c13d500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
                       </svg>
                     ) : (
-                      <div className="size-[18px] rounded-full" />
+                      <div className="size-[18px]" aria-hidden />
                     )}
                   </button>
                 )
@@ -3215,60 +3204,32 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
         {/* ── Data & Privacy ── */}
         <div className="flex flex-col gap-3 px-5">
           <p className="section-header" style={{ fontSize: 14 }}>{t('settings.dataPrivacy')}</p>
-          <div className="neo-card rounded-2xl w-full overflow-hidden">
-            <div className="flex w-full items-center justify-between gap-3 px-3.5 py-3.5 border-b-2 border-black">
-              <p
-                className="min-w-0"
-                style={{
-                  flex: 1,
-                  marginRight: 12,
-                  fontFamily: 'Unbounded, sans-serif',
-                  fontWeight: 900,
-                  fontSize: 10,
-                  color: '#000',
-                  textTransform: 'uppercase',
-                  lineHeight: 1.3,
-                }}
-              >
-                {t('settings.exportData')}
-              </p>
+          <div className="settings-card">
+            <div className="settings-card-row">
+              <div className="settings-row-copy">
+                <p className="settings-row-title settings-row-title--compact">{t('settings.exportData')}</p>
+                <p className="settings-row-subtitle">{t('settings.exportSubtitle')}</p>
+              </div>
               <button
                 type="button"
                 onClick={onExport}
-                className="shrink-0 bg-white border-2 border-black flex gap-2 items-center px-[11px] py-[3px] rounded-full cursor-pointer active:scale-95"
-                style={{ height: 35 }}
+                className="settings-chip-btn"
               >
-                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{t('settings.export')}</p>
-                <div className="flex-none rotate-180" style={{ width: 13.28, height: 14 }}>
-                  <svg fill="none" height="14" viewBox="0 0 13.2793 14" width="13.2793" aria-hidden>
-                    <path d={svgSettings.p218111f0} fill="black" />
-                  </svg>
-                </div>
+                <span>{t('settings.export')}</span>
+                <span aria-hidden>↑</span>
               </button>
             </div>
-            <div className="flex w-full items-center justify-between gap-3 px-3.5 py-3.5">
-              <p
-                className="min-w-0"
-                style={{
-                  flex: 1,
-                  marginRight: 12,
-                  fontFamily: 'Unbounded, sans-serif',
-                  fontWeight: 900,
-                  fontSize: 10,
-                  color: RED,
-                  textTransform: 'uppercase',
-                  lineHeight: 1.3,
-                }}
-              >
-                {t('settings.resetData')}
-              </p>
+            <div className="settings-card-row">
+              <div className="settings-row-copy">
+                <p className="settings-row-title settings-row-title--compact">{t('settings.resetData')}</p>
+                <p className="settings-row-subtitle">{t('settings.resetSubtitle')}</p>
+              </div>
               <button
                 type="button"
                 onClick={onReset}
-                className="shrink-0 bg-white flex items-center px-[11px] py-[3px] rounded-full cursor-pointer active:scale-95 border-2"
-                style={{ height: 35, borderColor: RED }}
+                className="settings-chip-btn settings-chip-btn--danger"
               >
-                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: RED }}>{t('settings.reset')}</p>
+                {t('settings.reset')}
               </button>
             </div>
           </div>
@@ -3277,56 +3238,25 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
         {/* ── Legal & About ── */}
         <div className="flex flex-col gap-3 px-5">
           <p className="section-header" style={{ fontSize: 14 }}>{t('settings.legalAbout')}</p>
-          <div className="neo-card rounded-2xl w-full overflow-hidden">
+          <div className="settings-card">
             <button
               type="button"
               onClick={() => setLegalDocument('privacy')}
-              className="flex w-full items-center justify-between gap-3 px-3.5 py-3.5 border-b-2 border-black bg-white cursor-pointer active:bg-[#F7F7F7]"
+              className="settings-card-row settings-card-row--link"
             >
-              <span
-                className="min-w-0 text-left"
-                style={{
-                  flex: 1,
-                  marginRight: 12,
-                  fontFamily: 'Unbounded, sans-serif',
-                  fontWeight: 900,
-                  fontSize: 10,
-                  color: '#000',
-                  textTransform: 'uppercase',
-                  lineHeight: 1.3,
-                }}
-              >
-                {t('settings.privacyPolicy')}
-              </span>
+              <span className="settings-row-title settings-row-title--compact text-left">{t('settings.privacyPolicy')}</span>
               <ChevronRight size={18} strokeWidth={2.5} className="shrink-0 text-black" aria-hidden />
             </button>
             <button
               type="button"
               onClick={() => setLegalDocument('impressum')}
-              className="flex w-full items-center justify-between gap-3 px-3.5 py-3.5 bg-white cursor-pointer active:bg-[#F7F7F7]"
+              className="settings-card-row settings-card-row--link"
             >
-              <span
-                className="min-w-0 text-left"
-                style={{
-                  flex: 1,
-                  marginRight: 12,
-                  fontFamily: 'Unbounded, sans-serif',
-                  fontWeight: 900,
-                  fontSize: 10,
-                  color: '#000',
-                  textTransform: 'uppercase',
-                  lineHeight: 1.3,
-                }}
-              >
-                {t('settings.legalNotice')}
-              </span>
+              <span className="settings-row-title settings-row-title--compact text-left">{t('settings.legalNotice')}</span>
               <ChevronRight size={18} strokeWidth={2.5} className="shrink-0 text-black" aria-hidden />
             </button>
           </div>
-          <p
-            className="text-center w-full"
-            style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}
-          >
+          <p className="settings-row-subtitle text-center w-full">
             {t('settings.appVersion', { version: APP_VERSION })}
           </p>
         </div>
@@ -3340,28 +3270,26 @@ function SettingsScreen({ plants, settings, onSave, onExport, onReset, onClose, 
         {/* ── MY JUNGLE PRO STATUS ── */}
         <div className="flex flex-col gap-3 px-5">
           <p className="section-header" style={{ fontSize: 14 }}>{t('settings.proStatus')}</p>
-          <div className="flex flex-col gap-2 py-3 w-full">
-            {/* Free tier card */}
-            <FreeTierCard
-              title={s.isPro ? t('settings.proMember') : t('settings.freeTier')}
-              plantsUsed={plantsUsed}
-              plantsMax={plantsMax}
-              footer={
-                s.isPro
-                  ? t('settings.proFooter')
-                  : t('settings.freeFooter', { count: plantsMax - plantsUsed })
-              }
-            />
-            {/* Unlock button */}
-            {!s.isPro && (
-              <button type="button" onClick={onShowPro}
-                className="btn-primary btn-green relative flex items-center justify-center rounded-full w-full cursor-pointer border-2 border-black"
-                style={{ background: GREEN, height: 58 }}
-              >
-                <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>{t('settings.unlockPro')}</p>
-              </button>
-            )}
-          </div>
+          <FreeTierCard
+            title={s.isPro ? t('settings.proMember') : t('settings.freeTier')}
+            plantsUsed={plantsUsed}
+            plantsMax={plantsMax}
+            footer={
+              s.isPro
+                ? t('settings.proFooter')
+                : t('settings.freeFooter', { count: plantsMax - plantsUsed })
+            }
+          />
+          {!s.isPro && (
+            <button
+              type="button"
+              onClick={onShowPro}
+              className="btn-primary btn-green relative flex items-center justify-center rounded-full w-full cursor-pointer border-2 border-black min-h-[58px]"
+              style={{ background: GREEN }}
+            >
+              <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}>{t('settings.unlockPro')}</p>
+            </button>
+          )}
         </div>
       </div>
 
@@ -3604,7 +3532,7 @@ export default function App() {
     }
     content = (
       <div className="flex flex-col h-full min-h-0">
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]">
           {tabContent}
         </div>
         <TabBar active={tab} onChange={(t) => { setTab(t); setScreen('main') }} plantCount={plants.length} isPro={settings.isPro} onUpgrade={() => setScreen('pro')} />

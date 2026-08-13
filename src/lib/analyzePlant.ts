@@ -1,33 +1,38 @@
+import {
+  parseImageDataUrl,
+  toUserFriendlyAnalysisError,
+} from '@/lib/geminiImage'
+import { compressImageForGemini, isInlinePhoto } from '@/lib/imageCompress'
+import { parseAiJson } from '@/lib/aiJson'
+import {
+  coerceAnalyzePlantResponseFromBody,
+  createLowConfidencePlantResult,
+  isAnalyzePlantErrorPayload,
+  type AnalyzePlantResult,
+} from '@/lib/analyzePlantResult'
 import { getAppLanguage } from '@/i18n'
 import type { AppLanguage } from '@/i18n/languages'
-import type { AnalyzePlantResult } from '@/server/analyzePlantHandler'
+
+export type { GeminiSupportedMime } from '@/lib/geminiImage'
+export { parseImageDataUrl } from '@/lib/geminiImage'
 
 export interface AnalyzePlantApiResponse extends AnalyzePlantResult {}
 
-export function parseImageDataUrl(dataUrl: string): { imageBase64: string; mimeType: string } {
-  const match = dataUrl.match(/^data:(image\/[\w+.-]+);base64,(.+)$/)
-  if (match) {
-    return { mimeType: match[1], imageBase64: match[2] }
-  }
-  return {
-    mimeType: 'image/jpeg',
-    imageBase64: dataUrl.replace(/^data:image\/\w+;base64,/, ''),
-  }
-}
+const FRIENDLY_ANALYSIS_FALLBACK =
+  'Could not analyze this plant photo. Please try again with a clearer image.'
 
-function parseResponseJson(text: string): unknown | null {
-  if (!text.trim()) return null
-  try {
-    return JSON.parse(text) as unknown
-  } catch {
-    return null
-  }
-}
+/** Keep JSON payloads small for Vercel serverless (well under 4.5 MB body limit). */
+const MAX_CLIENT_BASE64_CHARS = 3_500_000
 
 function getErrorMessageFromBody(body: unknown, fallback: string): string {
-  if (body && typeof body === 'object' && 'error' in body) {
-    const message = (body as { error?: unknown }).error
-    if (typeof message === 'string' && message.trim()) return message
+  if (body && typeof body === 'object') {
+    const record = body as { error?: unknown; success?: unknown }
+    if (record.success === false && typeof record.error === 'string' && record.error.trim()) {
+      return toUserFriendlyAnalysisError(record.error, fallback)
+    }
+    if (typeof record.error === 'string' && record.error.trim()) {
+      return toUserFriendlyAnalysisError(record.error, fallback)
+    }
   }
   return fallback
 }
@@ -37,10 +42,18 @@ function buildNonJsonErrorMessage(status: number, text: string): string {
   if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
     return 'Plant analysis API is unavailable in this environment. Use vite dev with GEMINI_API_KEY set, or deploy to Vercel.'
   }
-  const preview = trimmed.slice(0, 160).replace(/\s+/g, ' ')
-  return preview
-    ? `Analysis failed (${status}): ${preview}`
-    : `Analysis failed with status ${status}.`
+  return toUserFriendlyAnalysisError(trimmed, `Analysis failed (${status}). Please try again.`)
+}
+
+function normalizeClientPlantResponse(
+  body: unknown,
+  preferredDays: string[],
+  language: AppLanguage,
+): AnalyzePlantApiResponse {
+  if (isAnalyzePlantErrorPayload(body)) {
+    return createLowConfidencePlantResult(preferredDays, language)
+  }
+  return coerceAnalyzePlantResponseFromBody(body, preferredDays, language)
 }
 
 export async function analyzePlantImage(
@@ -48,53 +61,88 @@ export async function analyzePlantImage(
   preferredDays: string[] = [],
   language: AppLanguage = getAppLanguage(),
 ): Promise<{ ok: true; data: AnalyzePlantApiResponse } | { ok: false; error: string }> {
-  const { imageBase64, mimeType } = parseImageDataUrl(imageSource)
-
-  let response: Response
   try {
-    response = await fetch('/api/analyze-plant', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        imageBase64,
-        mimeType,
-        preferredDays: preferredDays.length > 0 ? preferredDays : undefined,
-        language,
-      }),
-    })
-  } catch (error) {
-    console.error('[myJungle] analyze-plant network error:', error)
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'Could not reach the plant analysis service.',
+    // Re-encode to JPEG ≤1024px so Gemini always gets clean, supported bytes.
+    const preparedSource = isInlinePhoto(imageSource)
+      ? await compressImageForGemini(imageSource)
+      : imageSource
+    const { imageBase64 } = parseImageDataUrl(preparedSource)
+    if (!imageBase64) {
+      return { ok: false, error: 'No image provided. Please take or choose a photo first.' }
     }
-  }
-
-  const responseText = await response.text()
-
-  if (!response.ok) {
-    console.error(`[myJungle] analyze-plant failed (${response.status}):`, responseText)
-    const body = parseResponseJson(responseText)
-    if (body) {
+    if (imageBase64.length > MAX_CLIENT_BASE64_CHARS) {
       return {
         ok: false,
-        error: getErrorMessageFromBody(body, `Analysis failed (${response.status}).`),
+        error: 'Image is too large after compression. Please try a smaller photo or retake the picture.',
       }
     }
-    return { ok: false, error: buildNonJsonErrorMessage(response.status, responseText) }
-  }
 
-  const data = parseResponseJson(responseText)
-  if (!data) {
-    console.error('[myJungle] analyze-plant returned non-JSON success body:', responseText)
-    return { ok: false, error: 'Invalid response from plant analysis service.' }
-  }
+    let response: Response
+    try {
+      response = await fetch('/api/analyze-plant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64,
+          mimeType: 'image/jpeg',
+          preferredDays: preferredDays.length > 0 ? preferredDays : undefined,
+          language,
+        }),
+      })
+    } catch (error) {
+      console.error('[myJungle] analyze-plant network error:', error)
+      return {
+        ok: false,
+        error: 'Could not reach the plant analysis service. Check your connection and try again.',
+      }
+    }
 
-  if (typeof data !== 'object' || data === null || !('name' in data) || typeof (data as AnalyzePlantApiResponse).name !== 'string') {
-    return { ok: false, error: 'Invalid analysis response.' }
-  }
+    const responseText = await response.text()
 
-  return { ok: true, data: data as AnalyzePlantApiResponse }
+    if (!response.ok) {
+      console.error(`[myJungle] analyze-plant failed (${response.status}):`, responseText)
+      const body = parseAiJson(responseText)
+      if (body) {
+        return {
+          ok: false,
+          error: getErrorMessageFromBody(body, FRIENDLY_ANALYSIS_FALLBACK),
+        }
+      }
+      return { ok: false, error: buildNonJsonErrorMessage(response.status, responseText) }
+    }
+
+    const data = parseAiJson(responseText)
+    if (!data) {
+      console.warn('[myJungle] analyze-plant success body was not JSON; using low-confidence fallback')
+      const fallback = createLowConfidencePlantResult(preferredDays, language)
+      return { ok: true, data: fallback }
+    }
+
+    if (isAnalyzePlantErrorPayload(data)) {
+      return {
+        ok: false,
+        error: getErrorMessageFromBody(data, FRIENDLY_ANALYSIS_FALLBACK),
+      }
+    }
+
+    const normalized = normalizeClientPlantResponse(data, preferredDays, language)
+
+    // Prefer server-normalized days; if empty, keep client preferred day as a soft fallback.
+    if (normalized.recommendedDays.length === 0 && preferredDays.length > 0) {
+      normalized.recommendedDays = preferredDays.slice(0, 1)
+    }
+
+    return { ok: true, data: normalized }
+  } catch (error) {
+    console.error('[myJungle] analyze-plant unexpected error:', error)
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? toUserFriendlyAnalysisError(error.message, FRIENDLY_ANALYSIS_FALLBACK)
+          : FRIENDLY_ANALYSIS_FALLBACK,
+    }
+  }
 }
 
 export function mapWaterNeedToForm(value: string): 'Light' | 'Moderate' | 'Heavy' {

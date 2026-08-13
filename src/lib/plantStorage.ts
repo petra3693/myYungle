@@ -109,4 +109,4 @@ export async function savePlantsToStorage(plants: Plant[]): Promise<StorageResul
   }
 }
 
-export { compressImageDataUrl, readAndCompressPhotoFile } from '@/lib/imageCompress'
+export { compressImageDataUrl, compressImageForGemini, readAndCompressPhotoFile } from '@/lib/imageCompress'

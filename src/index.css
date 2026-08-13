@@ -55,7 +55,7 @@
   --font-display: 'Unbounded', sans-serif;
   --color-neo-black: #000000;
   --color-neo-green: #00ff66;
-  --color-neo-bg: #f7f7f7;
+  --color-neo-bg: #efefef;
   --color-neo-red: #ff2d55;
   --color-neo-watered: #d9ffe8;
 }
@@ -75,12 +75,12 @@
     overflow: hidden;
     overscroll-behavior-y: none;
     touch-action: manipulation;
-    background-color: #f7f7f7;
+    background-color: var(--color-neo-bg);
   }
 
   body {
     font-family: var(--font-geist);
-    background-color: #f7f7f7;
+    background-color: var(--color-neo-bg);
   }
 
   h1,
@@ -377,7 +377,7 @@
     padding: 0;
     width: 100%;
     border-top: 2px solid black;
-    background: white;
+    background: var(--color-neo-bg);
   }
 
   .neo-tab-bar-inner {
@@ -398,6 +398,7 @@
     justify-content: space-between;
     padding: 12px 20px 8px;
     flex-shrink: 0;
+    background: var(--color-neo-bg);
   }
 
   .btn-green {
@@ -474,7 +475,7 @@
     border: 2px solid #000;
     border-radius: 9999px;
     overflow: hidden;
-    background-color: #fff;
+    background-color: var(--color-neo-bg);
   }
 
   .progress-bar-fill {
@@ -535,7 +536,7 @@
   .detail-snapshot-new {
     border: 2px dashed #000;
     border-radius: 1.5rem;
-    background: #fff;
+    background: var(--color-neo-watered);
     min-width: 108px;
     width: 108px;
     height: 108px;
@@ -674,3 +675,620 @@ html {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
+
+/* ─── Home dashboard layout ────────────────────────────────────────────────── */
+
+.home-dashboard-scroll {
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+}
+
+.home-dashboard-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.home-add-plant-btn {
+  margin-top: 1rem;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.home-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.75rem 0 0.5rem;
+  opacity: 0.4;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.home-empty-state__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.home-empty-state__icon svg {
+  display: block;
+  width: 52px;
+  height: auto;
+  max-height: 71px;
+}
+
+.home-empty-state__text {
+  width: 100%;
+  max-width: 18rem;
+  margin: 0.5rem 0 0;
+  padding: 0 1rem;
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #000;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* ─── Settings screen ──────────────────────────────────────────────────────── */
+
+.settings-card {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 16px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.settings-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.settings-card-row:last-child {
+  border-bottom: none;
+}
+
+.settings-card-row--stacked {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.settings-card-row--link {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  background: #fff;
+  border: none;
+  transition: background-color 0.15s ease;
+}
+
+.settings-card-row--link:active {
+  background: #e5e5e5;
+}
+
+.settings-row-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settings-row-title {
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 900;
+  font-size: 12px;
+  color: #000;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.settings-row-title--compact {
+  font-size: 10px;
+}
+
+.settings-inline-title {
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 900;
+  font-size: 12px;
+  color: #000;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.settings-row-subtitle {
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #888;
+  line-height: 1.35;
+}
+
+.settings-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  height: 35px;
+  padding: 3px 11px;
+  border: 2px solid #000;
+  border-radius: 9999px;
+  background: #fff;
+  cursor: pointer;
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 900;
+  font-size: 10px;
+  color: #000;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.settings-chip-btn--danger {
+  border-color: var(--color-neo-red);
+  color: var(--color-neo-red);
+}
+
+.settings-time-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  min-width: 103px;
+  height: 45px;
+  padding: 3px 11px;
+  border: 2px solid #000;
+  border-radius: 9px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.settings-action-btn {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #000;
+  border-radius: 9999px;
+  background: #fff;
+  cursor: pointer;
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 900;
+  font-size: 11px;
+  color: #000;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.settings-action-btn:active {
+  transform: scale(0.98);
+}
+
+.settings-day-pill {
+  position: relative;
+  display: flex;
+  width: 44px;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 10px 0;
+  border: 2px solid #000;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.settings-day-pill:active {
+  transform: scale(0.95);
+}
+
+.settings-day-pill--active {
+  background: var(--color-neo-green);
+}
+
+.settings-day-pill--inactive {
+  background: #fff;
+}
+
+.settings-language-trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.625rem 1rem;
+  border: 2px solid #000;
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #000;
+  text-align: left;
+}
+
+.settings-language-chevron {
+  pointer-events: none;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: #000;
+  transition: transform 0.15s ease;
+}
+
+.settings-language-chevron--open {
+  transform: rotate(180deg);
+}
+
+.settings-language-menu {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.settings-language-select {
+  width: 100%;
+  height: 44px;
+  padding: 0 2.5rem 0 1rem;
+  border: none;
+  border-radius: 0;
+  background: #fff;
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #000;
+}
+
+.settings-language-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.625rem 2.5rem 0.625rem 1rem;
+  border: none;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fff;
+  cursor: pointer;
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #000;
+  text-align: left;
+}
+
+.settings-language-option:last-child {
+  border-bottom: none;
+}
+
+.settings-language-option--active {
+  background: var(--color-neo-watered);
+  font-weight: 700;
+}
+
+.settings-language-option:active {
+  background: #e5e5e5;
+}
+
+.settings-screen-scroll {
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* ─── Plant detail page ────────────────────────────────────────────────────── */
+
+.plant-detail-hero__scrim {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+.plant-detail-hero__name {
+  margin: 0;
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 900;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  color: #fff;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.plant-detail-hero__watered {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border: 2px solid #000;
+  border-radius: 9999px;
+  background: var(--color-neo-green);
+  box-shadow: 3px 3px 0 0 #111;
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 900;
+  font-size: 10px;
+  color: #000;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.plant-detail-hero__watered--action {
+  background: #fff;
+}
+
+.plant-detail-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 2px solid #000;
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.plant-detail-metric-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.875rem;
+  border-right: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.plant-detail-metric-cell:nth-child(2n) {
+  border-right: none;
+}
+
+.plant-detail-metric-cell:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+
+.pet-toxicity-badge {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #000;
+  border-radius: 16px;
+}
+
+.pet-toxicity-badge--safe {
+  background: var(--color-neo-green);
+}
+
+.pet-toxicity-badge--toxic {
+  background: #ffe8a3;
+}
+
+.pet-toxicity-badge--unknown {
+  background: #fff;
+}
+
+.pet-toxicity-badge__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pet-toxicity-badge__title {
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 900;
+  font-size: 11px;
+  color: #000;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.pet-toxicity-badge__notes {
+  margin: 0;
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  color: #000;
+  line-height: 1.45;
+}
+
+.plant-detail-section-card {
+  border: 2px solid #000;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.plant-detail-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 2px solid #000;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.plant-detail-stat-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.75rem 0.625rem;
+  border-right: 1px solid #e5e5e5;
+}
+
+.plant-detail-stat-cell:last-child {
+  border-right: none;
+}
+
+.plant-detail-chart {
+  border: 2px solid #000;
+  border-radius: 14px;
+  background: #fff;
+  padding: 0.75rem;
+}
+
+.plant-detail-delete-btn {
+  border-color: var(--color-neo-red);
+}
+
+.health-observation-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.health-observation-row:last-child {
+  border-bottom: none;
+}
+
+.health-observation-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 0.25rem;
+  border-radius: 9999px;
+  border: 2px solid #000;
+  flex-shrink: 0;
+}
+
+.health-observation-dot--green {
+  background: var(--color-neo-green);
+}
+
+.health-observation-dot--yellow {
+  background: #ffb800;
+}
+
+.health-observation-dot--red {
+  background: var(--color-neo-red);
+}
+
+/* ─── Home watering banner ─────────────────────────────────────────────────── */
+
+.watering-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  width: 100%;
+  height: 10.5rem;
+  min-height: 10.5rem;
+  max-height: 10.5rem;
+  padding: 0 1rem;
+  border: 2px solid #000;
+  border-radius: 1rem;
+  background: var(--color-neo-green, #00ff66);
+  box-shadow: 4px 4px 0 0 #111;
+  text-align: center;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.watering-banner__icon-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 5.5rem;
+  min-height: 5.5rem;
+  max-height: 5.5rem;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.watering-banner__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+
+.watering-banner__icon--exit {
+  animation: watering-banner-icon-exit 0.22s cubic-bezier(0.4, 0, 0.85, 0.2) forwards;
+}
+
+.watering-banner__icon--enter {
+  animation: watering-banner-icon-enter 0.42s cubic-bezier(0.34, 1.45, 0.64, 1) forwards;
+}
+
+.watering-banner__text {
+  margin: 0;
+  flex-shrink: 0;
+  min-height: 2.5em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Unbounded, sans-serif;
+  font-weight: 900;
+  font-size: 14px;
+  line-height: 1.25;
+  color: #000;
+  max-width: 100%;
+}
+
+.watering-banner__text--enter {
+  animation: watering-banner-text-enter 0.32s cubic-bezier(0.34, 1.1, 0.64, 1) forwards;
+}
+
+@keyframes watering-banner-icon-exit {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0) rotate(-14deg);
+  }
+}
+
+@keyframes watering-banner-icon-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(10deg);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.15) rotate(0deg);
+  }
+  78% {
+    transform: scale(0.96) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes watering-banner-text-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .watering-banner,
+  .watering-banner__icon--exit,
+  .watering-banner__icon--enter,
+  .watering-banner__text--enter {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+

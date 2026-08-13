@@ -1,4 +1,5 @@
-import { parseImageDataUrl } from '@/lib/analyzePlant'
+import { parseImageDataUrl, toUserFriendlyAnalysisError } from '@/lib/geminiImage'
+import { compressImageForGemini, isInlinePhoto } from '@/lib/imageCompress'
 import { getAppLanguage } from '@/i18n'
 import type { AppLanguage } from '@/i18n/languages'
 import { clampHealthScore } from '@/lib/health-log'
@@ -8,6 +9,12 @@ export interface AnalyzePlantHealthApiResponse {
   diagnosis: string
   treatmentNotes: string
 }
+
+const FRIENDLY_HEALTH_FALLBACK =
+  'Could not analyze plant health from this photo. Please try again with a clearer image.'
+
+/** Keep JSON payloads small for Vercel serverless (well under 4.5 MB body limit). */
+const MAX_CLIENT_BASE64_CHARS = 3_500_000
 
 function parseResponseJson(text: string): unknown | null {
   if (!text.trim()) return null
@@ -19,9 +26,14 @@ function parseResponseJson(text: string): unknown | null {
 }
 
 function getErrorMessageFromBody(body: unknown, fallback: string): string {
-  if (body && typeof body === 'object' && 'error' in body) {
-    const message = (body as { error?: unknown }).error
-    if (typeof message === 'string' && message.trim()) return message
+  if (body && typeof body === 'object') {
+    const record = body as { error?: unknown; success?: unknown }
+    if (record.success === false && typeof record.error === 'string' && record.error.trim()) {
+      return toUserFriendlyAnalysisError(record.error, fallback)
+    }
+    if (typeof record.error === 'string' && record.error.trim()) {
+      return toUserFriendlyAnalysisError(record.error, fallback)
+    }
   }
   return fallback
 }
@@ -31,63 +43,85 @@ function buildNonJsonErrorMessage(status: number, text: string): string {
   if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
     return 'Plant health API is unavailable in this environment. Use vite dev with GEMINI_API_KEY set, or deploy to Vercel.'
   }
-  const preview = trimmed.slice(0, 160).replace(/\s+/g, ' ')
-  return preview ? `Health analysis failed (${status}): ${preview}` : `Health analysis failed with status ${status}.`
+  return toUserFriendlyAnalysisError(trimmed, `Health analysis failed (${status}). Please try again.`)
 }
 
 export async function analyzePlantHealthImage(
   imageSource: string,
   language: AppLanguage = getAppLanguage(),
 ): Promise<{ ok: true; data: AnalyzePlantHealthApiResponse } | { ok: false; error: string }> {
-  const { imageBase64, mimeType } = parseImageDataUrl(imageSource)
-
-  let response: Response
   try {
-    response = await fetch('/api/analyze-plant-health', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64, mimeType, language }),
-    })
-  } catch (error) {
-    console.error('[myJungle] analyze-plant-health network error:', error)
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'Could not reach the plant health analysis service.',
+    const preparedSource = isInlinePhoto(imageSource)
+      ? await compressImageForGemini(imageSource)
+      : imageSource
+    const { imageBase64 } = parseImageDataUrl(preparedSource)
+    if (!imageBase64) {
+      return { ok: false, error: 'No image provided. Please take or choose a photo first.' }
     }
-  }
-
-  const responseText = await response.text()
-
-  if (!response.ok) {
-    console.error(`[myJungle] analyze-plant-health failed (${response.status}):`, responseText)
-    const body = parseResponseJson(responseText)
-    if (body) {
+    if (imageBase64.length > MAX_CLIENT_BASE64_CHARS) {
       return {
         ok: false,
-        error: getErrorMessageFromBody(body, `Health analysis failed (${response.status}).`),
+        error: 'Image is too large after compression. Please try a smaller photo or retake the picture.',
       }
     }
-    return { ok: false, error: buildNonJsonErrorMessage(response.status, responseText) }
-  }
 
-  const data = parseResponseJson(responseText)
-  if (
-    typeof data !== 'object' ||
-    data === null ||
-    !('diagnosis' in data) ||
-    typeof (data as AnalyzePlantHealthApiResponse).diagnosis !== 'string' ||
-    typeof (data as AnalyzePlantHealthApiResponse).healthScore !== 'number'
-  ) {
-    return { ok: false, error: 'Invalid health analysis response.' }
-  }
+    let response: Response
+    try {
+      response = await fetch('/api/analyze-plant-health', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64, mimeType: 'image/jpeg', language }),
+      })
+    } catch (error) {
+      console.error('[myJungle] analyze-plant-health network error:', error)
+      return {
+        ok: false,
+        error: 'Could not reach the plant health analysis service. Check your connection and try again.',
+      }
+    }
 
-  const parsed = data as AnalyzePlantHealthApiResponse
-  return {
-    ok: true,
-    data: {
-      healthScore: clampHealthScore(parsed.healthScore),
-      diagnosis: parsed.diagnosis,
-      treatmentNotes: parsed.treatmentNotes,
-    },
+    const responseText = await response.text()
+
+    if (!response.ok) {
+      console.error(`[myJungle] analyze-plant-health failed (${response.status}):`, responseText)
+      const body = parseResponseJson(responseText)
+      if (body) {
+        return {
+          ok: false,
+          error: getErrorMessageFromBody(body, FRIENDLY_HEALTH_FALLBACK),
+        }
+      }
+      return { ok: false, error: buildNonJsonErrorMessage(response.status, responseText) }
+    }
+
+    const data = parseResponseJson(responseText)
+    if (
+      typeof data !== 'object' ||
+      data === null ||
+      !('diagnosis' in data) ||
+      typeof (data as AnalyzePlantHealthApiResponse).diagnosis !== 'string' ||
+      typeof (data as AnalyzePlantHealthApiResponse).healthScore !== 'number'
+    ) {
+      return { ok: false, error: 'Invalid health analysis response.' }
+    }
+
+    const parsed = data as AnalyzePlantHealthApiResponse
+    return {
+      ok: true,
+      data: {
+        healthScore: clampHealthScore(parsed.healthScore),
+        diagnosis: parsed.diagnosis,
+        treatmentNotes: parsed.treatmentNotes,
+      },
+    }
+  } catch (error) {
+    console.error('[myJungle] analyze-plant-health unexpected error:', error)
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? toUserFriendlyAnalysisError(error.message, FRIENDLY_HEALTH_FALLBACK)
+          : FRIENDLY_HEALTH_FALLBACK,
+    }
   }
 }

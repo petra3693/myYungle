@@ -1,24 +1,8 @@
 import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai'
 import { z } from 'zod'
-
-type AppLanguage = 'en' | 'de' | 'hu'
-
-function normalizeAppLanguage(value: unknown): AppLanguage {
-  const lang = String(value ?? 'en').toLowerCase()
-  if (lang === 'de' || lang === 'hu') return lang
-  return 'en'
-}
-
-function languagePromptInstruction(language: AppLanguage): string {
-  switch (language) {
-    case 'de':
-      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in German.'
-    case 'hu':
-      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in Hungarian.'
-    default:
-      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in English.'
-  }
-}
+import { asJsonObject, parseAiJson } from '../lib/aiJson'
+import { languagePromptInstruction, normalizeAppLanguage, SUPPORTED_LANGUAGES } from '../i18n/languages'
+import { friendlyGeminiError, isImagePayloadError, toGeminiInlineDataPart } from './geminiImagePart'
 
 function clampHealthScore(score: number): number {
   return Math.max(0, Math.min(100, Math.round(score)))
@@ -27,7 +11,7 @@ function clampHealthScore(score: number): number {
 export const analyzePlantHealthPayloadSchema = z.object({
   imageBase64: z.string().min(1, 'No image provided'),
   mimeType: z.string().default('image/jpeg'),
-  language: z.enum(['en', 'de', 'hu']).optional(),
+  language: z.enum(SUPPORTED_LANGUAGES).optional(),
 })
 
 export interface AnalyzePlantHealthResult {
@@ -36,7 +20,7 @@ export interface AnalyzePlantHealthResult {
   treatmentNotes: string
 }
 
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'] as const
+const GEMINI_MODEL = 'gemini-1.5-flash'
 
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,
@@ -53,21 +37,12 @@ async function generateHealthAnalysis(
   prompt: string,
   imagePart: { inlineData: { data: string; mimeType: string } },
 ): Promise<string> {
-  let lastError: unknown
-  for (const modelName of GEMINI_MODELS) {
-    try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: { responseMimeType: 'application/json', responseSchema },
-      })
-      const result = await model.generateContent([prompt, imagePart])
-      return result.response.text()
-    } catch (error) {
-      console.error(`Gemini health model "${modelName}" failed:`, error)
-      lastError = error
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error('All Gemini models failed.')
+  const model = genAI.getGenerativeModel({
+    model: GEMINI_MODEL,
+    generationConfig: { responseMimeType: 'application/json', responseSchema },
+  })
+  const result = await model.generateContent([prompt, imagePart])
+  return result.response.text()
 }
 
 export async function handleAnalyzePlantHealthRequest(
@@ -88,32 +63,57 @@ export async function handleAnalyzePlantHealthRequest(
     const { imageBase64, mimeType, language: rawLanguage } = parsed.data
     const language = normalizeAppLanguage(rawLanguage)
     const genAI = new GoogleGenerativeAI(apiKey)
-    const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '')
-    const imagePart = { inlineData: { data: cleanBase64, mimeType } }
+    const imagePart = toGeminiInlineDataPart(imageBase64, mimeType)
     const prompt =
       'Analyze this plant photo for diseases, pests, nutrient deficiencies, watering issues, or other health problems. ' +
+      'Respond with RAW JSON only — no markdown code fences and no prose outside the JSON object. ' +
       'Return healthScore as an integer from 0 to 100 (100 = perfectly healthy). ' +
       'Set diagnosis to a short label like "Healthy", "Overwatered", "Spider mites", or "Leaf spot". ' +
+      'If the photo is unclear, still return JSON with a best-effort diagnosis and lower healthScore. ' +
       'Provide brief, actionable treatmentNotes under 400 characters. ' +
       languagePromptInstruction(language)
 
     const text = await generateHealthAnalysis(genAI, prompt, imagePart)
-    const healthData = JSON.parse(text) as AnalyzePlantHealthResult
+    const parsedJson = parseAiJson(text)
+    const healthData = asJsonObject(parsedJson)
 
-    if (!healthData.diagnosis || !healthData.treatmentNotes || healthData.healthScore == null) {
-      return { status: 500, body: { error: 'Incomplete health analysis result from AI.' } }
+    if (!healthData) {
+      return {
+        status: 200,
+        body: {
+          healthScore: 50,
+          diagnosis: 'Unclear photo',
+          treatmentNotes: 'Photo quality was too low for a confident diagnosis. Retake in brighter, even light and try again.',
+        },
+      }
     }
+
+    const diagnosis =
+      typeof healthData.diagnosis === 'string' && healthData.diagnosis.trim()
+        ? healthData.diagnosis.trim()
+        : 'Needs review'
+    const treatmentNotes =
+      typeof healthData.treatmentNotes === 'string' && healthData.treatmentNotes.trim()
+        ? healthData.treatmentNotes.trim().slice(0, 400)
+        : 'Check soil moisture, light exposure, and leaf condition. Retake a clearer photo for a more precise diagnosis.'
+    const healthScore = clampHealthScore(Number(healthData.healthScore ?? 50))
 
     return {
       status: 200,
       body: {
-        healthScore: clampHealthScore(Number(healthData.healthScore)),
-        diagnosis: healthData.diagnosis.trim(),
-        treatmentNotes: healthData.treatmentNotes.trim().slice(0, 400),
+        healthScore,
+        diagnosis,
+        treatmentNotes,
       },
     }
   } catch (error) {
     console.error('Gemini Health API Error:', error)
-    return { status: 500, body: { error: 'Failed to analyze plant health' } }
+    const fallback = 'Failed to analyze plant health. Please try another photo.'
+    return {
+      status: isImagePayloadError(error) ? 400 : 500,
+      body: {
+        error: friendlyGeminiError(error, fallback),
+      },
+    }
   }
 }

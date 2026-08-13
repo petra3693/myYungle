@@ -8,7 +8,15 @@
     "subtitle": "Válaszd ki a preferált nyelvet",
     "en": "English",
     "de": "Deutsch",
-    "hu": "Magyar"
+    "hu": "Magyar",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ja": "日本語",
+    "zh": "中文（简体）"
   },
   "tabs": {
     "home": "MY JUNGLE",
@@ -26,8 +34,9 @@
     "start": "INDÍTÁS"
   },
   "home": {
-    "plantsNeedWater": "{{count}} NÖVÉNYNEK MA VIZRE VAN SZÜKSÉGE!",
-    "plantsNeedWater_one": "{{count}} NÖVÉNYNEK MA VIZRE VAN SZÜKSÉGE!",
+    "allPlantsWatered": "MA EGYETLEN NÖVÉNYT SEM KELL MEGÖNTÖZNÖD!",
+    "plantsNeedWater": "{{count}} NÖVÉNY VÁR ÖNTÖZÉSRE MA!",
+    "plantsNeedWater_one": "{{count}} NÖVÉNY VÁR ÖNTÖZÉSRE MA!",
     "weeklySchedule": "HETI ÖNTÖZÉSI ÜTEMTERV",
     "mySpecimens": "NÖVÉNYEIM ({{count}})",
     "noPlants": "Még nincsenek növények. Koppints alul a hozzáadáshoz!",
@@ -81,7 +90,8 @@
     "onSchedule": "Ütemterv szerint",
     "needsWater": "Vizet igényel",
     "markWatered": "ÖNTÖZVE",
-    "deletePlant": "Növény törlése",
+    "watered": "ÖNTÖZVE",
+    "deletePlant": "NÖVÉNY TÖRLÉSE",
     "editPlant": "Növény szerkesztése",
     "plantName": "Növény neve",
     "room": "Szoba",
@@ -92,7 +102,8 @@
     "never": "Soha",
     "today": "Ma",
     "daysAgo": "{{count}} napja",
-    "daysAgo_one": "{{count}} napja"
+    "daysAgo_one": "{{count}} napja",
+    "unnamedPlant": "Névtelen növény"
   },
   "watering": {
     "title": "ÖNTÖZÉS",
@@ -104,12 +115,24 @@
     "dayRoutine": "{{day}} RUTIN",
     "noPlantsAssigned": "Nincs hozzárendelt növény",
     "markWatered": "Megjelölés öntözöttként",
-    "watered": "Növény öntözve"
+    "watered": "Növény öntözve",
+    "scheduleTitle": "ÖNTÖZÉSI ÜTEMTERV",
+    "needsWaterToday": "{{count}} növénynek ma van szüksége vízre",
+    "needsWaterToday_one": "{{count}} növénynek ma van szüksége vízre",
+    "markAllToday": "MINDET MA ÖNTÖZÖM ({{count}})",
+    "sectionToday": "MA"
   },
   "health": {
     "title": "Egészség követő",
     "checkedToday": "Ma ellenőrizve · {{score}}%",
-    "scanToCheck": "Szkenneld az egészség ellenőrzéséhez",
+    "scanToCheck": "SZCANNELÉS ELLENŐRZÉSHEZ",
+    "overallHealthScore": "Összesített egészségügyi pontszám",
+    "thrivingConditions": "Jól fejlődik a jelenlegi körülmények között",
+    "recordHealthCheck": "EGÉSZSÉGÜGYI ELLENŐRZÉS RÖGZÍTÉSE",
+    "observationToday": "Ma",
+    "observationDaysAgo": "{{count}} napja",
+    "observationDaysAgo_one": "{{count}} napja",
+    "observationWeekAgo": "1 hete",
     "checkHealthWithAi": "EGÉSZSÉG ELLENŐRZÉSE MI-VEL",
     "analyzing": "ELEMZÉS…",
     "proFeature": "PRO FUNKCIÓ",
@@ -149,8 +172,10 @@
     "chooseDays": "Válaszd ki, mely napokon szeretnél öntözni",
     "dataPrivacy": "Adatok és adatvédelem",
     "exportData": "Adatok exportálása",
+    "exportSubtitle": "Töltsd le a dzsungelt JSON formátumban",
     "export": "EXPORT",
-    "resetData": "Adatok visszaállítása",
+    "resetData": "Alkalmazás adatainak törlése",
+    "resetSubtitle": "Minden növény és beállítás törlése",
     "reset": "RESET",
     "sendFeedback": "Visszajelzés küldése",
     "proStatus": "MY JUNGLE PRO STÁTUSZ",
@@ -315,7 +340,8 @@
     "resetData": "Minden alkalmazásadat visszaállítása?"
   },
   "analyze": {
-    "failed": "A fotó elemzése sikertelen. Próbáld újra."
+    "failed": "A fotó elemzése sikertelen. Próbáld újra.",
+    "lowConfidence": "Alacsony biztonsággal azonosított növény — ellenőrizd a nevet és a gondozási adatokat, vagy készíts tisztább fotót."
   },
   "months": {
     "short": {
@@ -354,5 +380,17 @@
       "contactTitle": "Kapcsolat",
       "contactBody": "Termékkel kapcsolatos kérdésekhez használd az alkalmazáson belüli visszajelző űrlapot."
     }
+  },
+  "toxicity": {
+    "title": "Mérgező háziállatoknak",
+    "question": "Mérgező ez a növény macskákra vagy kutyákra?",
+    "unknown": "Ismeretlen",
+    "safe": "Állatbarát",
+    "toxic": "Mérgező",
+    "notesLabel": "Mérgezettségi megjegyzések",
+    "notesPlaceholder": "pl. Enyhén mérgező macskáknak lenyeléskor",
+    "badgeSafe": "Állatbarát",
+    "badgeToxic": "Mérgező háziállatoknak",
+    "badgeUnknown": "Mérgezettség ismeretlen"
   }
 }

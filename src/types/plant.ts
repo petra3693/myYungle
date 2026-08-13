@@ -102,6 +102,9 @@ export interface Plant {
   checkIns: HealthCheckIn[]
   healthLogs: PlantHealthLog[]
   isWateredToday: boolean
+  /** null = unknown / not set */
+  isToxicToPets: boolean | null
+  toxicityNotes?: string
 }
 
 export interface AppSettings {

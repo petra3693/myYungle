@@ -1,65 +1,37 @@
 import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai'
 import { z } from 'zod'
+import {
+  normalizeAppLanguage,
+  normalizePreferredDays,
+  parseGeminiPlantAnalysisText,
+  type AnalyzePlantResult,
+} from '../lib/analyzePlantResult'
+import { languagePromptInstruction, SUPPORTED_LANGUAGES } from '../i18n/languages'
+import { friendlyGeminiError, isImagePayloadError, toGeminiInlineDataPart } from './geminiImagePart'
 
-type AppLanguage = 'en' | 'de' | 'hu'
-
-function normalizeAppLanguage(value: unknown): AppLanguage {
-  const lang = String(value ?? 'en').toLowerCase()
-  if (lang === 'de' || lang === 'hu') return lang
-  return 'en'
-}
-
-function languagePromptInstruction(language: AppLanguage): string {
-  switch (language) {
-    case 'de':
-      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in German.'
-    case 'hu':
-      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in Hungarian.'
-    default:
-      return 'Write all user-facing text fields (careNotes, diagnosis, treatmentNotes) in English.'
-  }
-}
+export type { AnalyzePlantResult } from '../lib/analyzePlantResult'
 
 export const analyzePlantPayloadSchema = z.object({
   imageBase64: z.string().min(1, 'No image provided'),
   mimeType: z.string().default('image/jpeg'),
   preferredDays: z.array(z.string()).optional(),
-  language: z.enum(['en', 'de', 'hu']).optional(),
+  language: z.enum(SUPPORTED_LANGUAGES).optional(),
 })
 
 export type AnalyzePlantPayload = z.infer<typeof analyzePlantPayloadSchema>
-
-export interface AnalyzePlantResult {
-  name: string
-  waterNeed: 'light' | 'moderate' | 'heavy'
-  lightNeed: 'low' | 'medium' | 'high'
-  careNotes: string
-  recommendedDays: string[]
-  frequency: 'weekly' | 'biweekly' | 'monthly'
-}
 
 export interface AnalyzePlantError {
   error: string
 }
 
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'] as const
-
-const FULL_DAY_NAMES = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-]
+const GEMINI_MODEL = 'gemini-1.5-flash'
 
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
     name: {
       type: SchemaType.STRING,
-      description: 'The name of the plant',
+      description: 'Common plant name. Use "Unknown Plant" if uncertain.',
     },
     waterNeed: {
       type: SchemaType.STRING,
@@ -71,7 +43,7 @@ const responseSchema: Schema = {
       type: SchemaType.STRING,
       format: 'enum',
       enum: ['low', 'medium', 'high'],
-      description: 'Light requirement: low (low light), medium (indirect/medium light), or high (direct sunlight)',
+      description: 'Light requirement: low, medium, or high',
     },
     careNotes: {
       type: SchemaType.STRING,
@@ -80,35 +52,48 @@ const responseSchema: Schema = {
     recommendedDays: {
       type: SchemaType.ARRAY,
       items: { type: SchemaType.STRING },
-      description:
-        'Minimum necessary watering days selected from the user preferred days (full day names, e.g. "Tuesday")',
+      description: 'Watering days as full English day names from the preferred list',
     },
     frequency: {
       type: SchemaType.STRING,
       format: 'enum',
       enum: ['weekly', 'biweekly', 'monthly'],
-      description: 'How often to water: weekly, biweekly (every 2 weeks), or monthly (every 4 weeks)',
+      description: 'How often to water: weekly, biweekly, or monthly',
+    },
+    confidence: {
+      type: SchemaType.STRING,
+      format: 'enum',
+      enum: ['low', 'medium', 'high'],
+      description: 'Identification confidence. Use low for blurry/dark/uncertain photos.',
+    },
+    isToxicToPets: {
+      type: SchemaType.BOOLEAN,
+      description:
+        'True if toxic to cats or dogs when ingested; false if generally pet-safe; omit or null if uncertain.',
+    },
+    toxicityNotes: {
+      type: SchemaType.STRING,
+      description:
+        'Brief pet toxicity note for cats/dogs (max 200 chars). Empty when safe or unknown.',
     },
   },
-  required: ['name', 'waterNeed', 'lightNeed', 'careNotes', 'recommendedDays', 'frequency'],
+  required: ['name', 'waterNeed', 'lightNeed', 'careNotes', 'recommendedDays', 'frequency', 'confidence'],
 }
 
-function normalizePreferredDays(preferredDays: string[] | undefined): string[] {
-  if (!preferredDays?.length) return [...FULL_DAY_NAMES]
-  const valid = preferredDays
-    .map((d) => {
-      const match = FULL_DAY_NAMES.find((name) => name.toLowerCase() === d.trim().toLowerCase())
-      return match ?? d.trim()
-    })
-    .filter(Boolean)
-  return valid.length > 0 ? valid : [...FULL_DAY_NAMES]
-}
-
-function buildAnalyzePrompt(preferredDays: string[], language: ReturnType<typeof normalizeAppLanguage>): string {
+function buildAnalyzePrompt(
+  preferredDays: string[],
+  language: ReturnType<typeof normalizeAppLanguage>,
+): string {
   const dayList = preferredDays.join(', ')
   return [
     'Identify the plant in this image, determine its water requirement (light, moderate, or heavy), light requirement, and provide care instructions.',
     languagePromptInstruction(language),
+    '',
+    'IMPORTANT OUTPUT RULES:',
+    '- Respond with RAW JSON only. Do not wrap the JSON in markdown code fences.',
+    '- Do not include ```json or any prose before/after the JSON object.',
+    '- Always return a complete JSON object even if the photo is blurry, dark, or uncertain.',
+    '- If uncertain, set confidence to "low", name to "Unknown Plant", and still provide sensible defaults.',
     '',
     'Determine lightNeed as:',
     '- low: low light / shade-tolerant plants',
@@ -125,21 +110,14 @@ function buildAnalyzePrompt(preferredDays: string[], language: ReturnType<typeof
     '',
     'Return recommendedDays as full English day names from the preferred list (e.g. ["Tuesday"]).',
     'Return frequency as "weekly", "biweekly", or "monthly".',
+    'Return confidence as "low", "medium", or "high".',
+    '',
+    'Assess pet toxicity for common household cats and dogs:',
+    '- Set isToxicToPets to true if the plant is toxic to cats or dogs when chewed or ingested.',
+    '- Set isToxicToPets to false if the plant is widely considered pet-safe.',
+    '- Omit isToxicToPets or use null when identification confidence is low or toxicity is uncertain.',
+    '- Provide toxicityNotes (under 200 characters) when toxic, e.g. which pets and symptoms; otherwise return an empty string.',
   ].join('\n')
-}
-
-function normalizeFrequency(value: unknown): AnalyzePlantResult['frequency'] {
-  const normalized = String(value ?? '').toLowerCase()
-  if (normalized === 'biweekly') return 'biweekly'
-  if (normalized === 'monthly') return 'monthly'
-  return 'weekly'
-}
-
-function normalizeLightNeed(value: unknown): AnalyzePlantResult['lightNeed'] {
-  const normalized = String(value ?? '').toLowerCase()
-  if (normalized === 'low') return 'low'
-  if (normalized === 'high') return 'high'
-  return 'medium'
 }
 
 async function generatePlantAnalysis(
@@ -147,27 +125,16 @@ async function generatePlantAnalysis(
   prompt: string,
   imagePart: { inlineData: { data: string; mimeType: string } },
 ): Promise<string> {
-  let lastError: unknown
+  const model = genAI.getGenerativeModel({
+    model: GEMINI_MODEL,
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema,
+    },
+  })
 
-  for (const modelName of GEMINI_MODELS) {
-    try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema,
-        },
-      })
-
-      const result = await model.generateContent([prompt, imagePart])
-      return result.response.text()
-    } catch (error) {
-      console.error(`Gemini model "${modelName}" failed:`, error)
-      lastError = error
-    }
-  }
-
-  throw lastError instanceof Error ? lastError : new Error('All Gemini models failed.')
+  const result = await model.generateContent([prompt, imagePart])
+  return result.response.text()
 }
 
 export async function handleAnalyzePlantRequest(
@@ -190,46 +157,23 @@ export async function handleAnalyzePlantRequest(
     const language = normalizeAppLanguage(rawLanguage)
     const genAI = new GoogleGenerativeAI(apiKey)
 
-    const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '')
-    const imagePart = {
-      inlineData: {
-        data: cleanBase64,
-        mimeType,
-      },
-    }
-
+    const imagePart = toGeminiInlineDataPart(imageBase64, mimeType)
     const prompt = buildAnalyzePrompt(preferredDays, language)
     const text = await generatePlantAnalysis(genAI, prompt, imagePart)
-    const plantData = JSON.parse(text) as AnalyzePlantResult
-
-    if (!plantData.name || !plantData.waterNeed || !plantData.lightNeed || !plantData.careNotes) {
-      return { status: 500, body: { error: 'Incomplete analysis result from AI.' } }
-    }
-
-    const waterNeed = plantData.waterNeed.toLowerCase()
-    if (waterNeed !== 'light' && waterNeed !== 'moderate' && waterNeed !== 'heavy') {
-      return { status: 500, body: { error: 'Invalid water need in AI response.' } }
-    }
-
-    const lightNeed = normalizeLightNeed(plantData.lightNeed)
-
-    const recommendedDays = Array.isArray(plantData.recommendedDays)
-      ? plantData.recommendedDays.filter((d): d is string => typeof d === 'string' && d.trim().length > 0)
-      : []
+    const result = parseGeminiPlantAnalysisText(text, preferredDays, language)
 
     return {
       status: 200,
-      body: {
-        name: plantData.name.trim(),
-        waterNeed: waterNeed as AnalyzePlantResult['waterNeed'],
-        lightNeed,
-        careNotes: plantData.careNotes.trim(),
-        recommendedDays,
-        frequency: normalizeFrequency(plantData.frequency),
-      },
+      body: result,
     }
   } catch (error) {
     console.error('Gemini API Error:', error)
-    return { status: 500, body: { error: 'Failed to analyze plant image' } }
+    const fallback = 'Failed to analyze plant image. Please try another photo.'
+    return {
+      status: isImagePayloadError(error) ? 400 : 500,
+      body: {
+        error: friendlyGeminiError(error, fallback),
+      },
+    }
   }
 }

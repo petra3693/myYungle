@@ -8,7 +8,15 @@
     "subtitle": "Choose your preferred language",
     "en": "English",
     "de": "Deutsch",
-    "hu": "Magyar"
+    "hu": "Magyar",
+    "es": "Español",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ja": "日本語",
+    "zh": "中文（简体）"
   },
   "tabs": {
     "home": "MY JUNGLE",
@@ -26,6 +34,7 @@
     "start": "START"
   },
   "home": {
+    "allPlantsWatered": "NO PLANTS NEED WATERING TODAY!",
     "plantsNeedWater": "{{count}} PLANTS NEED WATER TODAY!",
     "plantsNeedWater_one": "{{count}} PLANT NEEDS WATER TODAY!",
     "weeklySchedule": "WEEKLY WATER SCHEDULE",
@@ -81,9 +90,11 @@
     "onSchedule": "On Schedule",
     "needsWater": "Needs Water",
     "markWatered": "MARK WATERED",
-    "deletePlant": "Delete Plant",
+    "watered": "WATERED",
+    "deletePlant": "DELETE PLANT",
     "editPlant": "Edit Plant",
     "plantName": "Plant Name",
+    "unnamedPlant": "Unnamed Plant",
     "room": "Room",
     "saveChanges": "SAVE CHANGES",
     "lowLight": "Low Light",
@@ -96,6 +107,11 @@
   },
   "watering": {
     "title": "WATERING",
+    "scheduleTitle": "WATERING SCHEDULE",
+    "needsWaterToday": "{{count}} plants need water today",
+    "needsWaterToday_one": "{{count}} plant need water today",
+    "markAllToday": "WATER ALL TODAY ({{count}})",
+    "sectionToday": "TODAY",
     "plantCount": "{{count}} PLANTS",
     "plantCount_one": "{{count}} PLANT",
     "markAll": "MARK ALL {{count}} PLANTS TODAY AS WATERED",
@@ -109,7 +125,14 @@
   "health": {
     "title": "Health Tracker",
     "checkedToday": "Checked Today · {{score}}%",
-    "scanToCheck": "Scan to check health",
+    "scanToCheck": "SCAN TO CHECK",
+    "overallHealthScore": "Overall Health Score",
+    "thrivingConditions": "Thriving in current conditions",
+    "recordHealthCheck": "RECORD HEALTH CHECK",
+    "observationToday": "Today",
+    "observationDaysAgo": "{{count}} days ago",
+    "observationDaysAgo_one": "{{count}} day ago",
+    "observationWeekAgo": "1 week ago",
     "checkHealthWithAi": "CHECK HEALTH WITH AI",
     "analyzing": "ANALYZING…",
     "proFeature": "PRO FEATURE",
@@ -149,8 +172,10 @@
     "chooseDays": "Choose which days you'd like to water",
     "dataPrivacy": "Data & Privacy",
     "exportData": "Export Data",
+    "exportSubtitle": "Download your jungle as JSON",
     "export": "EXPORT",
     "resetData": "Reset App Data",
+    "resetSubtitle": "Erase all plants and settings",
     "reset": "RESET",
     "sendFeedback": "Send Feedback",
     "proStatus": "MY JUNGLE PRO STATUS",
@@ -280,7 +305,7 @@
     "soundSubtitle": "Play sound with notifications",
     "haptic": "Haptic Feedback",
     "hapticSubtitle": "Vibrate on alerts and toggles",
-    "sendTest": "Send Test Notification",
+    "sendTest": "SEND TEST NOTIFICATION",
     "unsupported": "Notifications are not supported on this device.",
     "enableFirst": "Enable push notifications first.",
     "testSent": "Test notification sent!",
@@ -315,7 +340,20 @@
     "resetData": "Reset all app data?"
   },
   "analyze": {
-    "failed": "Could not analyze this photo. Please try again."
+    "failed": "Could not analyze this photo. Please try again.",
+    "lowConfidence": "Plant identified with low confidence — review the name and care details, or try a clearer photo."
+  },
+  "toxicity": {
+    "title": "Toxicity to Pets",
+    "question": "Is this plant toxic to cats or dogs?",
+    "unknown": "Unknown",
+    "safe": "Pet Safe",
+    "toxic": "Toxic",
+    "notesLabel": "Toxicity Notes",
+    "notesPlaceholder": "e.g. Mildly toxic to cats if ingested",
+    "badgeSafe": "Pet Safe",
+    "badgeToxic": "Toxic to Pets",
+    "badgeUnknown": "Toxicity Unknown"
   },
   "months": {
     "short": {

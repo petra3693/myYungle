@@ -26,7 +26,7 @@ export default function PhotoActionSheet({
             <button
               type="button"
               onClick={onTakePhoto}
-              className="flex w-full items-center justify-center border-b-2 border-black px-4 py-4 cursor-pointer active:bg-[#F7F7F7]"
+              className="flex w-full items-center justify-center border-b-2 border-black px-4 py-4 cursor-pointer active:bg-[#E5E5E5]"
               style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 16, color: '#000' }}
             >
               {t('photo.takePhoto')}
@@ -34,7 +34,7 @@ export default function PhotoActionSheet({
             <button
               type="button"
               onClick={onChooseLibrary}
-              className="flex w-full items-center justify-center px-4 py-4 cursor-pointer active:bg-[#F7F7F7]"
+              className="flex w-full items-center justify-center px-4 py-4 cursor-pointer active:bg-[#E5E5E5]"
               style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 16, color: '#000' }}
             >
               {t('photo.chooseLibrary')}
@@ -43,7 +43,7 @@ export default function PhotoActionSheet({
           <button
             type="button"
             onClick={onClose}
-            className="neo-card flex w-full items-center justify-center rounded-2xl border-2 border-black bg-white px-4 py-4 mb-1 cursor-pointer active:bg-[#F7F7F7] shadow-lg"
+            className="neo-card flex w-full items-center justify-center rounded-2xl border-2 border-black bg-white px-4 py-4 mb-1 cursor-pointer active:bg-[#E5E5E5] shadow-lg"
             style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 16, color: '#000' }}
           >
             {t('photo.cancel')}
