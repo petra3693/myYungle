@@ -40,7 +40,7 @@ interface AnalyzePlantPayload {
 // Constants
 // ---------------------------------------------------------------------------
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash'
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash'
 const GEMINI_GENERATE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 const MAX_INLINE_BASE64_CHARS = 5_500_000
 const BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/

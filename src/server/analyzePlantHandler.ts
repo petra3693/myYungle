@@ -24,7 +24,7 @@ export interface AnalyzePlantError {
   error: string
 }
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash'
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash'
 
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,

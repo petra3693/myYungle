@@ -96,6 +96,7 @@ function analyzePlantApiDevPlugin(env: Record<string, string>): Plugin {
         }
 
         process.env.GEMINI_API_KEY = env.GEMINI_API_KEY ?? process.env.GEMINI_API_KEY
+        process.env.GEMINI_MODEL = env.GEMINI_MODEL ?? process.env.GEMINI_MODEL
 
         if (!process.env.GEMINI_API_KEY) {
           res.statusCode = 503
