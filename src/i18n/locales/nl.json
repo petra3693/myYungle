@@ -20,9 +20,13 @@
   },
   "tabs": {
     "home": "MY JUNGLE",
+    "plants": "PLANTEN",
+    "schedule": "SCHEMA",
     "add": "NIEUW",
     "addUpgrade": "UPGRADE",
     "watering": "WATER GEVEN",
+    "health": "GEZONDHEID",
+    "profile": "PROFIEL",
     "settings": "PRO",
     "upgradeToPro": "Upgrade naar Pro"
   },
@@ -67,7 +71,19 @@
     "lightNeedQuestion": "Hoeveel licht heeft je plant nodig?  *",
     "savePlant": "PLANT OPSLAAN",
     "saving": "OPSLAAN…",
-    "saveError": "Deze plant kon niet worden opgeslagen. Probeer het opnieuw."
+    "saveError": "Deze plant kon niet worden opgeslagen. Probeer het opnieuw.",
+    "chooseTitle": "Hoe wil je een plant toevoegen?",
+    "aiScan": "AI DIRECT SCAN",
+    "aiScanDesc": "Automatische ID, ingevulde verzorging, gegenereerd schema",
+    "manualEntry": "HANDMATIG / ZOEKEN",
+    "manualEntryDesc": "Zoek in de database of voer een eigen naam in",
+    "slotWarning": "Deze scan gebruikt 1 van je 2 gratis Pro-slots.",
+    "searchCatalog": "Zoek in plantendatabase",
+    "searchPlaceholder": "Zoek Monstera, Pothos, vrouwentong…",
+    "noCatalogMatch": "Geen treffers. Gebruik dit als eigen plantnaam.",
+    "useCustomName": "“{{name}}” als eigen plant gebruiken",
+    "backToChoices": "Terug naar keuzes",
+    "aiScanLocked": "Ontgrendel onbeperkte AI-scans met Pro"
   },
   "needLevels": {
     "waterLight": "Weinig",
@@ -94,6 +110,7 @@
     "deletePlant": "PLANT VERWIJDEREN",
     "editPlant": "Plant bewerken",
     "plantName": "Plantnaam",
+    "unnamedPlant": "Naamloze plant",
     "room": "Kamer",
     "saveChanges": "WIJZIGINGEN OPSLAAN",
     "lowLight": "Weinig licht",
@@ -102,11 +119,15 @@
     "never": "Nooit",
     "today": "Vandaag",
     "daysAgo": "{{count}} dagen geleden",
-    "daysAgo_one": "{{count}} dag geleden",
-    "unnamedPlant": "Naamloze plant"
+    "daysAgo_one": "{{count}} dag geleden"
   },
   "watering": {
     "title": "WATER GEVEN",
+    "scheduleTitle": "WATERSCHEMA",
+    "needsWaterToday": "{{count}} planten hebben vandaag water nodig",
+    "needsWaterToday_one": "{{count}} plant heeft vandaag water nodig",
+    "markAllToday": "ALLES VANDAAG WATER GEVEN ({{count}})",
+    "sectionToday": "VANDAAG",
     "plantCount": "{{count}} PLANTEN",
     "plantCount_one": "{{count}} PLANT",
     "markAll": "ALLE {{count}} PLANTEN VANDAAG ALS BEWATERD MARKEREN",
@@ -115,12 +136,7 @@
     "dayRoutine": "ROUTINE {{day}}",
     "noPlantsAssigned": "Geen planten toegewezen",
     "markWatered": "Markeer als bewaterd",
-    "watered": "Plant bewaterd",
-    "scheduleTitle": "WATERSCHEMA",
-    "needsWaterToday": "{{count}} planten hebben vandaag water nodig",
-    "needsWaterToday_one": "{{count}} plant heeft vandaag water nodig",
-    "markAllToday": "ALLES VANDAAG WATER GEVEN ({{count}})",
-    "sectionToday": "VANDAAG"
+    "watered": "Plant bewaterd"
   },
   "health": {
     "title": "Gezondheidstracker",
@@ -157,6 +173,52 @@
     "needsAttentionDiag": "{{diagnosis}} — heeft aandacht nodig.",
     "needsAttention": "Heeft aandacht nodig — bekijk de verzorgingstips hieronder."
   },
+  "healthHub": {
+    "title": "GEZONDHEID",
+    "slotsBanner": "Gratis Pro-slots: {{used}}/{{max}} gebruikt",
+    "slotsBannerPro": "Pro ontgrendeld — onbeperkte diagnoses en tijdlijnen",
+    "active": "Actieve Pro-planten",
+    "locked": "Vergrendelde planten",
+    "unlockAll": "ALLES ONTGRENDELEN",
+    "noActive": "Nog geen planten met Pro-toegang. Open een plant om een gratis slot te activeren.",
+    "noPlants": "Voeg een plant toe om gezondheid te volgen.",
+    "noScans": "Nog geen AI-scans",
+    "noTimeline": "Nog geen groeitijdlijn",
+    "timelineCount": "{{count}} tijdlijnitems",
+    "timelineCount_one": "{{count}} tijdlijnitem",
+    "lockedPreview": "AI-diagnose en tijdlijn vergrendeld",
+    "unlockPlant": "Pro-functies ontgrendelen voor {{name}}"
+  },
+  "slots": {
+    "activate": "GRATIS PRO-SLOT ACTIVEREN",
+    "activateTitle": "Pro-slot activeren?",
+    "activateBody": "1 van je 2 gratis Pro-slots activeren voor {{name}}? Deze keuze is permanent voor deze plant.",
+    "activateHint": "Gebruik een gratis Pro-slot om AI-diagnose en tijdlijn te ontgrendelen.",
+    "unlockHint": "Je hebt je 2 gratis slots gebruikt. Upgrade om Diagnose en Tijdlijn te ontgrendelen.",
+    "confirm": "SLOT ACTIVEREN",
+    "cancel": "ANNULEREN",
+    "close": "Slotbevestiging sluiten",
+    "unlockDiagnosis": "DIAGNOSE EN TIJDLIJN ONTGRENDELEN (PRO)"
+  },
+  "paywall": {
+    "title": "Bescherm je hele jungle met Pro",
+    "subtitle": "Je hebt je 2 gratis slots gebruikt. Upgrade nu voor onbeperkte AI-diagnoses en groeitijdlijnen voor al je planten.",
+    "cta": "START 7 DAGEN PROEF",
+    "yearly": "JAARLIJKS",
+    "monthly": "MAANDELIJKS",
+    "yearlyPrice": "€19,99/jaar",
+    "monthlyPrice": "€3,99/maand",
+    "restore": "AANKOOP HERSTELLEN",
+    "close": "SLUITEN",
+    "noPurchase": "Geen eerdere aankoop gevonden.",
+    "benefitUnlimited": "Onbeperkte AI-diagnoses voor elke plant",
+    "benefitTimeline": "Volledige groei- en gezondheidstijdlijnen",
+    "benefitPlants": "Geen plantenlimiet — laat je jungle groeien",
+    "benefitHealth": "Health Hub voor je hele collectie",
+    "scanTitle": "Ontgrendel onbeperkt AI-scannen en auto-setup met MyJungle Pro.",
+    "scanSubtitle": "Je hebt je 2 gratis slots gebruikt. Upgrade voor onbeperkte AI-herkenning en schema’s.",
+    "benefitScan": "Onbeperkt AI-plantenscannen en auto-setup"
+  },
   "deleteModal": {
     "title": "Plant verwijderen?",
     "body": "Weet je zeker dat je {{name}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
@@ -183,7 +245,8 @@
     "freeTier": "GRATIS VERSIE",
     "proFooter": "Onbeperkt planten · Alle functies ontgrendeld.",
     "freeFooter": "Nog {{count}} plantenplekken over in de gratis versie.",
-    "unlockPro": "PRO VOOR ALTIJD ONTGRENDELEN — $5.99",
+    "unlockPro": "START 7 DAGEN PROEF",
+    "slotsUsed": "Gratis Pro-slots: {{used}}/{{max}} gebruikt",
     "legalAbout": "Juridisch & over",
     "privacyPolicy": "Privacybeleid",
     "legalNotice": "Juridische kennisgeving & Impressum",
@@ -343,6 +406,18 @@
     "failed": "Deze foto kon niet worden geanalyseerd. Probeer het opnieuw.",
     "lowConfidence": "Plant herkend met lage zekerheid — controleer de naam en verzorgingsdetails, of probeer een duidelijkere foto."
   },
+  "toxicity": {
+    "title": "Giftigheid voor huisdieren",
+    "question": "Is deze plant giftig voor katten of honden?",
+    "unknown": "Onbekend",
+    "safe": "Huisdiervriendelijk",
+    "toxic": "Giftig",
+    "notesLabel": "Giftigheidsnotities",
+    "notesPlaceholder": "bijv. Licht giftig voor katten bij inname",
+    "badgeSafe": "Huisdiervriendelijk",
+    "badgeToxic": "Giftig voor huisdieren",
+    "badgeUnknown": "Giftigheid onbekend"
+  },
   "months": {
     "short": {
       "jan": "jan",
@@ -380,17 +455,5 @@
       "contactTitle": "Contact",
       "contactBody": "Gebruik het feedbackformulier in de app voor productvragen."
     }
-  },
-  "toxicity": {
-    "title": "Giftigheid voor huisdieren",
-    "question": "Is deze plant giftig voor katten of honden?",
-    "unknown": "Onbekend",
-    "safe": "Huisdiervriendelijk",
-    "toxic": "Giftig",
-    "notesLabel": "Giftigheidsnotities",
-    "notesPlaceholder": "bijv. Licht giftig voor katten bij inname",
-    "badgeSafe": "Huisdiervriendelijk",
-    "badgeToxic": "Giftig voor huisdieren",
-    "badgeUnknown": "Giftigheid onbekend"
   }
 }

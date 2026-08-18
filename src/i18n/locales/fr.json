@@ -20,9 +20,13 @@
   },
   "tabs": {
     "home": "MY JUNGLE",
+    "plants": "PLANTES",
+    "schedule": "PLANNING",
     "add": "AJOUTER",
     "addUpgrade": "UPGRADE",
     "watering": "ARROSAGE",
+    "health": "SANTÉ",
+    "profile": "PROFIL",
     "settings": "PRO",
     "upgradeToPro": "Passer à Pro"
   },
@@ -67,7 +71,19 @@
     "lightNeedQuestion": "De combien de lumière votre plante a-t-elle besoin ?  *",
     "savePlant": "ENREGISTRER LA PLANTE",
     "saving": "ENREGISTREMENT…",
-    "saveError": "Impossible d'enregistrer cette plante. Veuillez réessayer."
+    "saveError": "Impossible d'enregistrer cette plante. Veuillez réessayer.",
+    "chooseTitle": "Comment voulez-vous ajouter une plante ?",
+    "aiScan": "SCAN IA INSTANTANÉ",
+    "aiScanDesc": "Identification automatique, soins et planning générés",
+    "manualEntry": "SAISIE MANUELLE / RECHERCHE",
+    "manualEntryDesc": "Cherchez dans la base ou saisissez un nom",
+    "slotWarning": "Ce scan utilise 1 de vos 2 emplacements Pro gratuits.",
+    "searchCatalog": "Rechercher dans la base",
+    "searchPlaceholder": "Rechercher Monstera, Pothos, langue de belle-mère…",
+    "noCatalogMatch": "Aucun résultat. Utiliser ce nom personnalisé.",
+    "useCustomName": "Utiliser « {{name}} » comme plante personnalisée",
+    "backToChoices": "Retour aux choix",
+    "aiScanLocked": "Débloquez les scans IA illimités avec Pro"
   },
   "needLevels": {
     "waterLight": "Léger",
@@ -94,6 +110,7 @@
     "deletePlant": "SUPPRIMER LA PLANTE",
     "editPlant": "Modifier la plante",
     "plantName": "Nom de la plante",
+    "unnamedPlant": "Plante sans nom",
     "room": "Pièce",
     "saveChanges": "ENREGISTRER LES MODIFICATIONS",
     "lowLight": "Faible luminosité",
@@ -102,11 +119,15 @@
     "never": "Jamais",
     "today": "Aujourd'hui",
     "daysAgo": "Il y a {{count}} jours",
-    "daysAgo_one": "Il y a {{count}} jour",
-    "unnamedPlant": "Plante sans nom"
+    "daysAgo_one": "Il y a {{count}} jour"
   },
   "watering": {
     "title": "ARROSAGE",
+    "scheduleTitle": "CALENDRIER D'ARROSAGE",
+    "needsWaterToday": "{{count}} plantes ont besoin d'eau aujourd'hui",
+    "needsWaterToday_one": "{{count}} plante a besoin d'eau aujourd'hui",
+    "markAllToday": "TOUT ARROSER AUJOURD'HUI ({{count}})",
+    "sectionToday": "AUJOURD'HUI",
     "plantCount": "{{count}} PLANTES",
     "plantCount_one": "{{count}} PLANTE",
     "markAll": "MARQUER LES {{count}} PLANTES D'AUJOURD'HUI COMME ARROSÉES",
@@ -115,12 +136,7 @@
     "dayRoutine": "ROUTINE DU {{day}}",
     "noPlantsAssigned": "Aucune plante assignée",
     "markWatered": "Marquer comme arrosée",
-    "watered": "Plante arrosée",
-    "scheduleTitle": "CALENDRIER D'ARROSAGE",
-    "needsWaterToday": "{{count}} plantes ont besoin d'eau aujourd'hui",
-    "needsWaterToday_one": "{{count}} plante a besoin d'eau aujourd'hui",
-    "markAllToday": "TOUT ARROSER AUJOURD'HUI ({{count}})",
-    "sectionToday": "AUJOURD'HUI"
+    "watered": "Plante arrosée"
   },
   "health": {
     "title": "Suivi de santé",
@@ -157,6 +173,52 @@
     "needsAttentionDiag": "{{diagnosis}} — nécessite une attention.",
     "needsAttention": "Nécessite une attention — consultez les conseils d'entretien ci-dessous."
   },
+  "healthHub": {
+    "title": "SANTÉ",
+    "slotsBanner": "Emplacements Pro gratuits : {{used}}/{{max}} utilisés",
+    "slotsBannerPro": "Pro débloqué — diagnostics et chronologies illimités",
+    "active": "Plantes Pro actives",
+    "locked": "Plantes verrouillées",
+    "unlockAll": "TOUT DÉBLOQUER",
+    "noActive": "Aucune plante avec accès Pro. Ouvrez une plante pour activer un emplacement gratuit.",
+    "noPlants": "Ajoutez une plante pour suivre sa santé.",
+    "noScans": "Pas encore de scans IA",
+    "noTimeline": "Pas encore de chronologie",
+    "timelineCount": "{{count}} entrées de chronologie",
+    "timelineCount_one": "{{count}} entrée de chronologie",
+    "lockedPreview": "Diagnostic IA et chronologie verrouillés",
+    "unlockPlant": "Débloquer Pro pour {{name}}"
+  },
+  "slots": {
+    "activate": "ACTIVER UN EMPLACEMENT PRO GRATUIT",
+    "activateTitle": "Activer un emplacement Pro ?",
+    "activateBody": "Activer 1 de vos 2 emplacements Pro gratuits pour {{name}} ? Ce choix est définitif pour cette plante.",
+    "activateHint": "Utilisez un emplacement Pro gratuit pour débloquer le diagnostic IA et la chronologie.",
+    "unlockHint": "Vous avez utilisé vos 2 emplacements gratuits. Passez à Pro pour débloquer Diagnostic et chronologie.",
+    "confirm": "ACTIVER",
+    "cancel": "ANNULER",
+    "close": "Fermer la confirmation",
+    "unlockDiagnosis": "DÉBLOQUER DIAGNOSTIC ET CHRONOLOGIE (PRO)"
+  },
+  "paywall": {
+    "title": "Protégez toute votre jungle avec Pro",
+    "subtitle": "Vous avez utilisé vos 2 emplacements gratuits. Passez à Pro pour des diagnostics IA et chronologies illimités.",
+    "cta": "ESSAI GRATUIT 7 JOURS",
+    "yearly": "ANNUEL",
+    "monthly": "MENSUEL",
+    "yearlyPrice": "19,99 €/an",
+    "monthlyPrice": "3,99 €/mois",
+    "restore": "RESTAURER L’ACHAT",
+    "close": "FERMER",
+    "noPurchase": "Aucun achat précédent trouvé.",
+    "benefitUnlimited": "Diagnostics IA illimités pour chaque plante",
+    "benefitTimeline": "Chronologies de croissance et de santé complètes",
+    "benefitPlants": "Aucune limite de plantes — faites grandir votre jungle",
+    "benefitHealth": "Hub Santé pour toute votre collection",
+    "scanTitle": "Débloquez le scan IA illimité et la configuration auto avec MyJungle Pro.",
+    "scanSubtitle": "Vous avez utilisé vos 2 emplacements gratuits. Passez à Pro pour une identification IA illimitée.",
+    "benefitScan": "Scan IA illimité et configuration automatique"
+  },
   "deleteModal": {
     "title": "Supprimer la plante ?",
     "body": "Voulez-vous vraiment supprimer {{name}} ? Cette action est irréversible.",
@@ -183,7 +245,8 @@
     "freeTier": "OFFRE GRATUITE",
     "proFooter": "Plantes illimitées · Toutes les fonctionnalités débloquées.",
     "freeFooter": "Il reste {{count}} emplacements de plantes sur l'offre gratuite.",
-    "unlockPro": "DÉBLOQUER PRO À VIE — $5.99",
+    "unlockPro": "ESSAI GRATUIT 7 JOURS",
+    "slotsUsed": "Emplacements Pro gratuits : {{used}}/{{max}} utilisés",
     "legalAbout": "Mentions légales et à propos",
     "privacyPolicy": "Politique de confidentialité",
     "legalNotice": "Mentions légales et Impressum",
@@ -343,6 +406,18 @@
     "failed": "Impossible d'analyser cette photo. Veuillez réessayer.",
     "lowConfidence": "Plante identifiée avec une faible confiance — vérifiez le nom et les détails d'entretien, ou essayez une photo plus nette."
   },
+  "toxicity": {
+    "title": "Toxicité pour les animaux",
+    "question": "Cette plante est-elle toxique pour les chats ou les chiens ?",
+    "unknown": "Inconnu",
+    "safe": "Sans danger",
+    "toxic": "Toxique",
+    "notesLabel": "Notes de toxicité",
+    "notesPlaceholder": "p. ex. Légèrement toxique pour les chats en cas d'ingestion",
+    "badgeSafe": "Sans danger pour les animaux",
+    "badgeToxic": "Toxique pour les animaux",
+    "badgeUnknown": "Toxicité inconnue"
+  },
   "months": {
     "short": {
       "jan": "Jan",
@@ -380,17 +455,5 @@
       "contactTitle": "Contact",
       "contactBody": "Utilisez le formulaire de commentaires intégré pour les questions sur le produit."
     }
-  },
-  "toxicity": {
-    "title": "Toxicité pour les animaux",
-    "question": "Cette plante est-elle toxique pour les chats ou les chiens ?",
-    "unknown": "Inconnu",
-    "safe": "Sans danger",
-    "toxic": "Toxique",
-    "notesLabel": "Notes de toxicité",
-    "notesPlaceholder": "p. ex. Légèrement toxique pour les chats en cas d'ingestion",
-    "badgeSafe": "Sans danger pour les animaux",
-    "badgeToxic": "Toxique pour les animaux",
-    "badgeUnknown": "Toxicité inconnue"
   }
 }

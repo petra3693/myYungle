@@ -105,6 +105,14 @@ export interface Plant {
   /** null = unknown / not set */
   isToxicToPets: boolean | null
   toxicityNotes?: string
+  /** Free-tier Pro slot assigned to this plant (AI Diagnosis + Timeline). */
+  isProSlotActivated: boolean
+}
+
+/** Freemium / subscription flags used for Pro feature gating. */
+export interface UserState {
+  isProUser: boolean
+  proSlotsUsed: number
 }
 
 export interface AppSettings {
@@ -116,5 +124,8 @@ export interface AppSettings {
   hapticFeedback: boolean
   timezoneAutoSync: boolean
   timezone: string
+  /** @deprecated Use isProUser. Kept in sync for persisted data. */
   isPro: boolean
+  isProUser: boolean
+  proSlotsUsed: number
 }

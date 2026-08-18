@@ -20,9 +20,13 @@
   },
   "tabs": {
     "home": "MY JUNGLE",
+    "plants": "ROŚLINY",
+    "schedule": "HARMONOGRAM",
     "add": "NOWA",
     "addUpgrade": "UPGRADE",
     "watering": "PODLEWANIE",
+    "health": "ZDROWIE",
+    "profile": "PROFIL",
     "settings": "PRO",
     "upgradeToPro": "Przejdź na Pro"
   },
@@ -67,7 +71,19 @@
     "lightNeedQuestion": "Ile światła potrzebuje ta roślina?  *",
     "savePlant": "ZAPISZ ROŚLINĘ",
     "saving": "ZAPISYWANIE…",
-    "saveError": "Nie udało się zapisać rośliny. Spróbuj ponownie."
+    "saveError": "Nie udało się zapisać rośliny. Spróbuj ponownie.",
+    "chooseTitle": "Jak chcesz dodać roślinę?",
+    "aiScan": "BŁYSKAWICZNY SKAN AI",
+    "aiScanDesc": "Automatyczne ID, pielęgnacja i harmonogram",
+    "manualEntry": "RĘCZNIE / WYSZUKIWANIE",
+    "manualEntryDesc": "Szukaj w bazie lub wpisz własną nazwę",
+    "slotWarning": "Ten skan zużywa 1 z 2 darmowych slotów Pro.",
+    "searchCatalog": "Szukaj w bazie roślin",
+    "searchPlaceholder": "Szukaj Monstera, Pothos, sansewieria…",
+    "noCatalogMatch": "Brak wyników. Użyj tego jako własnej nazwy.",
+    "useCustomName": "Użyj „{{name}}” jako własnej rośliny",
+    "backToChoices": "Wróć do wyboru",
+    "aiScanLocked": "Odblokuj nielimitowane skany AI z Pro"
   },
   "needLevels": {
     "waterLight": "Mało",
@@ -94,6 +110,7 @@
     "deletePlant": "USUŃ ROŚLINĘ",
     "editPlant": "Edytuj roślinę",
     "plantName": "Nazwa rośliny",
+    "unnamedPlant": "Roślina bez nazwy",
     "room": "Pomieszczenie",
     "saveChanges": "ZAPISZ ZMIANY",
     "lowLight": "Mało światła",
@@ -102,11 +119,15 @@
     "never": "Nigdy",
     "today": "Dziś",
     "daysAgo": "{{count}} dni temu",
-    "daysAgo_one": "{{count}} dzień temu",
-    "unnamedPlant": "Roślina bez nazwy"
+    "daysAgo_one": "{{count}} dzień temu"
   },
   "watering": {
     "title": "PODLEWANIE",
+    "scheduleTitle": "HARMONOGRAM PODLEWANIA",
+    "needsWaterToday": "{{count}} roślin wymaga dziś podlania",
+    "needsWaterToday_one": "{{count}} roślina wymaga dziś podlania",
+    "markAllToday": "POLEJ WSZYSTKO DZIŚ ({{count}})",
+    "sectionToday": "DZIŚ",
     "plantCount": "{{count}} ROŚLIN",
     "plantCount_one": "{{count}} ROŚLINA",
     "markAll": "OZNACZ WSZYSTKIE {{count}} ROŚLINY JAKO PODLANE DZIŚ",
@@ -115,12 +136,7 @@
     "dayRoutine": "RUTYNA — {{day}}",
     "noPlantsAssigned": "Brak przypisanych roślin",
     "markWatered": "Oznacz jako podlaną",
-    "watered": "Roślina podlana",
-    "scheduleTitle": "HARMONOGRAM PODLEWANIA",
-    "needsWaterToday": "{{count}} roślin wymaga dziś podlania",
-    "needsWaterToday_one": "{{count}} roślina wymaga dziś podlania",
-    "markAllToday": "POLEJ WSZYSTKO DZIŚ ({{count}})",
-    "sectionToday": "DZIŚ"
+    "watered": "Roślina podlana"
   },
   "health": {
     "title": "Monitor zdrowia",
@@ -157,6 +173,52 @@
     "needsAttentionDiag": "{{diagnosis}} — wymaga uwagi.",
     "needsAttention": "Wymaga uwagi — sprawdź porady pielęgnacyjne poniżej."
   },
+  "healthHub": {
+    "title": "ZDROWIE",
+    "slotsBanner": "Darmowe sloty Pro: {{used}}/{{max}} użyte",
+    "slotsBannerPro": "Pro odblokowane — nielimitowane diagnozy i osie czasu",
+    "active": "Aktywne rośliny Pro",
+    "locked": "Zablokowane rośliny",
+    "unlockAll": "ODBLOKUJ WSZYSTKO",
+    "noActive": "Brak roślin z dostępem Pro. Otwórz roślinę, aby aktywować darmowy slot.",
+    "noPlants": "Dodaj roślinę, aby śledzić zdrowie.",
+    "noScans": "Brak skanów AI",
+    "noTimeline": "Brak osi czasu wzrostu",
+    "timelineCount": "{{count}} wpisów osi czasu",
+    "timelineCount_one": "{{count}} wpis osi czasu",
+    "lockedPreview": "Diagnoza AI i oś czasu zablokowane",
+    "unlockPlant": "Odblokuj Pro dla {{name}}"
+  },
+  "slots": {
+    "activate": "AKTYWUJ DARMOWY SLOT PRO",
+    "activateTitle": "Aktywować slot Pro?",
+    "activateBody": "Aktywować 1 z 2 darmowych slotów Pro dla {{name}}? Ten wybór jest trwały dla tej rośliny.",
+    "activateHint": "Użyj darmowego slotu Pro, aby odblokować diagnozę AI i oś czasu.",
+    "unlockHint": "Wykorzystano 2 darmowe sloty. Ulepsz, aby odblokować Diagnozę i oś czasu.",
+    "confirm": "AKTYWUJ SLOT",
+    "cancel": "ANULUJ",
+    "close": "Zamknij potwierdzenie slotu",
+    "unlockDiagnosis": "ODBLOKUJ DIAGNOZĘ I OŚ CZASU (PRO)"
+  },
+  "paywall": {
+    "title": "Chroń całą dżunglę z Pro",
+    "subtitle": "Wykorzystano 2 darmowe sloty. Ulepsz teraz, aby mieć nielimitowane diagnozy AI i osie czasu dla wszystkich roślin.",
+    "cta": "ZACZNIJ 7-DNIOWY OKRES PRÓBNY",
+    "yearly": "ROCZNIE",
+    "monthly": "MIESIĘCZNIE",
+    "yearlyPrice": "19,99 €/rok",
+    "monthlyPrice": "3,99 €/mies.",
+    "restore": "PRZYWRÓĆ ZAKUP",
+    "close": "ZAMKNIJ",
+    "noPurchase": "Nie znaleziono wcześniejszego zakupu.",
+    "benefitUnlimited": "Nielimitowane diagnozy AI dla każdej rośliny",
+    "benefitTimeline": "Pełne osie czasu wzrostu i zdrowia",
+    "benefitPlants": "Bez limitu roślin — powiększ dżunglę",
+    "benefitHealth": "Centrum zdrowia dla całej kolekcji",
+    "scanTitle": "Odblokuj nielimitowane skanowanie AI i auto-konfigurację z MyJungle Pro.",
+    "scanSubtitle": "Wykorzystano 2 darmowe sloty. Ulepsz, aby mieć nielimitowane rozpoznawanie AI.",
+    "benefitScan": "Nielimitowane skanowanie AI i automatyczna konfiguracja"
+  },
   "deleteModal": {
     "title": "Usunąć roślinę?",
     "body": "Czy na pewno chcesz usunąć {{name}}? Tej operacji nie można cofnąć.",
@@ -183,7 +245,8 @@
     "freeTier": "WERSJA BEZPŁATNA",
     "proFooter": "Nieograniczona liczba roślin · Wszystkie funkcje odblokowane.",
     "freeFooter": "Pozostało {{count}} miejsc na rośliny w wersji bezpłatnej.",
-    "unlockPro": "ODBLOKUJ PRO NA ZAWSZE — $5.99",
+    "unlockPro": "ZACZNIJ 7-DNIOWY OKRES PRÓBNY",
+    "slotsUsed": "Darmowe sloty Pro: {{used}}/{{max}} użyte",
     "legalAbout": "Informacje prawne i o aplikacji",
     "privacyPolicy": "Polityka prywatności",
     "legalNotice": "Informacje prawne i Impressum",
@@ -343,6 +406,18 @@
     "failed": "Nie udało się przeanalizować tego zdjęcia. Spróbuj ponownie.",
     "lowConfidence": "Roślina rozpoznana z niską pewnością — sprawdź nazwę i szczegóły pielęgnacji lub spróbuj wyraźniejszego zdjęcia."
   },
+  "toxicity": {
+    "title": "Toksyczność dla zwierząt",
+    "question": "Czy ta roślina jest toksyczna dla kotów lub psów?",
+    "unknown": "Nieznane",
+    "safe": "Bezpieczna dla zwierząt",
+    "toxic": "Toksyczna",
+    "notesLabel": "Uwagi o toksyczności",
+    "notesPlaceholder": "np. Lekko toksyczna dla kotów po spożyciu",
+    "badgeSafe": "Bezpieczna dla zwierząt",
+    "badgeToxic": "Toksyczna dla zwierząt",
+    "badgeUnknown": "Toksyczność nieznana"
+  },
   "months": {
     "short": {
       "jan": "sty",
@@ -380,17 +455,5 @@
       "contactTitle": "Kontakt",
       "contactBody": "W sprawach dotyczących produktu skorzystaj z formularza opinii w aplikacji."
     }
-  },
-  "toxicity": {
-    "title": "Toksyczność dla zwierząt",
-    "question": "Czy ta roślina jest toksyczna dla kotów lub psów?",
-    "unknown": "Nieznane",
-    "safe": "Bezpieczna dla zwierząt",
-    "toxic": "Toksyczna",
-    "notesLabel": "Uwagi o toksyczności",
-    "notesPlaceholder": "np. Lekko toksyczna dla kotów po spożyciu",
-    "badgeSafe": "Bezpieczna dla zwierząt",
-    "badgeToxic": "Toksyczna dla zwierząt",
-    "badgeUnknown": "Toksyczność nieznana"
   }
 }

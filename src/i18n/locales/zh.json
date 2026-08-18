@@ -20,9 +20,13 @@
   },
   "tabs": {
     "home": "MY JUNGLE",
+    "plants": "植物",
+    "schedule": "日程",
     "add": "新增",
     "addUpgrade": "升级",
     "watering": "浇水",
+    "health": "健康",
+    "profile": "个人",
     "settings": "PRO",
     "upgradeToPro": "升级到 Pro"
   },
@@ -67,7 +71,19 @@
     "lightNeedQuestion": "您的植物需要多少光照？  *",
     "savePlant": "保存植物",
     "saving": "保存中…",
-    "saveError": "无法保存此植物。请重试。"
+    "saveError": "无法保存此植物。请重试。",
+    "chooseTitle": "你想如何添加植物？",
+    "aiScan": "AI 即时扫描",
+    "aiScanDesc": "自动识别、填写养护参数并生成日程",
+    "manualEntry": "手动录入 / 搜索",
+    "manualEntryDesc": "搜索植物库或输入自定义名称",
+    "slotWarning": "本次扫描将使用 2 个免费 Pro 名额中的 1 个。",
+    "searchCatalog": "搜索植物库",
+    "searchPlaceholder": "搜索龟背竹、绿萝、虎尾兰…",
+    "noCatalogMatch": "无匹配。将此作为自定义植物名。",
+    "useCustomName": "将“{{name}}”用作自定义植物",
+    "backToChoices": "返回选择",
+    "aiScanLocked": "用 Pro 解锁无限 AI 扫描"
   },
   "needLevels": {
     "waterLight": "少量",
@@ -94,6 +110,7 @@
     "deletePlant": "删除植物",
     "editPlant": "编辑植物",
     "plantName": "植物名称",
+    "unnamedPlant": "未命名植物",
     "room": "房间",
     "saveChanges": "保存更改",
     "lowLight": "弱光",
@@ -102,11 +119,15 @@
     "never": "从未",
     "today": "今天",
     "daysAgo": "{{count}} 天前",
-    "daysAgo_one": "{{count}} 天前",
-    "unnamedPlant": "未命名植物"
+    "daysAgo_one": "{{count}} 天前"
   },
   "watering": {
     "title": "浇水",
+    "scheduleTitle": "浇水日程",
+    "needsWaterToday": "今天有 {{count}} 株植物需要浇水",
+    "needsWaterToday_one": "今天有 {{count}} 株植物需要浇水",
+    "markAllToday": "今天全部浇水 ({{count}})",
+    "sectionToday": "今天",
     "plantCount": "{{count}} 株植物",
     "plantCount_one": "{{count}} 株植物",
     "markAll": "将今天全部 {{count}} 株植物标记为已浇水",
@@ -115,12 +136,7 @@
     "dayRoutine": "{{day}} 安排",
     "noPlantsAssigned": "未分配植物",
     "markWatered": "标记为已浇水",
-    "watered": "已浇水",
-    "scheduleTitle": "浇水日程",
-    "needsWaterToday": "今天有 {{count}} 株植物需要浇水",
-    "needsWaterToday_one": "今天有 {{count}} 株植物需要浇水",
-    "markAllToday": "今天全部浇水 ({{count}})",
-    "sectionToday": "今天"
+    "watered": "已浇水"
   },
   "health": {
     "title": "健康追踪",
@@ -157,6 +173,52 @@
     "needsAttentionDiag": "{{diagnosis}} — 需要关注。",
     "needsAttention": "需要关注 — 请查看下方养护提示。"
   },
+  "healthHub": {
+    "title": "健康",
+    "slotsBanner": "免费 Pro 名额：已用 {{used}}/{{max}}",
+    "slotsBannerPro": "已解锁 Pro — 不限次数诊断与时间线",
+    "active": "已开通 Pro 的植物",
+    "locked": "未解锁的植物",
+    "unlockAll": "全部解锁",
+    "noActive": "还没有开通 Pro 的植物。打开一株植物以激活免费名额。",
+    "noPlants": "添加植物开始健康追踪。",
+    "noScans": "暂无 AI 扫描",
+    "noTimeline": "暂无生长时间线",
+    "timelineCount": "{{count}} 条时间线记录",
+    "timelineCount_one": "{{count}} 条时间线记录",
+    "lockedPreview": "AI 诊断与时间线已锁定",
+    "unlockPlant": "为 {{name}} 解锁 Pro 功能"
+  },
+  "slots": {
+    "activate": "激活免费 Pro 名额",
+    "activateTitle": "激活 Pro 名额？",
+    "activateBody": "为 {{name}} 使用 2 个免费 Pro 名额中的 1 个？此选择对该植物永久有效。",
+    "activateHint": "使用免费 Pro 名额解锁该植物的 AI 诊断与历史时间线。",
+    "unlockHint": "已用完 2 个免费名额。升级即可解锁诊断与时间线。",
+    "confirm": "激活名额",
+    "cancel": "取消",
+    "close": "关闭名额确认",
+    "unlockDiagnosis": "解锁诊断与时间线（Pro）"
+  },
+  "paywall": {
+    "title": "用 Pro 保护整片丛林",
+    "subtitle": "你已用完 2 个免费名额。立即升级，为所有植物解锁无限 AI 诊断与生长时间线。",
+    "cta": "开始 7 天免费试用",
+    "yearly": "年付",
+    "monthly": "月付",
+    "yearlyPrice": "€19.99/年",
+    "monthlyPrice": "€3.99/月",
+    "restore": "恢复购买",
+    "close": "关闭",
+    "noPurchase": "未找到以往购买记录。",
+    "benefitUnlimited": "每株植物无限次 AI 诊断",
+    "benefitTimeline": "完整生长与健康时间线",
+    "benefitPlants": "不限植物数量",
+    "benefitHealth": "面向全部收藏的健康中心",
+    "scanTitle": "用 MyJungle Pro 解锁无限 AI 植物扫描与自动设置。",
+    "scanSubtitle": "你已用完 2 个免费名额。升级即可无限 AI 识别与日程。",
+    "benefitScan": "无限 AI 植物扫描与自动设置"
+  },
   "deleteModal": {
     "title": "删除植物？",
     "body": "确定要删除 {{name}} 吗？此操作无法撤销。",
@@ -183,7 +245,8 @@
     "freeTier": "免费版",
     "proFooter": "植物数量不限 · 所有功能已解锁。",
     "freeFooter": "免费版剩余 {{count}} 个植物名额。",
-    "unlockPro": "永久解锁 PRO — $5.99",
+    "unlockPro": "开始 7 天免费试用",
+    "slotsUsed": "免费 Pro 名额：已用 {{used}}/{{max}}",
     "legalAbout": "法律信息与关于",
     "privacyPolicy": "隐私政策",
     "legalNotice": "法律声明与 Impressum",
@@ -343,6 +406,18 @@
     "failed": "无法分析此照片。请重试。",
     "lowConfidence": "植物识别置信度较低 — 请核对名称和养护详情，或尝试更清晰的照片。"
   },
+  "toxicity": {
+    "title": "对宠物的毒性",
+    "question": "这种植物对猫或狗有毒吗？",
+    "unknown": "未知",
+    "safe": "对宠物安全",
+    "toxic": "有毒",
+    "notesLabel": "毒性说明",
+    "notesPlaceholder": "例如：猫误食可能轻度中毒",
+    "badgeSafe": "对宠物安全",
+    "badgeToxic": "对宠物有毒",
+    "badgeUnknown": "毒性未知"
+  },
   "months": {
     "short": {
       "jan": "1月",
@@ -380,17 +455,5 @@
       "contactTitle": "联系方式",
       "contactBody": "产品相关问题请使用应用内反馈表单。"
     }
-  },
-  "toxicity": {
-    "title": "对宠物的毒性",
-    "question": "这种植物对猫或狗有毒吗？",
-    "unknown": "未知",
-    "safe": "对宠物安全",
-    "toxic": "有毒",
-    "notesLabel": "毒性说明",
-    "notesPlaceholder": "例如：猫误食可能轻度中毒",
-    "badgeSafe": "对宠物安全",
-    "badgeToxic": "对宠物有毒",
-    "badgeUnknown": "毒性未知"
   }
 }

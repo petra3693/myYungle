@@ -20,9 +20,13 @@
   },
   "tabs": {
     "home": "MY JUNGLE",
+    "plants": "PIANTE",
+    "schedule": "AGENDA",
     "add": "AGGIUNGI",
     "addUpgrade": "UPGRADE",
     "watering": "IRRIGAZIONE",
+    "health": "SALUTE",
+    "profile": "PROFILO",
     "settings": "PRO",
     "upgradeToPro": "Passa a Pro"
   },
@@ -67,7 +71,19 @@
     "lightNeedQuestion": "Di quanta luce ha bisogno la tua pianta?  *",
     "savePlant": "SALVA PIANTA",
     "saving": "SALVATAGGIO…",
-    "saveError": "Impossibile salvare questa pianta. Riprova."
+    "saveError": "Impossibile salvare questa pianta. Riprova.",
+    "chooseTitle": "Come vuoi aggiungere una pianta?",
+    "aiScan": "SCANSIONE IA ISTANTANEA",
+    "aiScanDesc": "ID automatico, cure e programma generati",
+    "manualEntry": "INSERIMENTO MANUALE / RICERCA",
+    "manualEntryDesc": "Cerca nel database o inserisci un nome",
+    "slotWarning": "Questa scansione usa 1 dei tuoi 2 slot Pro gratis.",
+    "searchCatalog": "Cerca nel database piante",
+    "searchPlaceholder": "Cerca Monstera, Pothos, sansevieria…",
+    "noCatalogMatch": "Nessun risultato. Usalo come nome personalizzato.",
+    "useCustomName": "Usa “{{name}}” come pianta personalizzata",
+    "backToChoices": "Torna alle scelte",
+    "aiScanLocked": "Sblocca scansioni IA illimitate con Pro"
   },
   "needLevels": {
     "waterLight": "Leggera",
@@ -94,6 +110,7 @@
     "deletePlant": "ELIMINA PIANTA",
     "editPlant": "Modifica pianta",
     "plantName": "Nome della pianta",
+    "unnamedPlant": "Pianta senza nome",
     "room": "Stanza",
     "saveChanges": "SALVA MODIFICHE",
     "lowLight": "Poca luce",
@@ -102,11 +119,15 @@
     "never": "Mai",
     "today": "Oggi",
     "daysAgo": "{{count}} giorni fa",
-    "daysAgo_one": "{{count}} giorno fa",
-    "unnamedPlant": "Pianta senza nome"
+    "daysAgo_one": "{{count}} giorno fa"
   },
   "watering": {
     "title": "IRRIGAZIONE",
+    "scheduleTitle": "PIANO DI ANNAFFIO",
+    "needsWaterToday": "{{count}} piante hanno bisogno di acqua oggi",
+    "needsWaterToday_one": "{{count}} pianta ha bisogno di acqua oggi",
+    "markAllToday": "ANNAFFIA TUTTO OGGI ({{count}})",
+    "sectionToday": "OGGI",
     "plantCount": "{{count}} PIANTE",
     "plantCount_one": "{{count}} PIANTA",
     "markAll": "SEGNA TUTTE LE {{count}} PIANTE DI OGGI COME ANNAFFIATE",
@@ -115,12 +136,7 @@
     "dayRoutine": "ROUTINE DI {{day}}",
     "noPlantsAssigned": "Nessuna pianta assegnata",
     "markWatered": "Segna come annaffiata",
-    "watered": "Pianta annaffiata",
-    "scheduleTitle": "PIANO DI ANNAFFIO",
-    "needsWaterToday": "{{count}} piante hanno bisogno di acqua oggi",
-    "needsWaterToday_one": "{{count}} pianta ha bisogno di acqua oggi",
-    "markAllToday": "ANNAFFIA TUTTO OGGI ({{count}})",
-    "sectionToday": "OGGI"
+    "watered": "Pianta annaffiata"
   },
   "health": {
     "title": "Monitoraggio salute",
@@ -157,6 +173,52 @@
     "needsAttentionDiag": "{{diagnosis}} — richiede attenzione.",
     "needsAttention": "Richiede attenzione — consulta i consigli di cura qui sotto."
   },
+  "healthHub": {
+    "title": "SALUTE",
+    "slotsBanner": "Slot Pro gratis: {{used}}/{{max}} usati",
+    "slotsBannerPro": "Pro sbloccato — diagnosi e timeline illimitate",
+    "active": "Piante Pro attive",
+    "locked": "Piante bloccate",
+    "unlockAll": "SBLOCCA TUTTO",
+    "noActive": "Nessuna pianta con accesso Pro. Apri una pianta per attivare uno slot gratis.",
+    "noPlants": "Aggiungi una pianta per monitorare la salute.",
+    "noScans": "Nessuna scansione IA",
+    "noTimeline": "Nessuna timeline di crescita",
+    "timelineCount": "{{count}} voci nella timeline",
+    "timelineCount_one": "{{count}} voce nella timeline",
+    "lockedPreview": "Diagnosi IA e timeline bloccate",
+    "unlockPlant": "Sblocca Pro per {{name}}"
+  },
+  "slots": {
+    "activate": "ATTIVA SLOT PRO GRATIS",
+    "activateTitle": "Attivare lo slot Pro?",
+    "activateBody": "Attivare 1 dei tuoi 2 slot Pro gratis per {{name}}? Questa scelta è permanente per questa pianta.",
+    "activateHint": "Usa uno slot Pro gratis per sbloccare Diagnosi IA e Timeline.",
+    "unlockHint": "Hai usato i 2 slot gratis. Passa a Pro per sbloccare Diagnosi e Timeline.",
+    "confirm": "ATTIVA SLOT",
+    "cancel": "ANNULLA",
+    "close": "Chiudi conferma slot",
+    "unlockDiagnosis": "SBLOCCA DIAGNOSI E TIMELINE (PRO)"
+  },
+  "paywall": {
+    "title": "Proteggi tutta la tua giungla con Pro",
+    "subtitle": "Hai usato i 2 slot gratis. Passa a Pro per diagnosi IA e timeline illimitate per tutte le piante.",
+    "cta": "INIZIA PROVA DI 7 GIORNI",
+    "yearly": "ANNUALE",
+    "monthly": "MENSILE",
+    "yearlyPrice": "19,99 €/anno",
+    "monthlyPrice": "3,99 €/mese",
+    "restore": "RIPRISTINA ACQUISTO",
+    "close": "CHIUDI",
+    "noPurchase": "Nessun acquisto precedente trovato.",
+    "benefitUnlimited": "Diagnosi IA illimitate per ogni pianta",
+    "benefitTimeline": "Timeline complete di crescita e salute",
+    "benefitPlants": "Nessun limite di piante — fai crescere la giungla",
+    "benefitHealth": "Health Hub per tutta la collezione",
+    "scanTitle": "Sblocca scansione IA illimitata e auto-setup con MyJungle Pro.",
+    "scanSubtitle": "Hai usato i 2 slot gratis. Passa a Pro per identificazione IA e programmi illimitati.",
+    "benefitScan": "Scansione IA illimitata e configurazione automatica"
+  },
   "deleteModal": {
     "title": "Eliminare la pianta?",
     "body": "Sei sicuro di voler eliminare {{name}}? Questa azione non può essere annullata.",
@@ -183,7 +245,8 @@
     "freeTier": "PIANO GRATUITO",
     "proFooter": "Piante illimitate · Tutte le funzioni sbloccate.",
     "freeFooter": "Restano {{count}} slot piante nel piano gratuito.",
-    "unlockPro": "SBLOCCA PRO PER SEMPRE — $5.99",
+    "unlockPro": "INIZIA PROVA DI 7 GIORNI",
+    "slotsUsed": "Slot Pro gratis: {{used}}/{{max}} usati",
     "legalAbout": "Legale e informazioni",
     "privacyPolicy": "Informativa sulla privacy",
     "legalNotice": "Note legali e Impressum",
@@ -343,6 +406,18 @@
     "failed": "Impossibile analizzare questa foto. Riprova.",
     "lowConfidence": "Pianta identificata con bassa confidenza — controlla nome e dettagli di cura, oppure prova con una foto più nitida."
   },
+  "toxicity": {
+    "title": "Tossicità per gli animali",
+    "question": "Questa pianta è tossica per gatti o cani?",
+    "unknown": "Sconosciuto",
+    "safe": "Sicura per animali",
+    "toxic": "Tossica",
+    "notesLabel": "Note sulla tossicità",
+    "notesPlaceholder": "es. Leggermente tossica per i gatti se ingerita",
+    "badgeSafe": "Sicura per animali",
+    "badgeToxic": "Tossica per animali",
+    "badgeUnknown": "Tossicità sconosciuta"
+  },
   "months": {
     "short": {
       "jan": "Gen",
@@ -380,17 +455,5 @@
       "contactTitle": "Contatto",
       "contactBody": "Usa il modulo feedback nell'app per domande sul prodotto."
     }
-  },
-  "toxicity": {
-    "title": "Tossicità per gli animali",
-    "question": "Questa pianta è tossica per gatti o cani?",
-    "unknown": "Sconosciuto",
-    "safe": "Sicura per animali",
-    "toxic": "Tossica",
-    "notesLabel": "Note sulla tossicità",
-    "notesPlaceholder": "es. Leggermente tossica per i gatti se ingerita",
-    "badgeSafe": "Sicura per animali",
-    "badgeToxic": "Tossica per animali",
-    "badgeUnknown": "Tossicità sconosciuta"
   }
 }

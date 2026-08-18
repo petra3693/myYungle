@@ -20,9 +20,13 @@
   },
   "tabs": {
     "home": "MY JUNGLE",
+    "plants": "PLANTAS",
+    "schedule": "AGENDA",
     "add": "AÑADIR",
     "addUpgrade": "UPGRADE",
     "watering": "RIEGO",
+    "health": "SALUD",
+    "profile": "PERFIL",
     "settings": "PRO",
     "upgradeToPro": "Pasar a Pro"
   },
@@ -67,7 +71,19 @@
     "lightNeedQuestion": "¿Cuánta luz necesita tu planta?  *",
     "savePlant": "GUARDAR PLANTA",
     "saving": "GUARDANDO…",
-    "saveError": "No se pudo guardar esta planta. Inténtalo de nuevo."
+    "saveError": "No se pudo guardar esta planta. Inténtalo de nuevo.",
+    "chooseTitle": "¿Cómo quieres añadir una planta?",
+    "aiScan": "ESCANEO IA INSTANTÁNEO",
+    "aiScanDesc": "Identificación automática, cuidados y calendario generados",
+    "manualEntry": "ENTRADA MANUAL / BÚSQUEDA",
+    "manualEntryDesc": "Busca en la base de datos o escribe un nombre",
+    "slotWarning": "Este escaneo usa 1 de tus 2 huecos Pro gratis.",
+    "searchCatalog": "Buscar en la base de datos",
+    "searchPlaceholder": "Busca Monstera, Pothos, lengua de suegra…",
+    "noCatalogMatch": "Sin coincidencias. Úsalo como nombre personalizado.",
+    "useCustomName": "Usar “{{name}}” como planta personalizada",
+    "backToChoices": "Volver a las opciones",
+    "aiScanLocked": "Desbloquea escaneos IA ilimitados con Pro"
   },
   "needLevels": {
     "waterLight": "Poca",
@@ -94,6 +110,7 @@
     "deletePlant": "ELIMINAR PLANTA",
     "editPlant": "Editar planta",
     "plantName": "Nombre de la planta",
+    "unnamedPlant": "Planta sin nombre",
     "room": "Habitación",
     "saveChanges": "GUARDAR CAMBIOS",
     "lowLight": "Poca luz",
@@ -102,11 +119,15 @@
     "never": "Nunca",
     "today": "Hoy",
     "daysAgo": "Hace {{count}} días",
-    "daysAgo_one": "Hace {{count}} día",
-    "unnamedPlant": "Planta sin nombre"
+    "daysAgo_one": "Hace {{count}} día"
   },
   "watering": {
     "title": "RIEGO",
+    "scheduleTitle": "CALENDARIO DE RIEGO",
+    "needsWaterToday": "{{count}} plantas necesitan agua hoy",
+    "needsWaterToday_one": "{{count}} planta necesita agua hoy",
+    "markAllToday": "REGAR TODO HOY ({{count}})",
+    "sectionToday": "HOY",
     "plantCount": "{{count}} PLANTAS",
     "plantCount_one": "{{count}} PLANTA",
     "markAll": "MARCAR LAS {{count}} PLANTAS DE HOY COMO REGADAS",
@@ -115,12 +136,7 @@
     "dayRoutine": "RUTINA DE {{day}}",
     "noPlantsAssigned": "No hay plantas asignadas",
     "markWatered": "Marcar como regada",
-    "watered": "Planta regada",
-    "scheduleTitle": "CALENDARIO DE RIEGO",
-    "needsWaterToday": "{{count}} plantas necesitan agua hoy",
-    "needsWaterToday_one": "{{count}} planta necesita agua hoy",
-    "markAllToday": "REGAR TODO HOY ({{count}})",
-    "sectionToday": "HOY"
+    "watered": "Planta regada"
   },
   "health": {
     "title": "Seguimiento de salud",
@@ -157,6 +173,52 @@
     "needsAttentionDiag": "{{diagnosis}} — necesita atención.",
     "needsAttention": "Necesita atención — revisa los consejos de cuidado abajo."
   },
+  "healthHub": {
+    "title": "SALUD",
+    "slotsBanner": "Huecos Pro gratis: {{used}}/{{max}} usados",
+    "slotsBannerPro": "Pro desbloqueado — diagnósticos y líneas de tiempo ilimitados",
+    "active": "Plantas Pro activas",
+    "locked": "Plantas bloqueadas",
+    "unlockAll": "DESBLOQUEAR TODO",
+    "noActive": "Aún no hay plantas con acceso Pro. Abre una planta para activar un hueco gratis.",
+    "noPlants": "Añade una planta para empezar a seguir su salud.",
+    "noScans": "Aún no hay análisis IA",
+    "noTimeline": "Aún no hay línea de tiempo",
+    "timelineCount": "{{count}} entradas de línea de tiempo",
+    "timelineCount_one": "{{count}} entrada de línea de tiempo",
+    "lockedPreview": "Diagnóstico IA y línea de tiempo bloqueados",
+    "unlockPlant": "Desbloquear Pro para {{name}}"
+  },
+  "slots": {
+    "activate": "ACTIVAR HUECO PRO GRATIS",
+    "activateTitle": "¿Activar hueco Pro?",
+    "activateBody": "¿Activar 1 de tus 2 huecos Pro gratis para {{name}}? Esta elección es permanente para esta planta.",
+    "activateHint": "Usa un hueco Pro gratis para desbloquear Diagnóstico IA y línea de tiempo.",
+    "unlockHint": "Has usado tus 2 huecos gratis. Mejora para desbloquear Diagnóstico y línea de tiempo.",
+    "confirm": "ACTIVAR HUECO",
+    "cancel": "CANCELAR",
+    "close": "Cerrar confirmación de hueco",
+    "unlockDiagnosis": "DESBLOQUEAR DIAGNÓSTICO Y LÍNEA DE TIEMPO (PRO)"
+  },
+  "paywall": {
+    "title": "Protege toda tu jungla con Pro",
+    "subtitle": "Has usado tus 2 huecos gratis. Mejora ahora para diagnósticos IA y líneas de tiempo ilimitados en todas tus plantas.",
+    "cta": "EMPEZAR PRUEBA DE 7 DÍAS",
+    "yearly": "ANUAL",
+    "monthly": "MENSUAL",
+    "yearlyPrice": "19,99 €/año",
+    "monthlyPrice": "3,99 €/mes",
+    "restore": "RESTAURAR COMPRA",
+    "close": "CERRAR",
+    "noPurchase": "No se encontró una compra anterior.",
+    "benefitUnlimited": "Diagnósticos IA ilimitados para cada planta",
+    "benefitTimeline": "Líneas de tiempo de crecimiento y salud completas",
+    "benefitPlants": "Sin límite de plantas — haz crecer tu jungla",
+    "benefitHealth": "Centro de salud para toda tu colección",
+    "scanTitle": "Desbloquea el escaneo IA ilimitado y la configuración automática con MyJungle Pro.",
+    "scanSubtitle": "Has usado tus 2 huecos gratis. Mejora para identificación IA y calendarios ilimitados.",
+    "benefitScan": "Escaneo IA ilimitado y configuración automática"
+  },
   "deleteModal": {
     "title": "¿Eliminar planta?",
     "body": "¿Seguro que quieres eliminar {{name}}? Esta acción no se puede deshacer.",
@@ -183,7 +245,8 @@
     "freeTier": "PLAN GRATUITO",
     "proFooter": "Plantas ilimitadas · Todas las funciones desbloqueadas.",
     "freeFooter": "Quedan {{count}} espacios de plantas en el plan gratuito.",
-    "unlockPro": "DESBLOQUEAR PRO PARA SIEMPRE — $5.99",
+    "unlockPro": "EMPEZAR PRUEBA DE 7 DÍAS",
+    "slotsUsed": "Huecos Pro gratis: {{used}}/{{max}} usados",
     "legalAbout": "Legal e información",
     "privacyPolicy": "Política de privacidad",
     "legalNotice": "Aviso legal e Impressum",
@@ -343,6 +406,18 @@
     "failed": "No se pudo analizar esta foto. Inténtalo de nuevo.",
     "lowConfidence": "Planta identificada con poca confianza — revisa el nombre y los detalles de cuidado, o prueba con una foto más clara."
   },
+  "toxicity": {
+    "title": "Toxicidad para mascotas",
+    "question": "¿Esta planta es tóxica para gatos o perros?",
+    "unknown": "Desconocido",
+    "safe": "Segura para mascotas",
+    "toxic": "Tóxica",
+    "notesLabel": "Notas de toxicidad",
+    "notesPlaceholder": "p. ej. Levemente tóxica para gatos si se ingiere",
+    "badgeSafe": "Segura para mascotas",
+    "badgeToxic": "Tóxica para mascotas",
+    "badgeUnknown": "Toxicidad desconocida"
+  },
   "months": {
     "short": {
       "jan": "Ene",
@@ -380,17 +455,5 @@
       "contactTitle": "Contacto",
       "contactBody": "Usa el formulario de comentarios de la app para preguntas sobre el producto."
     }
-  },
-  "toxicity": {
-    "title": "Toxicidad para mascotas",
-    "question": "¿Esta planta es tóxica para gatos o perros?",
-    "unknown": "Desconocido",
-    "safe": "Segura para mascotas",
-    "toxic": "Tóxica",
-    "notesLabel": "Notas de toxicidad",
-    "notesPlaceholder": "p. ej. Levemente tóxica para gatos si se ingiere",
-    "badgeSafe": "Segura para mascotas",
-    "badgeToxic": "Tóxica para mascotas",
-    "badgeUnknown": "Toxicidad desconocida"
   }
 }

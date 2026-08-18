@@ -20,9 +20,13 @@
   },
   "tabs": {
     "home": "MY JUNGLE",
+    "plants": "PFLANZEN",
+    "schedule": "PLAN",
     "add": "NEU",
     "addUpgrade": "UPGRADE",
     "watering": "GIEßEN",
+    "health": "GESUNDHEIT",
+    "profile": "PROFIL",
     "settings": "PRO",
     "upgradeToPro": "Auf Pro upgraden"
   },
@@ -67,7 +71,19 @@
     "lightNeedQuestion": "Wie viel Licht braucht deine Pflanze?  *",
     "savePlant": "PFLANZE SPEICHERN",
     "saving": "SPEICHERN…",
-    "saveError": "Pflanze konnte nicht gespeichert werden. Bitte erneut versuchen."
+    "saveError": "Pflanze konnte nicht gespeichert werden. Bitte erneut versuchen.",
+    "chooseTitle": "Wie möchtest du eine Pflanze hinzufügen?",
+    "aiScan": "KI-SOFORTSCAN",
+    "aiScanDesc": "Automatische Erkennung, ausgefüllte Pflegewerte, erstellter Plan",
+    "manualEntry": "MANUELL / SUCHE",
+    "manualEntryDesc": "Pflanzendatenbank durchsuchen oder eigenen Namen eingeben",
+    "slotWarning": "Dieser Scan nutzt 1 deiner 2 kostenlosen Pro-Slots.",
+    "searchCatalog": "Pflanzendatenbank durchsuchen",
+    "searchPlaceholder": "Monstera, Efeutute, Bogenhanf suchen…",
+    "noCatalogMatch": "Keine Treffer. Als eigenen Pflanzennamen verwenden.",
+    "useCustomName": "„{{name}}“ als eigene Pflanze verwenden",
+    "backToChoices": "Zurück zur Auswahl",
+    "aiScanLocked": "Unbegrenzte KI-Scans mit Pro freischalten"
   },
   "needLevels": {
     "waterLight": "Wenig",
@@ -94,6 +110,7 @@
     "deletePlant": "PFLANZE LÖSCHEN",
     "editPlant": "Pflanze bearbeiten",
     "plantName": "Pflanzenname",
+    "unnamedPlant": "Unbenannte Pflanze",
     "room": "Raum",
     "saveChanges": "ÄNDERUNGEN SPEICHERN",
     "lowLight": "Wenig Licht",
@@ -102,11 +119,15 @@
     "never": "Nie",
     "today": "Heute",
     "daysAgo": "vor {{count}} Tagen",
-    "daysAgo_one": "vor {{count}} Tag",
-    "unnamedPlant": "Unbenannte Pflanze"
+    "daysAgo_one": "vor {{count}} Tag"
   },
   "watering": {
     "title": "GIEßEN",
+    "scheduleTitle": "GIEGELPLAN",
+    "needsWaterToday": "{{count}} Pflanzen brauchen heute Wasser",
+    "needsWaterToday_one": "{{count}} Pflanze braucht heute Wasser",
+    "markAllToday": "ALLE HEUTE GIESSEN ({{count}})",
+    "sectionToday": "HEUTE",
     "plantCount": "{{count}} PFLANZEN",
     "plantCount_one": "{{count}} PFLANZE",
     "markAll": "ALLE {{count}} PFLANZEN HEUTE ALS GEGossen MARKIEREN",
@@ -115,12 +136,7 @@
     "dayRoutine": "{{day}} ROUTINE",
     "noPlantsAssigned": "Keine Pflanzen zugewiesen",
     "markWatered": "Als gegossen markieren",
-    "watered": "Pflanze gegossen",
-    "scheduleTitle": "GIEGELPLAN",
-    "needsWaterToday": "{{count}} Pflanzen brauchen heute Wasser",
-    "needsWaterToday_one": "{{count}} Pflanze braucht heute Wasser",
-    "markAllToday": "ALLE HEUTE GIESSEN ({{count}})",
-    "sectionToday": "HEUTE"
+    "watered": "Pflanze gegossen"
   },
   "health": {
     "title": "Gesundheits-Tracker",
@@ -157,6 +173,52 @@
     "needsAttentionDiag": "{{diagnosis}} — braucht Aufmerksamkeit.",
     "needsAttention": "Braucht Aufmerksamkeit — Pflegetipps unten prüfen."
   },
+  "healthHub": {
+    "title": "GESUNDHEIT",
+    "slotsBanner": "Kostenlose Pro-Slots: {{used}}/{{max}} genutzt",
+    "slotsBannerPro": "Pro freigeschaltet — unbegrenzte Diagnosen & Zeitachsen",
+    "active": "Aktive Pro-Pflanzen",
+    "locked": "Gesperrte Pflanzen",
+    "unlockAll": "ALLE FREISCHALTEN",
+    "noActive": "Noch keine Pflanzen mit Pro-Zugang. Öffne eine Pflanze, um einen kostenlosen Slot zu aktivieren.",
+    "noPlants": "Füge eine Pflanze hinzu, um die Gesundheit zu verfolgen.",
+    "noScans": "Noch keine KI-Scans",
+    "noTimeline": "Noch keine Wachstums-Zeitachse",
+    "timelineCount": "{{count}} Zeitachsen-Einträge",
+    "timelineCount_one": "{{count}} Zeitachsen-Eintrag",
+    "lockedPreview": "KI-Diagnose & Zeitachse gesperrt",
+    "unlockPlant": "Pro-Funktionen für {{name}} freischalten"
+  },
+  "slots": {
+    "activate": "KOSTENLOSEN PRO-SLOT AKTIVIEREN",
+    "activateTitle": "Pro-Slot aktivieren?",
+    "activateBody": "1 deiner 2 kostenlosen Pro-Slots für {{name}} aktivieren? Diese Wahl gilt dauerhaft für diese Pflanze.",
+    "activateHint": "Nutze einen kostenlosen Pro-Slot, um KI-Diagnose & Verlauf für diese Pflanze freizuschalten.",
+    "unlockHint": "Du hast deine 2 kostenlosen Slots genutzt. Upgrade, um Diagnose & Zeitachse freizuschalten.",
+    "confirm": "SLOT AKTIVIEREN",
+    "cancel": "ABBRECHEN",
+    "close": "Slot-Bestätigung schließen",
+    "unlockDiagnosis": "DIAGNOSE & ZEITACHSE FREISCHALTEN (PRO)"
+  },
+  "paywall": {
+    "title": "Schütze deinen ganzen Dschungel mit Pro",
+    "subtitle": "Du hast deine 2 kostenlosen Slots genutzt. Upgrade jetzt für unbegrenzte KI-Diagnosen & Wachstums-Zeitachsen für alle Pflanzen.",
+    "cta": "7-TAGE-TEST STARTEN",
+    "yearly": "JÄHRLICH",
+    "monthly": "MONATLICH",
+    "yearlyPrice": "19,99 €/Jahr",
+    "monthlyPrice": "3,99 €/Monat",
+    "restore": "KAUF WIEDERHERSTELLEN",
+    "close": "SCHLIESSEN",
+    "noPurchase": "Kein vorheriger Kauf gefunden.",
+    "benefitUnlimited": "Unbegrenzte KI-Diagnosen für jede Pflanze",
+    "benefitTimeline": "Vollständige Wachstums- & Gesundheits-Zeitachsen",
+    "benefitPlants": "Kein Pflanzenlimit — lass deinen Dschungel wachsen",
+    "benefitHealth": "Health Hub für deine ganze Sammlung",
+    "scanTitle": "Schalte unbegrenztes KI-Scannen und Auto-Setup mit MyJungle Pro frei.",
+    "scanSubtitle": "Du hast deine 2 kostenlosen Slots genutzt. Upgrade für unbegrenzte KI-Erkennung, Pflegewerte und Pläne.",
+    "benefitScan": "Unbegrenztes KI-Pflanzenscannen und Auto-Setup"
+  },
   "deleteModal": {
     "title": "Pflanze löschen?",
     "body": "Möchtest du {{name}} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
@@ -183,7 +245,8 @@
     "freeTier": "KOSTENLOS",
     "proFooter": "Unbegrenzte Pflanzen · Alle Funktionen freigeschaltet.",
     "freeFooter": "Noch {{count}} Plätze im kostenlosen Tarif.",
-    "unlockPro": "PRO FÜR IMMER FREISCHALTEN — 5,99 $",
+    "unlockPro": "7-TAGE-TEST STARTEN",
+    "slotsUsed": "Kostenlose Pro-Slots: {{used}}/{{max}} genutzt",
     "legalAbout": "Rechtliches & Infos",
     "privacyPolicy": "Datenschutzerklärung",
     "legalNotice": "Impressum",
@@ -343,6 +406,18 @@
     "failed": "Foto konnte nicht analysiert werden. Bitte erneut versuchen.",
     "lowConfidence": "Pflanze mit geringer Sicherheit erkannt — prüfe Name und Pflegehinweise oder nimm ein klareres Foto."
   },
+  "toxicity": {
+    "title": "Giftigkeit für Haustiere",
+    "question": "Ist diese Pflanze für Katzen oder Hunde giftig?",
+    "unknown": "Unbekannt",
+    "safe": "Haustiersicher",
+    "toxic": "Giftig",
+    "notesLabel": "Giftigkeitshinweise",
+    "notesPlaceholder": "z. B. Leicht giftig für Katzen bei Verschlucken",
+    "badgeSafe": "Haustiersicher",
+    "badgeToxic": "Giftig für Haustiere",
+    "badgeUnknown": "Giftigkeit unbekannt"
+  },
   "months": {
     "short": {
       "jan": "Jan",
@@ -380,17 +455,5 @@
       "contactTitle": "Kontakt",
       "contactBody": "Für Produktfragen nutze das Feedback-Formular in der App."
     }
-  },
-  "toxicity": {
-    "title": "Giftigkeit für Haustiere",
-    "question": "Ist diese Pflanze für Katzen oder Hunde giftig?",
-    "unknown": "Unbekannt",
-    "safe": "Haustiersicher",
-    "toxic": "Giftig",
-    "notesLabel": "Giftigkeitshinweise",
-    "notesPlaceholder": "z. B. Leicht giftig für Katzen bei Verschlucken",
-    "badgeSafe": "Haustiersicher",
-    "badgeToxic": "Giftig für Haustiere",
-    "badgeUnknown": "Giftigkeit unbekannt"
   }
 }

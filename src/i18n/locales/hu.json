@@ -20,9 +20,13 @@
   },
   "tabs": {
     "home": "MY JUNGLE",
+    "plants": "NÖVÉNYEK",
+    "schedule": "NAPTÁR",
     "add": "ÚJ",
     "addUpgrade": "PRO",
     "watering": "ÖNTÖZÉS",
+    "health": "EGÉSZSÉG",
+    "profile": "PROFIL",
     "settings": "PRO",
     "upgradeToPro": "Pro frissítés"
   },
@@ -67,7 +71,19 @@
     "lightNeedQuestion": "Mennyi fényt igényel a növényed?  *",
     "savePlant": "NÖVÉNY MENTÉSE",
     "saving": "MENTÉS…",
-    "saveError": "A növény mentése sikertelen. Próbáld újra."
+    "saveError": "A növény mentése sikertelen. Próbáld újra.",
+    "chooseTitle": "Hogyan szeretnéd hozzáadni a növényt?",
+    "aiScan": "AZONNALI AI SZKENNELÉS",
+    "aiScanDesc": "Automatikus azonosítás, kitöltött gondozás, generált ütemezés",
+    "manualEntry": "KÉZI BEÍRÁS / KERESÉS",
+    "manualEntryDesc": "Keresés az adatbázisban vagy egyedi név megadása",
+    "slotWarning": "Ez a szkennelés 1-et használ a 2 ingyenes Pro helyből.",
+    "searchCatalog": "Növényadatbázis keresése",
+    "searchPlaceholder": "Monstera, Pothos, anyósnyelv…",
+    "noCatalogMatch": "Nincs találat. Használd ezt egyedi növénynévként.",
+    "useCustomName": "„{{name}}” használata egyedi növényként",
+    "backToChoices": "Vissza a választáshoz",
+    "aiScanLocked": "Korlátlan AI szkennelés Pro-val"
   },
   "needLevels": {
     "waterLight": "Kevés",
@@ -94,6 +110,7 @@
     "deletePlant": "NÖVÉNY TÖRLÉSE",
     "editPlant": "Növény szerkesztése",
     "plantName": "Növény neve",
+    "unnamedPlant": "Névtelen növény",
     "room": "Szoba",
     "saveChanges": "VÁLTOZTATÁSOK MENTÉSE",
     "lowLight": "Kevés fény",
@@ -102,11 +119,15 @@
     "never": "Soha",
     "today": "Ma",
     "daysAgo": "{{count}} napja",
-    "daysAgo_one": "{{count}} napja",
-    "unnamedPlant": "Névtelen növény"
+    "daysAgo_one": "{{count}} napja"
   },
   "watering": {
     "title": "ÖNTÖZÉS",
+    "scheduleTitle": "ÖNTÖZÉSI ÜTEMTERV",
+    "needsWaterToday": "{{count}} növénynek ma van szüksége vízre",
+    "needsWaterToday_one": "{{count}} növénynek ma van szüksége vízre",
+    "markAllToday": "MINDET MA ÖNTÖZÖM ({{count}})",
+    "sectionToday": "MA",
     "plantCount": "{{count}} NÖVÉNY",
     "plantCount_one": "{{count}} NÖVÉNY",
     "markAll": "MA {{count}} NÖVÉNY ÖSSZES JELÖLÉSE ÖNTÖZÖTTKÉNT",
@@ -115,12 +136,7 @@
     "dayRoutine": "{{day}} RUTIN",
     "noPlantsAssigned": "Nincs hozzárendelt növény",
     "markWatered": "Megjelölés öntözöttként",
-    "watered": "Növény öntözve",
-    "scheduleTitle": "ÖNTÖZÉSI ÜTEMTERV",
-    "needsWaterToday": "{{count}} növénynek ma van szüksége vízre",
-    "needsWaterToday_one": "{{count}} növénynek ma van szüksége vízre",
-    "markAllToday": "MINDET MA ÖNTÖZÖM ({{count}})",
-    "sectionToday": "MA"
+    "watered": "Növény öntözve"
   },
   "health": {
     "title": "Egészség követő",
@@ -157,6 +173,52 @@
     "needsAttentionDiag": "{{diagnosis}} — figyelmet igényel.",
     "needsAttention": "Figyelmet igényel — nézd meg az ápolási tippeket lent."
   },
+  "healthHub": {
+    "title": "EGÉSZSÉG",
+    "slotsBanner": "Ingyenes Pro helyek: {{used}}/{{max}} felhasználva",
+    "slotsBannerPro": "Pro feloldva — korlátlan diagnózis és idővonal",
+    "active": "Aktív Pro növények",
+    "locked": "Zárolt növények",
+    "unlockAll": "MIND FELOLDÁSA",
+    "noActive": "Még nincs Pro-hozzáférésű növény. Nyiss meg egyet az ingyenes hely aktiválásához.",
+    "noPlants": "Adj hozzá egy növényt az egészségkövetéshez.",
+    "noScans": "Még nincs AI-vizsgálat",
+    "noTimeline": "Még nincs növekedési idővonal",
+    "timelineCount": "{{count}} idővonal-bejegyzés",
+    "timelineCount_one": "{{count}} idővonal-bejegyzés",
+    "lockedPreview": "AI diagnózis és idővonal zárolva",
+    "unlockPlant": "Pro funkciók feloldása: {{name}}"
+  },
+  "slots": {
+    "activate": "INGYENES PRO HELY AKTIVÁLÁSA",
+    "activateTitle": "Pro hely aktiválása?",
+    "activateBody": "Aktiválod 1-et a 2 ingyenes Pro helyből a(z) {{name}} növényre? Ez a választás ennél a növénynél végleges.",
+    "activateHint": "Használj egy ingyenes Pro helyet az AI diagnózis és az idővonal feloldásához.",
+    "unlockHint": "Felhasználtad a 2 ingyenes helyet. Frissíts a diagnózis és az idővonal feloldásához.",
+    "confirm": "HELY AKTIVÁLÁSA",
+    "cancel": "MÉGSE",
+    "close": "Hely megerősítés bezárása",
+    "unlockDiagnosis": "DIAGNÓZIS ÉS IDŐVONAL FELOLDÁSA (PRO)"
+  },
+  "paywall": {
+    "title": "Védd az egész dzsungelt Pro-val",
+    "subtitle": "Felhasználtad a 2 ingyenes helyet. Frissíts most korlátlan AI diagnózishoz és növekedési idővonalhoz minden növényeden.",
+    "cta": "7 NAPOS PRÓBA INDÍTÁSA",
+    "yearly": "ÉVES",
+    "monthly": "HAVI",
+    "yearlyPrice": "19,99 €/év",
+    "monthlyPrice": "3,99 €/hó",
+    "restore": "VÁSÁRLÁS VISSZAÁLLÍTÁSA",
+    "close": "BEZÁRÁS",
+    "noPurchase": "Nem található korábbi vásárlás.",
+    "benefitUnlimited": "Korlátlan AI diagnózis minden növényre",
+    "benefitTimeline": "Teljes növekedési és egészségügyi idővonalak",
+    "benefitPlants": "Nincs növénylimit — növeld a dzsungelt",
+    "benefitHealth": "Egészségközpont a teljes gyűjteményhez",
+    "scanTitle": "Oldd fel a korlátlan AI növényszkennelést és automatikus beállítást a MyJungle Pro-val.",
+    "scanSubtitle": "Felhasználtad a 2 ingyenes helyet. Frissíts korlátlan AI azonosításhoz és ütemezéshez.",
+    "benefitScan": "Korlátlan AI növényszkennelés és automatikus beállítás"
+  },
   "deleteModal": {
     "title": "Növény törlése?",
     "body": "Biztosan törölni szeretnéd: {{name}}? Ez a művelet nem vonható vissza.",
@@ -183,7 +245,8 @@
     "freeTier": "INGYENES",
     "proFooter": "Korlátlan növények · Minden funkció feloldva.",
     "freeFooter": "Még {{count}} hely maradt az ingyenes csomagban.",
-    "unlockPro": "PRO ÖRÖKRE — 5,99 $",
+    "unlockPro": "7 NAPOS PRÓBA INDÍTÁSA",
+    "slotsUsed": "Ingyenes Pro helyek: {{used}}/{{max}} felhasználva",
     "legalAbout": "Jogi információk",
     "privacyPolicy": "Adatvédelmi nyilatkozat",
     "legalNotice": "Impressum & Jogi nyilatkozat",
@@ -343,6 +406,18 @@
     "failed": "A fotó elemzése sikertelen. Próbáld újra.",
     "lowConfidence": "Alacsony biztonsággal azonosított növény — ellenőrizd a nevet és a gondozási adatokat, vagy készíts tisztább fotót."
   },
+  "toxicity": {
+    "title": "Mérgező háziállatoknak",
+    "question": "Mérgező ez a növény macskákra vagy kutyákra?",
+    "unknown": "Ismeretlen",
+    "safe": "Állatbarát",
+    "toxic": "Mérgező",
+    "notesLabel": "Mérgezettségi megjegyzések",
+    "notesPlaceholder": "pl. Enyhén mérgező macskáknak lenyeléskor",
+    "badgeSafe": "Állatbarát",
+    "badgeToxic": "Mérgező háziállatoknak",
+    "badgeUnknown": "Mérgezettség ismeretlen"
+  },
   "months": {
     "short": {
       "jan": "jan.",
@@ -380,17 +455,5 @@
       "contactTitle": "Kapcsolat",
       "contactBody": "Termékkel kapcsolatos kérdésekhez használd az alkalmazáson belüli visszajelző űrlapot."
     }
-  },
-  "toxicity": {
-    "title": "Mérgező háziállatoknak",
-    "question": "Mérgező ez a növény macskákra vagy kutyákra?",
-    "unknown": "Ismeretlen",
-    "safe": "Állatbarát",
-    "toxic": "Mérgező",
-    "notesLabel": "Mérgezettségi megjegyzések",
-    "notesPlaceholder": "pl. Enyhén mérgező macskáknak lenyeléskor",
-    "badgeSafe": "Állatbarát",
-    "badgeToxic": "Mérgező háziállatoknak",
-    "badgeUnknown": "Mérgezettség ismeretlen"
   }
 }

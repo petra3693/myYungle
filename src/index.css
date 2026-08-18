@@ -382,9 +382,31 @@
 
   .neo-tab-bar-inner {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     width: 100%;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    align-items: end;
+  }
+
+  .neo-tab-add-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 9999px;
+    background: var(--color-neo-green);
+    border: 2px solid #000;
+    box-shadow: 3px 3px 0 #111;
+    margin-top: -10px;
+  }
+
+  .health-hub-card {
+    border: 2px solid black;
+    border-radius: 1rem;
+    background: #fff;
+  }
+
+  .health-hub-card--locked .health-hub-card__photo {
+    filter: blur(4px);
+    opacity: 0.55;
   }
 
   .neo-plant-card {

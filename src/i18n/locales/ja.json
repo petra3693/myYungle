@@ -20,9 +20,13 @@
   },
   "tabs": {
     "home": "MY JUNGLE",
+    "plants": "植物",
+    "schedule": "スケジュール",
     "add": "新規追加",
     "addUpgrade": "アップグレード",
     "watering": "水やり",
+    "health": "健康",
+    "profile": "プロフィール",
     "settings": "PRO",
     "upgradeToPro": "Proにアップグレード"
   },
@@ -67,7 +71,19 @@
     "lightNeedQuestion": "必要な光の量は？  *",
     "savePlant": "植物を保存",
     "saving": "保存中…",
-    "saveError": "植物を保存できませんでした。もう一度お試しください。"
+    "saveError": "植物を保存できませんでした。もう一度お試しください。",
+    "chooseTitle": "植物の追加方法を選んでください",
+    "aiScan": "AIインスタントスキャン",
+    "aiScanDesc": "自動識別、ケア項目の自動入力、スケジュール生成",
+    "manualEntry": "手動入力 / 検索",
+    "manualEntryDesc": "データベースを検索するか、名前を入力",
+    "slotWarning": "このスキャンは無料Pro枠2つのうち1つを使います。",
+    "searchCatalog": "植物データベースを検索",
+    "searchPlaceholder": "モンステラ、ポトス、サンスベリア…",
+    "noCatalogMatch": "一致なし。この名前をカスタム植物として使います。",
+    "useCustomName": "「{{name}}」をカスタム植物として使う",
+    "backToChoices": "選択に戻る",
+    "aiScanLocked": "Proで無制限のAIスキャンを解除"
   },
   "needLevels": {
     "waterLight": "少なめ",
@@ -94,6 +110,7 @@
     "deletePlant": "植物を削除",
     "editPlant": "植物を編集",
     "plantName": "植物名",
+    "unnamedPlant": "名前未設定の植物",
     "room": "部屋",
     "saveChanges": "変更を保存",
     "lowLight": "弱い光",
@@ -102,11 +119,15 @@
     "never": "なし",
     "today": "今日",
     "daysAgo": "{{count}}日前",
-    "daysAgo_one": "{{count}}日前",
-    "unnamedPlant": "名前未設定の植物"
+    "daysAgo_one": "{{count}}日前"
   },
   "watering": {
     "title": "水やり",
+    "scheduleTitle": "水やりスケジュール",
+    "needsWaterToday": "今日水が必要な植物：{{count}}株",
+    "needsWaterToday_one": "今日水が必要な植物：{{count}}株",
+    "markAllToday": "今日すべて水やり ({{count}})",
+    "sectionToday": "今日",
     "plantCount": "植物 {{count}}株",
     "plantCount_one": "植物 {{count}}株",
     "markAll": "今日の{{count}}株すべてを水やり済みにする",
@@ -115,12 +136,7 @@
     "dayRoutine": "{{day}}のルーティン",
     "noPlantsAssigned": "割り当てられた植物がありません",
     "markWatered": "水やり済みにする",
-    "watered": "水やり完了",
-    "scheduleTitle": "水やりスケジュール",
-    "needsWaterToday": "今日水が必要な植物：{{count}}株",
-    "needsWaterToday_one": "今日水が必要な植物：{{count}}株",
-    "markAllToday": "今日すべて水やり ({{count}})",
-    "sectionToday": "今日"
+    "watered": "水やり完了"
   },
   "health": {
     "title": "健康トラッカー",
@@ -157,6 +173,52 @@
     "needsAttentionDiag": "{{diagnosis}} — 要注意です。",
     "needsAttention": "要注意 — 下のケアのヒントを確認してください。"
   },
+  "healthHub": {
+    "title": "健康",
+    "slotsBanner": "無料Pro枠: {{used}}/{{max}} 使用",
+    "slotsBannerPro": "Pro解除済み — 診断とタイムライン無制限",
+    "active": "有効なPro植物",
+    "locked": "ロック中の植物",
+    "unlockAll": "すべて解除",
+    "noActive": "Proアクセスの植物はまだありません。植物を開いて無料枠を有効にしてください。",
+    "noPlants": "植物を追加して健康を記録しましょう。",
+    "noScans": "AIスキャンはまだありません",
+    "noTimeline": "成長タイムラインはまだありません",
+    "timelineCount": "タイムライン {{count}} 件",
+    "timelineCount_one": "タイムライン {{count}} 件",
+    "lockedPreview": "AI診断とタイムラインはロック中",
+    "unlockPlant": "{{name}} のPro機能を解除"
+  },
+  "slots": {
+    "activate": "無料Pro枠を有効化",
+    "activateTitle": "Pro枠を有効にしますか？",
+    "activateBody": "{{name}} に2つの無料Pro枠のうち1つを使いますか？この植物では変更できません。",
+    "activateHint": "無料Pro枠でAI診断と履歴タイムラインを解除できます。",
+    "unlockHint": "無料枠を使い切りました。診断とタイムラインを解除するにはアップグレードしてください。",
+    "confirm": "枠を有効化",
+    "cancel": "キャンセル",
+    "close": "確認を閉じる",
+    "unlockDiagnosis": "診断とタイムラインを解除（Pro）"
+  },
+  "paywall": {
+    "title": "Proですべてのジャングルを守る",
+    "subtitle": "無料枠を使い切りました。今すぐアップグレードして、すべての植物で無制限のAI診断と成長タイムラインを。",
+    "cta": "7日間無料トライアルを開始",
+    "yearly": "年額",
+    "monthly": "月額",
+    "yearlyPrice": "€19.99/年",
+    "monthlyPrice": "€3.99/月",
+    "restore": "購入を復元",
+    "close": "閉じる",
+    "noPurchase": "以前の購入は見つかりませんでした。",
+    "benefitUnlimited": "すべての植物で無制限のAI診断",
+    "benefitTimeline": "成長と健康のフルタイムライン",
+    "benefitPlants": "植物数の制限なし",
+    "benefitHealth": "コレクション全体のヘルスケアハブ",
+    "scanTitle": "MyJungle Proで無制限のAIスキャンと自動セットアップを解除。",
+    "scanSubtitle": "無料枠を使い切りました。無制限のAI識別とスケジュールのためにアップグレード。",
+    "benefitScan": "無制限のAI植物スキャンと自動セットアップ"
+  },
   "deleteModal": {
     "title": "植物を削除しますか？",
     "body": "{{name}}を削除してもよろしいですか？この操作は取り消せません。",
@@ -183,7 +245,8 @@
     "freeTier": "無料版",
     "proFooter": "植物数無制限 · すべての機能が利用可能。",
     "freeFooter": "無料版の残り枠：{{count}}株。",
-    "unlockPro": "PROを永久解除 — $5.99",
+    "unlockPro": "7日間無料トライアルを開始",
+    "slotsUsed": "無料Pro枠: {{used}}/{{max}} 使用",
     "legalAbout": "法的情報とアプリについて",
     "privacyPolicy": "プライバシーポリシー",
     "legalNotice": "法的通知とImpressum",
@@ -343,6 +406,18 @@
     "failed": "この写真を分析できませんでした。もう一度お試しください。",
     "lowConfidence": "植物の識別精度が低いです — 名前とケア内容を確認するか、より鮮明な写真をお試しください。"
   },
+  "toxicity": {
+    "title": "ペットへの毒性",
+    "question": "この植物は猫や犬に有毒ですか？",
+    "unknown": "不明",
+    "safe": "ペットに安全",
+    "toxic": "有毒",
+    "notesLabel": "毒性メモ",
+    "notesPlaceholder": "例：猫が誤飲すると軽度の毒性",
+    "badgeSafe": "ペットに安全",
+    "badgeToxic": "ペットに有毒",
+    "badgeUnknown": "毒性不明"
+  },
   "months": {
     "short": {
       "jan": "1月",
@@ -380,17 +455,5 @@
       "contactTitle": "お問い合わせ",
       "contactBody": "製品に関するご質問は、アプリ内のフィードバックフォームをご利用ください。"
     }
-  },
-  "toxicity": {
-    "title": "ペットへの毒性",
-    "question": "この植物は猫や犬に有毒ですか？",
-    "unknown": "不明",
-    "safe": "ペットに安全",
-    "toxic": "有毒",
-    "notesLabel": "毒性メモ",
-    "notesPlaceholder": "例：猫が誤飲すると軽度の毒性",
-    "badgeSafe": "ペットに安全",
-    "badgeToxic": "ペットに有毒",
-    "badgeUnknown": "毒性不明"
   }
 }
