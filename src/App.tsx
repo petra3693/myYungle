@@ -151,6 +151,8 @@ const IconTrash = (p: { size?: number }) => <Icon {...p}><path d="M4 7h16M9 7V4h
 const IconThermometer = (p: { size?: number }) => <Icon {...p}><path d="M14 14.76V4a2 2 0 0 0-4 0v10.76a4 4 0 1 0 4 0z" /></Icon>
 const IconDroplets = (p: { size?: number }) => <Icon {...p}><path d="M7 16a4 4 0 0 0 8 0c0-3-4-8-4-8s-4 5-4 8z" /><path d="M15.5 4.5c1.2 1.8 3 4.7 3 6.5" /></Icon>
 const IconCalendarSmall = (p: { size?: number }) => <Icon {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18" /></Icon>
+const IconDotsHorizontal = (p: { size?: number }) => <Icon {...p}><circle cx="5" cy="12" r="1.5" fill="currentColor" /><circle cx="12" cy="12" r="1.5" fill="currentColor" /><circle cx="19" cy="12" r="1.5" fill="currentColor" /></Icon>
+const IconChevronRight = (p: { size?: number }) => <Icon {...p}><path d="M9 5l7 7-7 7" /></Icon>
 
 // ─── Small building blocks ───────────────────────────────────────────────────
 
@@ -209,29 +211,6 @@ function AiThinkingScreen({ label }: { label: string }) {
 }
 
 function todayISO() { return new Date().toISOString() }
-
-function getStreakDays(plants: Plant[]): number {
-  const dates = plants.flatMap((p) => plantHistory(p).map((h) => h.date.slice(0, 10)))
-  if (dates.length === 0) return 0
-  const unique = Array.from(new Set(dates)).sort().reverse()
-  let streak = 0
-  const cursor = new Date()
-  for (let i = 0; i < unique.length; i += 1) {
-    const expected = new Date(cursor)
-    expected.setDate(cursor.getDate() - i)
-    if (unique[i] === expected.toISOString().slice(0, 10)) streak += 1
-    else break
-  }
-  return streak
-}
-
-function daysSinceLabel(iso: string | null): string {
-  if (!iso) return 'Never'
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
-  if (days <= 0) return 'Today'
-  if (days === 1) return '1 day ago'
-  return `${days} days ago`
-}
 
 /** Lightweight heuristic from watering recency — not a real diagnosis. */
 function computeHealthStatus(plant: Plant, todayIdx: number): { score: number; label: string } {
@@ -571,17 +550,27 @@ function nextWaterStatus(plant: Plant, todayIdx: number): { label: string; dotCo
 
 function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayIdx: number; onOpenPlant: (p: Plant) => void }) {
   const thirsty = plants.filter((p) => isPlantDueToday(p, todayIdx) && !p.isWateredToday).length
-  const streak = getStreakDays(plants)
+  const healthScores = plants.map((p) => computeHealthStatus(p, todayIdx).score)
+  const avgHealth = healthScores.length > 0 ? Math.round(healthScores.reduce((a, b) => a + b, 0) / healthScores.length) : 0
+  const alerts = healthScores.filter((s) => s < 70).length
   return (
     <div className="scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
       <div className="flex items-center justify-between mb-5">
-        <h1 className="font-heading" style={{ fontSize: 30, color: '#fff' }}>my Jungle</h1>
-        <div className="icon-circle text-white"><IconBell /></div>
+        <div className="flex items-center gap-2">
+          <div style={{ color: GREEN }}>
+            <svg width="20" height="24" viewBox="0 0 85 116" fill="currentColor">
+              <path d="M42.5 2.9C45.9 16.9 53.7 29.9 63.9 38.2l1.1 0.9C77.4 48.9 83 59.4 83 71.9c0 11-4.4 21.6-12.1 29.4C63.2 109 52.6 113.4 42.5 113.4S21.8 109 14 101.3C6.3 93.5 1.9 82.9 1.9 71.9c0-11.6 5.7-22.7 17.2-32.2l1.1-0.9C29.5 29.9 39.1 16.9 42.5 2.9z" />
+            </svg>
+          </div>
+          <h1 className="font-heading" style={{ fontSize: 22, color: '#fff' }}>MyJungle</h1>
+        </div>
+        <div className="icon-circle text-white"><IconDotsHorizontal /></div>
       </div>
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="stat-tile"><span className="stat-tile__value">{plants.length}</span><span className="stat-tile__label">plants</span></div>
-        <div className="stat-tile"><span className="stat-tile__value">{thirsty}</span><span className="stat-tile__label">thirsty</span></div>
-        <div className="stat-tile"><span className="stat-tile__value">{streak}</span><span className="stat-tile__label">day{streak === 1 ? '' : 's'} streak</span></div>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="stat-tile"><span className="stat-tile__value">{plants.length}</span><span className="stat-tile__label">Total plants</span></div>
+        <div className="stat-tile"><span className="stat-tile__value">{thirsty}</span><span className="stat-tile__label">Thirsty plants</span></div>
+        <div className="stat-tile"><span className="stat-tile__value">{avgHealth}%</span><span className="stat-tile__label">Avg. health</span></div>
+        <div className="stat-tile"><span className="stat-tile__value">{alerts}</span><span className="stat-tile__label">Alerts active</span></div>
       </div>
       <h2 className="font-heading mb-3" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Your plants</h2>
       {plants.length === 0 ? (
@@ -590,20 +579,23 @@ function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayI
           <p className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>No plants yet. Tap + to add your jungle.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-3">
           {plants.map((p) => {
             const status = nextWaterStatus(p, todayIdx)
+            const health = computeHealthStatus(p, todayIdx)
             return (
-            <button key={p.id} type="button" onClick={() => onOpenPlant(p)} className="plant-tile text-left">
-              <PlantPhoto photo={p.photo} alt={p.name} className="w-full h-full object-cover" />
-              <div className="plant-tile__label">
-                <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{p.name}</span>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span style={{ width: 6, height: 6, borderRadius: 9999, background: status.dotColor, flexShrink: 0 }} />
-                  <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>{status.label}</span>
+              <button key={p.id} type="button" onClick={() => onOpenPlant(p)} className="check-row text-left">
+                <PlantPhoto photo={p.photo} alt={p.name} className="rounded-2xl object-cover shrink-0 w-14 h-14" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-heading truncate" style={{ fontSize: 16, color: '#111' }}>{p.name}</div>
+                  {p.category && <div className="font-body truncate" style={{ fontSize: 12, color: '#8E8E93' }}>{p.category}</div>}
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span style={{ width: 6, height: 6, borderRadius: 9999, background: status.dotColor, flexShrink: 0 }} />
+                    <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>{status.label} · Health: {health.score}%</span>
+                  </div>
                 </div>
-              </div>
-            </button>
+                <div style={{ color: '#8E8E93' }}><IconChevronRight size={18} /></div>
+              </button>
             )
           })}
         </div>
@@ -668,14 +660,13 @@ function PlantDetailScreen({
   const hasAccess = canAccessProFeatures(user)
   const timesPerWeek = plant.wateringFrequency === 'monthly' ? 1 : plant.wateringDays.length * (plant.wateringFrequency === 'biweekly' ? 0.5 : 1)
   const health = computeHealthStatus(plant, todayIdx)
-  const timeline = plantHistory(plant).slice(0, 5)
 
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
         <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
-        <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Plant detail</span>
-        <div style={{ width: 44 }} />
+        <span className="font-heading truncate px-2" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>{plant.name}</span>
+        <IconCircleBtn onClick={() => setShowDelete(true)} label="More options"><IconDotsHorizontal /></IconCircleBtn>
       </div>
       <div className="scroll-y flex-1 px-5 pb-6">
         <div className="rounded-[1.5rem] overflow-hidden mb-4" style={{ height: 240 }}>
@@ -720,36 +711,36 @@ function PlantDetailScreen({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
-              <div className="flex items-center gap-2"><IconDroplet size={16} /><span className="font-heading" style={{ fontSize: 14 }}>Water: {timesPerWeek}x/week</span></div>
-              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Soil hydration</span>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#111' }}>
+              <div style={{ color: GREEN }}><IconDroplet size={16} /></div>
+              <span className="font-heading" style={{ fontSize: 15, color: GREEN }}>{timesPerWeek}x/week</span>
+              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Watering</span>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
-              <div className="flex items-center gap-2"><IconSun size={16} /><span className="font-heading" style={{ fontSize: 14 }}>Light: {plant.lightNeed}</span></div>
-              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>{plant.lightNeed === 'High' ? 'Direct sun' : plant.lightNeed === 'Low' ? 'Shade tolerant' : 'Bright filtered'}</span>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#111' }}>
+              <div style={{ color: GREEN }}><IconSun size={16} /></div>
+              <span className="font-heading" style={{ fontSize: 15, color: GREEN }}>{plant.lightNeed === 'High' ? 'Direct' : plant.lightNeed === 'Low' ? 'Shade' : 'Indirect'}</span>
+              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Light need</span>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
-              <div className="flex items-center gap-2"><IconThermometer size={16} /><span className="font-heading" style={{ fontSize: 14 }}>Temp: {plant.temperatureRangeC ?? '18-27°C'}</span></div>
-              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Keep stable</span>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#111' }}>
+              <div style={{ color: GREEN }}><IconThermometer size={16} /></div>
+              <span className="font-heading" style={{ fontSize: 15, color: GREEN }}>{plant.temperatureRangeC ?? '18-27°C'}</span>
+              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Temperature</span>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
-              <div className="flex items-center gap-2"><IconDroplets size={16} /><span className="font-heading" style={{ fontSize: 14 }}>Humidity: {(plant.humidityNeed ?? 'normal').replace(/^./, (c) => c.toUpperCase())}</span></div>
-              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>{plant.humidityNeed === 'high' ? 'Mist regularly' : plant.humidityNeed === 'low' ? 'Avoid misting' : 'Normal room air'}</span>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#111' }}>
+              <div style={{ color: GREEN }}><IconDroplets size={16} /></div>
+              <span className="font-heading" style={{ fontSize: 15, color: GREEN }}>{plant.humidityNeed === 'high' ? 'High (60%+)' : plant.humidityNeed === 'low' ? 'Low' : 'Normal'}</span>
+              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Humidity</span>
             </div>
           </div>
 
           <div>
-            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Watering timeline</span>
+            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Watering schedule</span>
             <div className="flex items-center gap-2 mt-2">
-              {timeline.length > 0 ? (
-                <span className="font-heading" style={{ fontSize: 11, background: '#111', color: GREEN, borderRadius: 8, padding: '4px 8px' }}>
-                  {new Date(timeline[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase()}
-                </span>
-              ) : (
-                <span className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>No waterings logged yet</span>
-              )}
+              <span className="font-heading" style={{ fontSize: 11, background: '#111', color: GREEN, borderRadius: 8, padding: '4px 8px' }}>
+                {plant.isWateredToday ? 'DONE' : isPlantDueToday(plant, todayIdx) ? 'TODAY' : (plant.scheduleDays[0] ?? '—')}
+              </span>
               <div style={{ flex: 1, height: 1, background: '#eee' }} />
-              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Last watered: {daysSinceLabel(plant.lastWateredAt)}</span>
+              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>{nextWaterStatus(plant, todayIdx).label}</span>
             </div>
           </div>
 
@@ -764,11 +755,8 @@ function PlantDetailScreen({
               {hasAccess ? 'Growth & health tracking unlocked' : 'Growth & health — unlocks with Pro'}
             </span>
           </button>
-          <button type="button" onClick={onWater} className="btn-fill w-full" style={{ height: 52, fontSize: 15, textTransform: 'uppercase' }}>
+          <button type="button" onClick={onWater} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>
             {plant.isWateredToday ? 'Watered ✓' : 'Water now'}
-          </button>
-          <button type="button" onClick={() => setShowDelete(true)} className="font-body text-center" style={{ fontSize: 13, color: '#FF3B30' }}>
-            Delete plant
           </button>
         </div>
       </div>
@@ -1107,16 +1095,14 @@ function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock:
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-2 shrink-0">
-        <IconCircleBtn onClick={onClose} label="Close"><IconX /></IconCircleBtn>
+        <IconCircleBtn onClick={onClose} label="Close"><IconChevronLeft /></IconCircleBtn>
         <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Upgrade</span>
         <div style={{ width: 44 }} />
       </div>
-      <div className="flex items-center justify-center shrink-0" style={{ height: 160 }}>
-        <div className="flex items-center justify-center rounded-full" style={{ width: 96, height: 96, background: 'var(--color-surface)' }}>
-          <div className="flex items-center justify-center rounded-full" style={{ width: 64, height: 64, border: `2px solid ${GREEN}`, color: GREEN }}>
-            <IconX size={28} />
-          </div>
-        </div>
+      <div className="flex flex-col items-center justify-center px-8 pb-4 text-center shrink-0" style={{ minHeight: 170 }}>
+        <span className="btn-outline-pro" style={{ fontSize: 11, padding: '4px 12px', marginBottom: 14 }}>Pro version</span>
+        <h1 className="font-heading" style={{ fontSize: 28, lineHeight: 1.15, color: '#fff', textTransform: 'uppercase' }}>Unlimited growth</h1>
+        <p className="font-body mt-2" style={{ fontSize: 13, color: '#8E8E93' }}>Unlock your full care potential, no limits.</p>
       </div>
       <div className="flex-1 min-h-0 flex flex-col" style={{ background: '#fff', borderRadius: '1.75rem 1.75rem 0 0' }}>
         <div className="scroll-y flex-1 px-6 pt-6">
