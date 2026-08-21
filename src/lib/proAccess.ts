@@ -1,28 +1,20 @@
-import type { AppSettings, Plant, UserState } from '@/types/plant'
+import type { AppSettings, UserState } from '@/types/plant'
 
-export const MAX_PRO_SLOTS = 2
+export const MAX_FREE_PLANTS = 5
 
-export function clampProSlotsUsed(value: unknown): number {
-  const n = typeof value === 'number' && Number.isFinite(value) ? Math.floor(value) : 0
-  return Math.min(MAX_PRO_SLOTS, Math.max(0, n))
+export function userStateFromSettings(settings: Pick<AppSettings, 'isPro'>): UserState {
+  return { isPro: settings.isPro === true }
 }
 
-export function userStateFromSettings(settings: Pick<AppSettings, 'isPro' | 'isProUser' | 'proSlotsUsed'>): UserState {
-  const isProUser = settings.isProUser === true || settings.isPro === true
-  return {
-    isProUser,
-    proSlotsUsed: clampProSlotsUsed(settings.proSlotsUsed),
-  }
+/** Pro is a single one-time unlock: no subscription, no per-plant slots. */
+export function canAccessProFeatures(user: UserState): boolean {
+  return user.isPro === true
 }
 
-export function canAccessProFeatures(plant: Plant, user: UserState): boolean {
-  return user.isProUser === true || plant.isProSlotActivated === true
+export function canAddMorePlants(plantCount: number, user: UserState): boolean {
+  return user.isPro || plantCount < MAX_FREE_PLANTS
 }
 
-export function hasFreeProSlotsRemaining(user: UserState): boolean {
-  return !user.isProUser && user.proSlotsUsed < MAX_PRO_SLOTS
-}
-
-export function canUseAiInstantScan(user: UserState): boolean {
-  return user.isProUser === true || user.proSlotsUsed < MAX_PRO_SLOTS
+export function isFreeTierLimitReached(plantCount: number, user: UserState): boolean {
+  return !user.isPro && plantCount >= MAX_FREE_PLANTS
 }

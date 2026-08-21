@@ -10,7 +10,6 @@ import {
   isAnalyzePlantErrorPayload,
   type AnalyzePlantResult,
 } from '@/lib/analyzePlantResult'
-import { getAppLanguage } from '@/i18n'
 import type { AppLanguage } from '@/i18n/languages'
 
 export type { GeminiSupportedMime } from '@/lib/geminiImage'
@@ -59,7 +58,7 @@ function normalizeClientPlantResponse(
 export async function analyzePlantImage(
   imageSource: string,
   preferredDays: string[] = [],
-  language: AppLanguage = getAppLanguage(),
+  language: AppLanguage = 'en',
 ): Promise<{ ok: true; data: AnalyzePlantApiResponse } | { ok: false; error: string }> {
   try {
     // Re-encode to JPEG ≤1024px so Gemini always gets clean, supported bytes.

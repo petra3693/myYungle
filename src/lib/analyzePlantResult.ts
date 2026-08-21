@@ -8,6 +8,8 @@ export interface AnalyzePlantResult {
   name: string
   waterNeed: 'light' | 'moderate' | 'heavy'
   lightNeed: 'low' | 'medium' | 'high'
+  humidityNeed: 'low' | 'normal' | 'high'
+  temperatureRangeC: string
   careNotes: string
   recommendedDays: string[]
   frequency: 'weekly' | 'biweekly' | 'monthly'
@@ -48,6 +50,17 @@ export function normalizeWaterNeed(value: unknown): AnalyzePlantResult['waterNee
   if (normalized === 'light') return 'light'
   if (normalized === 'heavy') return 'heavy'
   return 'moderate'
+}
+
+export function normalizeHumidityNeed(value: unknown): AnalyzePlantResult['humidityNeed'] {
+  const normalized = String(value ?? '').toLowerCase().trim()
+  if (normalized === 'low') return 'low'
+  if (normalized === 'high') return 'high'
+  return 'normal'
+}
+
+export function normalizeTemperatureRangeC(value: unknown): string {
+  return typeof value === 'string' && value.trim() ? value.trim().slice(0, 30) : '18-27°C'
 }
 
 export function normalizeConfidence(value: unknown): AnalyzePlantConfidence {
@@ -114,6 +127,8 @@ export function coerceAnalyzePlantResult(
       ? obj.name.trim()
       : 'Unknown Plant'
   const lightNeed = normalizeLightNeed(obj.lightNeed)
+  const humidityNeed = normalizeHumidityNeed(obj.humidityNeed)
+  const temperatureRangeC = normalizeTemperatureRangeC(obj.temperatureRangeC)
   const frequency = normalizeFrequency(obj.frequency)
   const recommendedDays = normalizeRecommendedDays(obj.recommendedDays, preferredDays, waterNeed)
   const careNotes =
@@ -127,6 +142,8 @@ export function coerceAnalyzePlantResult(
     name,
     waterNeed,
     lightNeed,
+    humidityNeed,
+    temperatureRangeC,
     careNotes,
     recommendedDays,
     frequency,
@@ -147,6 +164,8 @@ export function createLowConfidencePlantResult(
       name: 'Unknown Plant',
       waterNeed: 'moderate',
       lightNeed: 'medium',
+      humidityNeed: 'normal',
+      temperatureRangeC: '18-27°C',
       careNotes: defaultCareNotes(language, 'low'),
       recommendedDays: days.slice(0, 1),
       frequency: 'weekly',

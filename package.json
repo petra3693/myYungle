@@ -5,9 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "npm run validate:i18n && vite build",
+    "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "validate:i18n": "node scripts/validate-i18n.mjs",
     "preview": "vite preview",
     "format": "oxfmt",
     "update:all": "npm run update:assets && npm run deploy:vercel && npm run sync:mobile",

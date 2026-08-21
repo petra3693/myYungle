@@ -2,18 +2,24 @@ import { defineConfig, loadEnv, type HtmlTagDescriptor, type Plugin } from 'vite
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
-import siteConfiguration from './.figma/make/site.json'
+import siteConfiguration from './.figma/make/site.json' with { type: 'json' }
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(async ({ mode }) => {
+  // Anchor on the invocation cwd, not __dirname/import.meta.url: Vite's native
+  // config loader evaluates a copy of this file from node_modules/.vite-temp/,
+  // so any path derived from this file's own location resolves to that temp
+  // dir instead of the real project root. npm/vite always run from the root.
+  const projectRoot = process.cwd()
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
-  const env = loadEnv(mode, process.cwd(), '')
+  const env = loadEnv(mode, projectRoot, '')
   const devPlugins: Plugin[] = []
   if (mode === 'development') {
-    const devModule = ['./vite', '.dev-plugins', '.ts'].join('')
-    const { createDevApiPlugins } = await import(devModule)
+    const devModuleUrl = pathToFileURL(path.resolve(projectRoot, 'vite.dev-plugins.ts')).href
+    const { createDevApiPlugins } = await import(devModuleUrl)
     devPlugins.push(...createDevApiPlugins(env))
   }
 
@@ -34,7 +40,7 @@ export default defineConfig(async ({ mode }) => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(projectRoot, './src'),
       },
     },
     server: {

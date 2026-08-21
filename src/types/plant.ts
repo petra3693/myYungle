@@ -95,6 +95,9 @@ export interface Plant {
   wateringCycleAnchor: string | null
   waterNeed: WaterNeed
   lightNeed: LightNeed
+  humidityNeed?: 'low' | 'normal' | 'high'
+  temperatureRangeC?: string
+  category?: string
   photo: string
   lastWateredAt: string | null
   previousWateredAt: string | null
@@ -105,14 +108,13 @@ export interface Plant {
   /** null = unknown / not set */
   isToxicToPets: boolean | null
   toxicityNotes?: string
-  /** Free-tier Pro slot assigned to this plant (AI Diagnosis + Timeline). */
-  isProSlotActivated: boolean
+  /** AI identification confidence, 0-100. Undefined for manually-entered plants. */
+  confidence?: number
 }
 
-/** Freemium / subscription flags used for Pro feature gating. */
+/** Freemium gating: a single one-time Pro unlock (no subscription, no per-plant slots). */
 export interface UserState {
-  isProUser: boolean
-  proSlotsUsed: number
+  isPro: boolean
 }
 
 export interface AppSettings {
@@ -124,8 +126,6 @@ export interface AppSettings {
   hapticFeedback: boolean
   timezoneAutoSync: boolean
   timezone: string
-  /** @deprecated Use isProUser. Kept in sync for persisted data. */
+  darkMode: boolean
   isPro: boolean
-  isProUser: boolean
-  proSlotsUsed: number
 }

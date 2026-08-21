@@ -45,6 +45,16 @@ const responseSchema: Schema = {
       enum: ['low', 'medium', 'high'],
       description: 'Light requirement: low, medium, or high',
     },
+    humidityNeed: {
+      type: SchemaType.STRING,
+      format: 'enum',
+      enum: ['low', 'normal', 'high'],
+      description: 'Humidity preference: low, normal, or high',
+    },
+    temperatureRangeC: {
+      type: SchemaType.STRING,
+      description: 'Ideal temperature range in Celsius, short format e.g. "18-27°C"',
+    },
     careNotes: {
       type: SchemaType.STRING,
       description: 'Short care instructions and tips',
@@ -77,7 +87,7 @@ const responseSchema: Schema = {
         'Brief pet toxicity note for cats/dogs (max 200 chars). Empty when safe or unknown.',
     },
   },
-  required: ['name', 'waterNeed', 'lightNeed', 'careNotes', 'recommendedDays', 'frequency', 'confidence'],
+  required: ['name', 'waterNeed', 'lightNeed', 'humidityNeed', 'temperatureRangeC', 'careNotes', 'recommendedDays', 'frequency', 'confidence'],
 }
 
 function buildAnalyzePrompt(
@@ -99,6 +109,9 @@ function buildAnalyzePrompt(
     '- low: low light / shade-tolerant plants',
     '- medium: medium or bright indirect light',
     '- high: high light / direct sunlight',
+    '',
+    'Determine humidityNeed as low, normal, or high based on the plant species.',
+    'Provide temperatureRangeC as a short ideal indoor range, e.g. "18-27°C".',
     '',
     `The user's globally active preferred watering days are: ${dayList}.`,
     'Select the MINIMUM necessary days from ONLY these preferred days to maximize schedule stacking:',

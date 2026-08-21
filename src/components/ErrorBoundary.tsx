@@ -32,21 +32,20 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
     return (
       <div
         className="flex flex-col items-center justify-center gap-4 min-h-dvh px-6 text-center"
-        style={{ background: '#F2ECEC', fontFamily: 'Geist, sans-serif' }}
+        style={{ background: '#0D0D0D', fontFamily: 'Inter, sans-serif' }}
       >
-        <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 18, color: '#000' }}>
-          MYJUNGLE HIT A SNAG
+        <p style={{ fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, fontSize: 20, color: '#fff' }}>
+          my Jungle hit a snag
         </p>
-        <p style={{ fontWeight: 500, fontSize: 14, color: '#444', maxWidth: 320, lineHeight: 1.5 }}>
+        <p style={{ fontWeight: 500, fontSize: 14, color: '#8E8E93', maxWidth: 320, lineHeight: 1.5 }}>
           {this.state.message}
         </p>
         <button
           type="button"
           onClick={this.handleRetry}
-          className="btn-primary btn-green rounded-full border-2 border-black px-6 py-3 cursor-pointer"
-          style={{ background: '#00FF66', fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000' }}
+          className="btn-fill px-6 py-3"
         >
-          TRY AGAIN
+          Try again
         </button>
       </div>
     )
