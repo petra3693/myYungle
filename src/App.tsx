@@ -188,6 +188,31 @@ function DayPill({ label, active, onClick, disabled }: { label: string; active: 
   )
 }
 
+const AI_THINKING_SCENE_URL = 'https://prod.spline.design/PrtPWP3dKiFnEO8l/scene.splinecode'
+
+const SplineViewer = 'spline-viewer' as unknown as React.ComponentType<{
+  url: string
+  'loading-anim-type'?: string
+  style?: React.CSSProperties
+}>
+
+function AiThinkingLoader({ size = 160 }: { size?: number }) {
+  return (
+    <div style={{ width: size, height: size }}>
+      <SplineViewer url={AI_THINKING_SCENE_URL} loading-anim-type="none" style={{ width: '100%', height: '100%' }} />
+    </div>
+  )
+}
+
+function AiThinkingScreen({ label }: { label: string }) {
+  return (
+    <div className="app-shell fixed inset-0 flex flex-col items-center justify-center gap-6">
+      <AiThinkingLoader size={220} />
+      <span className="font-heading text-center px-10" style={{ fontSize: 18, color: '#fff' }}>{label}</span>
+    </div>
+  )
+}
+
 function todayISO() { return new Date().toISOString() }
 
 function getStreakDays(plants: Plant[]): number {
@@ -410,6 +435,10 @@ const FALLBACK_DRAFT_BASE = {
   name: 'Unknown plant', category: 'Houseplant', waterNeed: 'Moderate' as WaterNeed, lightNeed: 'Medium' as LightNeed,
   humidityNeed: 'normal' as const, temperatureRangeC: '18-27°C', careNote: '', wateringDays: [0, 3],
   isToxicToPets: null, toxicityNotes: '', confidence: 40,
+}
+
+function withMinDelay<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.all([promise, new Promise((r) => setTimeout(r, ms))]).then(([value]) => value)
 }
 
 async function identifyPhoto(dataUrl: string): Promise<DraftPlant> {
@@ -844,7 +873,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro }: {
       setPhoto(compressed)
       setDraft(null)
       setAnalyzing(true)
-      const result = await identifyPhoto(compressed)
+      const result = await withMinDelay(identifyPhoto(compressed), 700)
       setDraft(result)
     } catch (error) {
       console.error('[myJungle] manual add analyze failed:', error)
@@ -889,7 +918,10 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro }: {
           </button>
 
           {analyzing && (
-            <p className="font-body text-center mt-4" style={{ fontSize: 14, color: '#8E8E93' }}>Identifying your plant…</p>
+            <div className="flex flex-col items-center gap-2 mt-4">
+              <AiThinkingLoader size={120} />
+              <p className="font-body text-center" style={{ fontSize: 14, color: '#8E8E93' }}>Identifying your plant…</p>
+            </div>
           )}
 
           {draft && (
@@ -1138,6 +1170,7 @@ export default function App() {
   const [storageError, setStorageError] = useState<string | null>(null)
   const [showLimitSheet, setShowLimitSheet] = useState(false)
   const [pendingDrafts, setPendingDrafts] = useState<DraftPlant[]>([])
+  const [aiThinkingLabel, setAiThinkingLabel] = useState<string | null>(null)
   const user = useUserState(settings)
   const todayIdx = getTodayDayIndex()
 
@@ -1267,8 +1300,10 @@ export default function App() {
         freeSlots={MAX_FREE_PLANTS}
         doneLabel="Start AI analysis"
         onDone={(photos) => {
-          void Promise.all(photos.map((p) => identifyPhoto(p.dataUrl))).then((drafts) => {
+          setAiThinkingLabel(`Identifying ${photos.length} plant${photos.length === 1 ? '' : 's'}…`)
+          void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl))), 900).then((drafts) => {
             setPendingDrafts(drafts)
+            setAiThinkingLabel(null)
             setScreen('onboardingResult')
           })
         }}
@@ -1346,8 +1381,10 @@ export default function App() {
         doneLabel="Add all in one tap"
         onBack={() => { setScreen('main'); setTab('home') }}
         onDone={(photos) => {
-          void Promise.all(photos.map((p) => identifyPhoto(p.dataUrl))).then((drafts) => {
+          setAiThinkingLabel(`Identifying ${photos.length} plant${photos.length === 1 ? '' : 's'}…`)
+          void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl))), 900).then((drafts) => {
             setPendingDrafts(drafts)
+            setAiThinkingLabel(null)
             setScreen('bulkResult')
           })
         }}
@@ -1399,7 +1436,7 @@ export default function App() {
           {storageError}
         </div>
       )}
-      {content}
+      {aiThinkingLabel ? <AiThinkingScreen label={aiThinkingLabel} /> : content}
       {showLimitSheet && (
         <LimitReachedSheet
           onCancel={() => setShowLimitSheet(false)}
