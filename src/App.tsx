@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor'
+import Spline from '@splinetool/react-spline'
 import PlantPhoto from '@/components/PlantPhoto'
 import { analyzePlantImage, mapLightNeedToForm, mapWaterNeedToForm } from '@/lib/analyzePlant'
 import {
@@ -190,16 +191,10 @@ function DayPill({ label, active, onClick, disabled }: { label: string; active: 
 
 const AI_THINKING_SCENE_URL = 'https://prod.spline.design/8qdv7wvWdhiLUVHw/scene.splinecode'
 
-const SplineViewer = 'spline-viewer' as unknown as React.ComponentType<{
-  url: string
-  'loading-anim-type'?: string
-  style?: React.CSSProperties
-}>
-
 function AiThinkingLoader({ size = 160 }: { size?: number }) {
   return (
     <div style={{ width: size, height: size }}>
-      <SplineViewer url={AI_THINKING_SCENE_URL} loading-anim-type="none" style={{ width: '100%', height: '100%' }} />
+      <Spline scene={AI_THINKING_SCENE_URL} style={{ width: '100%', height: '100%' }} />
     </div>
   )
 }
