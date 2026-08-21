@@ -188,7 +188,7 @@ function DayPill({ label, active, onClick, disabled }: { label: string; active: 
   )
 }
 
-const AI_THINKING_SCENE_URL = 'https://prod.spline.design/PrtPWP3dKiFnEO8l/scene.splinecode'
+const AI_THINKING_SCENE_URL = 'https://prod.spline.design/8qdv7wvWdhiLUVHw/scene.splinecode'
 
 const SplineViewer = 'spline-viewer' as unknown as React.ComponentType<{
   url: string
