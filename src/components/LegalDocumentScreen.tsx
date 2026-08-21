@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import svgSettings from '@/imports/MyjungleSettings/svg-doomn8mxv7'
 
-const BG = '#EFEFEF'
+const BG = '#F2ECEC'
 
 export type LegalDocument = 'privacy' | 'impressum'
 

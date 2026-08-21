@@ -135,6 +135,7 @@ export default function PaywallModal({ onClose, onStartTrial, onRestore, variant
             >
               <p style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 10, color: '#000' }}>{t('paywall.yearly')}</p>
               <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 11, color: '#333', marginTop: 4 }}>{t('paywall.yearlyPrice')}</p>
+              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 9, color: '#333', marginTop: 2 }}>{t('paywall.yearlyTrialNote')}</p>
             </button>
             <button
               type="button"

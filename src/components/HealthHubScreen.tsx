@@ -114,7 +114,7 @@ export default function HealthHubScreen({
   const lockedPlants = user.isProUser ? [] : plants.filter((p) => !p.isProSlotActivated)
 
   return (
-    <div className="flex flex-col h-full" style={{ background: '#EFEFEF' }}>
+    <div className="flex flex-col h-full" style={{ background: '#F2ECEC' }}>
       <div className="app-header">
         <div className="flex items-center gap-2">
           <Stethoscope className="size-5" strokeWidth={2.5} aria-hidden />
@@ -132,7 +132,7 @@ export default function HealthHubScreen({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-6 flex flex-col gap-5">
+      <div className="flex-1 overflow-y-auto px-5 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-5">
         <div
           className="neo-card rounded-2xl border-2 border-black px-4 py-3"
           style={{ background: user.isProUser ? GREEN : '#fff' }}

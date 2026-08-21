@@ -186,7 +186,7 @@ function ChipSelect<T extends string>({
 function DomainHeader({ domain }: { domain: keyof typeof DOMAIN_LABELS }) {
   return (
     <span
-      className="sticky top-0 z-[1] bg-[#EFEFEF] py-1"
+      className="sticky top-0 z-[1] bg-[#F2ECEC] py-1"
       style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', textTransform: 'uppercase' }}
     >
       {DOMAIN_LABELS[domain]}
@@ -231,7 +231,7 @@ export default function CheckInSheet({ plantName, lastCheckIn, onClose, onSubmit
       >
         <form
           onSubmit={handleSubmit}
-          className="neo-card flex flex-col gap-3 rounded-t-3xl rounded-b-2xl border-2 border-black bg-[#EFEFEF] p-4 w-full max-w-lg mx-auto max-h-[90vh] overflow-hidden"
+          className="neo-card flex flex-col gap-3 rounded-t-3xl rounded-b-2xl border-2 border-black bg-[#F2ECEC] p-4 w-full max-w-lg mx-auto max-h-[90vh] overflow-hidden"
           style={{ boxShadow: '0 -4px 0 0 #000' }}
         >
           <div className="flex items-center justify-between gap-3 shrink-0">

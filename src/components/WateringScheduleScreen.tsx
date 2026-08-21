@@ -137,7 +137,7 @@ function CalendarDayPill({
       type="button"
       onClick={onSelect}
       aria-current={isActive ? 'date' : undefined}
-      className={`relative flex min-w-[52px] shrink-0 snap-center flex-col items-center justify-center gap-1 rounded-2xl border-2 px-3 py-2.5 transition-colors ${
+      className={`relative flex min-w-[56px] shrink-0 snap-center flex-col items-center justify-center gap-1 rounded-2xl border-2 px-3 pt-3 pb-4 transition-colors ${
         isActive
           ? 'border-black bg-[#00FF66] font-black text-black'
           : 'border-black bg-white font-bold text-black'
@@ -150,7 +150,7 @@ function CalendarDayPill({
       {isToday && (
         <span
           aria-hidden
-          className={`absolute -bottom-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full ${
+          className={`absolute bottom-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full ${
             isActive ? 'bg-black' : 'bg-[#888888]'
           }`}
         />
@@ -278,8 +278,7 @@ export default function WateringScreen({
     sectionRefs.current[dayIdx]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  function isPlantWateredForDay(plant: Plant, dayIdx: number): boolean {
-    if (dayIdx !== resolvedTodayIdx) return false
+  function isPlantWateredForDay(plant: Plant): boolean {
     return plant.isWateredToday
   }
 
@@ -289,7 +288,7 @@ export default function WateringScreen({
       : taskGroups.filter((group) => group.dayIdx === selectedDayIdx)
 
   return (
-    <div className="flex h-full flex-col bg-[#efefef]">
+    <div className="flex h-full flex-col bg-[#F2ECEC]">
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-4">
         <header className="shrink-0 px-5 pb-3 pt-4">
           <h1 className="font-[family-name:var(--font-unbounded)] text-xl font-black uppercase leading-tight text-black">
@@ -357,7 +356,7 @@ export default function WateringScreen({
                 <WateringTaskCard
                   key={plant.id}
                   plant={plant}
-                  watered={isPlantWateredForDay(plant, group.dayIdx)}
+                  watered={isPlantWateredForDay(plant)}
                   onToggle={() => onMarkWatered(plant.id)}
                   markWateredLabel={t('watering.markWatered')}
                   wateredLabel={t('watering.watered')}

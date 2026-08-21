@@ -27,7 +27,7 @@ export default function PlantPhoto({ photo, alt, className }: PlantPhotoProps) {
   }, [photo])
 
   if (!src) {
-    return <div className={className} style={{ background: '#EFEFEF' }} aria-hidden />
+    return <div className={className} style={{ background: '#F2ECEC' }} aria-hidden />
   }
 
   return <img src={src} alt={alt} className={className} />

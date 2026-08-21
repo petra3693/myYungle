@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Capacitor } from '@capacitor/core'
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor'
-import { AlertTriangle, Calendar, Camera, Check, ChevronRight, Leaf, PawPrint, Plus, Sparkles, Star, Stethoscope, Sun, User } from 'lucide-react'
+import { AlertTriangle, Calendar, Camera, Check, ChevronLeft, ChevronRight, Leaf, Lock, PawPrint, Plus, Sparkles, Star, Stethoscope, Sun, User } from 'lucide-react'
 import LanguageSelector from '@/components/LanguageSelector'
 import i18n, { getAppLanguage } from '@/i18n'
 import { formatWateringDayTags, fullDayLabel, shortDayLabel, translateRoomLabel } from '@/i18n/labels'
@@ -49,13 +49,13 @@ import plantImg1 from '@/imports/MyjungleSettimgs-2/a629e756f91539ad0cd6c99c620a
 import plantImg2 from '@/imports/MyjungleSettimgs-2/c1e26fe342a3e4cbf5b479e973ae60ebe8c1d81e.png'
 import plantImg3 from '@/imports/MyjungleSettimgs-2/f9057e3acb1771233585613c769e96893a7e8d76.png'
 
-type Screen = 'splash' | 'onboarding' | 'main' | 'detail' | 'settings'
+type Screen = 'splash' | 'onboarding' | 'main' | 'detail' | 'healthDetail' | 'settings'
 type TabScreen = 'home' | 'schedule' | 'add' | 'health' | 'profile'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const GREEN = '#00FF66'
-const BG = '#EFEFEF'
+const BG = '#F2ECEC'
 const BLACK = '#000000'
 const RED = '#FF2D55'
 const WATERED_BG = '#D9FFE8'
@@ -326,7 +326,7 @@ function formatDate(iso: string) { return new Date(iso).toLocaleDateString('en-G
 function SvgDrop() {
   return (
     <svg className="block" fill="none" height="116" viewBox="0 0 85 116" width="85">
-      <path d={svgPaths.p1cd02a80} fill="black" stroke="black" strokeLinecap="round" strokeWidth="2" />
+      <path d={svgPaths.p1cd02a80} fill="none" stroke="#B5B5B5" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
     </svg>
   )
 }
@@ -349,13 +349,6 @@ function SvgCheck() {
   return (
     <svg className="block" fill="none" height="18" viewBox="0 0 18 18" width="18">
       <path d={svgPaths.p3901e500} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
-    </svg>
-  )
-}
-function SvgSettings() {
-  return (
-    <svg className="block" fill="none" height="18" viewBox="0 0 18 18" width="18">
-      <path d={svgPaths.p1f61bb80} stroke="#000000" strokeLinecap="round" strokeWidth="2" />
     </svg>
   )
 }
@@ -408,67 +401,66 @@ function TabBar({
 }) {
   const { t } = useTranslation()
   const limitReached = isFreeTierLimitReached(plantCount, isPro)
-  const tabs: { id: TabScreen; label: string; Icon: typeof Leaf; center?: boolean; proBadge?: boolean }[] = [
+  const sideTabs: { id: TabScreen; label: string; Icon: typeof Leaf; proBadge?: boolean }[] = [
     { id: 'home', label: t('tabs.plants'), Icon: Leaf },
     { id: 'schedule', label: t('tabs.schedule'), Icon: Calendar },
-    { id: 'add', label: limitReached ? t('tabs.addUpgrade') : t('tabs.add'), Icon: Plus, center: true },
     { id: 'health', label: t('tabs.health'), Icon: Stethoscope, proBadge: !isPro },
     { id: 'profile', label: t('tabs.profile'), Icon: User },
   ]
-  return (
-    <nav className="neo-tab-bar fixed bottom-0 left-0 right-0 z-50 border-t-2 border-black" aria-label={t('common.mainNav')}>
-      <div className="neo-tab-bar-inner">
-      {tabs.map((tabItem) => {
-        const on = tabItem.id === active
-        const isUpgradeTab = Boolean(tabItem.center && limitReached)
-        const Icon = tabItem.Icon
+  const leftTabs = sideTabs.slice(0, 2)
+  const rightTabs = sideTabs.slice(2)
+  const AddIcon = limitReached ? Lock : Plus
 
-        return (
-          <button
-            key={tabItem.id}
-            type="button"
-            onClick={() => {
-              if (tabItem.id === 'add' && limitReached && onUpgrade) {
-                onUpgrade()
-                return
-              }
-              onChange(tabItem.id)
-            }}
-            className={`relative flex flex-col items-center justify-center gap-1 min-w-0 cursor-pointer transition-colors pt-3 pb-2 ${isUpgradeTab ? 'border-x-2 border-black' : ''}`}
-            style={{ background: isUpgradeTab ? '#EFEFEF' : 'transparent' }}
-            aria-current={on ? 'page' : undefined}
-            aria-label={isUpgradeTab ? t('tabs.upgradeToPro') : tabItem.label}
+  function renderSideTab(tabItem: (typeof sideTabs)[number]) {
+    const on = tabItem.id === active
+    const Icon = tabItem.Icon
+    return (
+      <button
+        key={tabItem.id}
+        type="button"
+        onClick={() => onChange(tabItem.id)}
+        className="neo-tab-icon-btn relative cursor-pointer"
+        style={{ background: on ? GREEN : 'transparent' }}
+        aria-current={on ? 'page' : undefined}
+        aria-label={tabItem.label}
+      >
+        <Icon className="size-5 text-black" strokeWidth={2.25} aria-hidden />
+        {tabItem.proBadge && (
+          <span
+            className="absolute -top-1 -right-1 neo-pill px-1 py-px"
+            style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 5, background: RED, color: '#fff', lineHeight: 1.2 }}
+            aria-hidden
           >
-            {on && (
-              <span
-                aria-hidden
-                className="absolute left-0 right-0 top-0 pointer-events-none"
-                style={{ height: 6, background: GREEN }}
-              />
-            )}
-            {tabItem.center ? (
-              <div className="neo-tab-add-btn flex items-center justify-center">
-                <Icon className="size-5 text-black" strokeWidth={2.5} aria-hidden />
-              </div>
-            ) : (
-              <div className="relative flex items-center justify-center" style={{ width: 20, height: 20 }}>
-                <Icon className="size-5 text-black" strokeWidth={2.25} aria-hidden />
-                {tabItem.proBadge && (
-                  <span
-                    className="absolute -top-1.5 -right-3 neo-pill px-1 py-px"
-                    style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 5, background: RED, color: '#fff', lineHeight: 1.2 }}
-                  >
-                    {t('common.pro')}
-                  </span>
-                )}
-              </div>
-            )}
-            <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 7, color: BLACK, textTransform: 'uppercase' }}>{tabItem.label}</span>
-          </button>
-        )
-      })}
-      </div>
-    </nav>
+            {t('common.pro')}
+          </span>
+        )}
+      </button>
+    )
+  }
+
+  return (
+    <div className="neo-tab-bar-floating-wrap fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+      <nav className="neo-tab-bar-capsule relative flex items-center justify-between pointer-events-auto" aria-label={t('common.mainNav')}>
+        {leftTabs.map(renderSideTab)}
+        <div aria-hidden style={{ width: 56, flexShrink: 0 }} />
+        {rightTabs.map(renderSideTab)}
+        <button
+          type="button"
+          onClick={() => {
+            if (limitReached && onUpgrade) {
+              onUpgrade()
+              return
+            }
+            onChange('add')
+          }}
+          className="neo-tab-add-btn-float flex items-center justify-center cursor-pointer"
+          aria-current={active === 'add' ? 'page' : undefined}
+          aria-label={limitReached ? t('tabs.upgradeToPro') : t('tabs.add')}
+        >
+          <AddIcon className="size-6 text-black" strokeWidth={2.5} aria-hidden />
+        </button>
+      </nav>
+    </div>
   )
 }
 
@@ -767,9 +759,9 @@ function PlantCard({ plant, onTap, onDeleteRequest, onWater, todayIdx, swipeRese
 
 // ─── Screen 3 & 4: Home ───────────────────────────────────────────────────────
 
-function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPlant, onGoAdd, onSettings, onShowPro, todayIdx }: {
+function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPlant, onGoAdd, onShowPro, todayIdx }: {
   plants: Plant[]; settings: AppSettings; onSelectPlant: (p: Plant) => void;
-  onDeletePlant: (id: string) => void; onWaterPlant: (id: string) => void; onGoAdd: () => void; onSettings: () => void; onShowPro: () => void; todayIdx: number
+  onDeletePlant: (id: string) => void; onWaterPlant: (id: string) => void; onGoAdd: () => void; onShowPro: () => void; todayIdx: number
 }) {
   const { t } = useTranslation()
   const [plantToDelete, setPlantToDelete] = useState<Plant | null>(null)
@@ -816,9 +808,6 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
           >
             <SvgLeaf />
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>{t('common.pro')}</span>
-          </button>
-          <button type="button" onClick={onSettings} className="flex items-center justify-center rounded-full border-2 border-black bg-white cursor-pointer" style={{ width: 38, height: 38 }}>
-            <SvgSettings />
           </button>
         </div>
       </div>
@@ -877,9 +866,9 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
             type="button"
             onClick={limitReached ? onShowPro : onGoAdd}
             className={`home-add-plant-btn w-full flex items-center justify-center rounded-full border-2 border-black cursor-pointer transition-all min-h-[52px] py-3.5 px-6 ${
-              limitReached ? 'btn-primary bg-[#EFEFEF]' : 'btn-primary btn-green'
+              limitReached ? 'btn-primary bg-[#F2ECEC]' : 'btn-primary btn-green'
             }`}
-            style={{ background: limitReached ? '#EFEFEF' : GREEN }}
+            style={{ background: limitReached ? '#F2ECEC' : GREEN }}
           >
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#000' }}>
               {limitReached ? t('home.upgradeToPro') : t('home.addPlant')}
@@ -894,16 +883,16 @@ function HomeScreen({ plants, settings, onSelectPlant, onDeletePlant, onWaterPla
 // ─── Free Tier Card ───────────────────────────────────────────────────────────
 
 function AddPlantForm({
-  currentPlantCount,
+  proSlotsUsed,
   onUpgrade,
 }: {
-  currentPlantCount: number
+  proSlotsUsed: number
   onUpgrade: () => void
 }) {
   const { t } = useTranslation()
-  const isLimitReached = isFreeTierLimitReached(currentPlantCount, false)
-  const remainingSlots = Math.max(0, MAX_FREE_PLANTS - currentPlantCount)
-  const progressPercentage = Math.min(100, (currentPlantCount / MAX_FREE_PLANTS) * 100)
+  const isLimitReached = proSlotsUsed >= MAX_PRO_SLOTS
+  const remainingSlots = Math.max(0, MAX_PRO_SLOTS - proSlotsUsed)
+  const progressPercentage = Math.min(100, (proSlotsUsed / MAX_PRO_SLOTS) * 100)
 
   return (
     <div className={`free-tier-card w-full transition-colors ${isLimitReached ? 'free-tier-card--limit' : ''}`}>
@@ -912,7 +901,7 @@ function AddPlantForm({
           {t('common.freeTier')}
         </span>
         <span className={`plants-used-badge ${isLimitReached ? 'plants-used-badge--limit' : ''}`}>
-          {t('common.plantsUsed', { used: currentPlantCount, max: MAX_FREE_PLANTS })}
+          {t('common.proSlotsBadge', { used: proSlotsUsed, max: MAX_PRO_SLOTS })}
         </span>
       </div>
 
@@ -931,7 +920,7 @@ function AddPlantForm({
             role="alert"
           >
             <span aria-hidden>⚠️</span>
-            <span>{t('common.limitReached', { count: MAX_FREE_PLANTS })}</span>
+            <span>{t('common.proSlotsLimitReached')}</span>
           </p>
           <button
             type="button"
@@ -940,13 +929,13 @@ function AddPlantForm({
             style={{ background: GREEN }}
           >
             <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000' }}>
-              {t('common.upgradeUnlimitedCta')}
+              {t('common.upgradeAiScanCta')}
             </span>
           </button>
         </div>
       ) : (
         <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 13, color: '#888', lineHeight: 1.5 }}>
-          {t('common.slotsRemaining', { count: remainingSlots })}{' '}
+          {t('common.proSlotsRemaining', { count: remainingSlots })}{' '}
           <button
             type="button"
             onClick={onUpgrade}
@@ -1411,12 +1400,13 @@ function PetToxicityBadge({
 
 // ─── Screen 5: Add New ───────────────────────────────────────────────────────
 
-function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobalSchedule }: {
-  plants: Plant[]; settings: AppSettings; onSave: (p: Plant) => void; onCancel: () => void; onUpgrade: () => void
-  onEditGlobalSchedule: () => void
+function AddScreen({ plants, settings, user, onSave, onCancel, onUpgrade, onActivateSlot, onEditGlobalSchedule }: {
+  plants: Plant[]; settings: AppSettings; user: UserState; onSave: (p: Plant) => void; onCancel: () => void; onUpgrade: () => void
+  onActivateSlot: () => void; onEditGlobalSchedule: () => void
 }) {
   const { t } = useTranslation()
   const globalIndices = scheduleToIndices(settings.globalWaterSchedule)
+  const [addMode, setAddMode] = useState<'ai' | 'manual'>('ai')
   const [name, setName] = useState('')
   const [room, setRoom] = useState('')
   const [note, setNote] = useState('')
@@ -1435,6 +1425,8 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [analyzeNotice, setAnalyzeNotice] = useState<string | null>(null)
+  const [slotActivated, setSlotActivated] = useState(false)
+  const [showSlotConfirm, setShowSlotConfirm] = useState(false)
   const [petToxicity, setPetToxicity] = useState<PetToxicityChoice>('unknown')
   const [toxicityNotes, setToxicityNotes] = useState('')
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -1460,6 +1452,28 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
     e.target.value = ''
     setAnalyzeError(null)
     setAnalyzeNotice(null)
+  }
+
+  const aiScanLocked = !user.isProUser && !slotActivated && !hasFreeProSlotsRemaining(user)
+
+  function handleAiScanClick() {
+    if (!photo || analyzing) return
+    if (user.isProUser || slotActivated) {
+      void handleAnalyzeWithAi()
+      return
+    }
+    if (hasFreeProSlotsRemaining(user)) {
+      setShowSlotConfirm(true)
+      return
+    }
+    onUpgrade()
+  }
+
+  function confirmSlotAndScan() {
+    setShowSlotConfirm(false)
+    setSlotActivated(true)
+    onActivateSlot()
+    void handleAnalyzeWithAi()
   }
 
   async function handleAnalyzeWithAi() {
@@ -1579,7 +1593,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
         isWateredToday: false,
         isToxicToPets: booleanFromPetToxicity(petToxicity),
         toxicityNotes: toxicityNotes.trim(),
-        isProSlotActivated: false,
+        isProSlotActivated: slotActivated,
       }
 
       onSave(newPlant)
@@ -1640,68 +1654,105 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             onChange={handlePhotoInputChange}
           />
 
-          {/* Photo uploader */}
-          <div className="neo-card rounded-3xl w-full shrink-0">
-            <div className="flex flex-col items-center gap-4 p-4">
-              <div className="bg-white rounded-full shrink-0 size-20 overflow-hidden border-2 border-black flex items-center justify-center">
-                {photo ? (
-                  <img src={photo} alt={t('photo.selectedPlant')} className="block w-full h-full object-cover" />
-                ) : (
-                  <svg fill="none" height="28" viewBox="0 0 24 24" width="28" aria-hidden>
-                    <path d={svgAdd.p22b7c700} fill="black" />
-                  </svg>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPhotoPicker(true)}
-                className="btn-primary btn-green inline-flex items-center justify-center gap-1.5 rounded-full border-2 border-black cursor-pointer px-4 py-2"
-                style={{ background: GREEN, minHeight: 36 }}
-              >
-                <svg fill="none" height="14" viewBox="0 0 20 20" width="14" aria-hidden className="shrink-0">
-                  <path d={svgAdd.p3e11a380} stroke="black" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                </svg>
-                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', lineHeight: 1 }}>
-                  {t('addPlant.takePhoto')}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* AI analyze */}
-          <div className="w-full flex flex-col items-center gap-2 shrink-0">
+          {/* AI Instant Scan / Manual Entry toggle */}
+          <div className="add-mode-toggle w-full shrink-0" role="tablist" aria-label={t('addPlant.modeToggleLabel')}>
             <button
               type="button"
-              onClick={() => { void handleAnalyzeWithAi() }}
-              disabled={!photo || analyzing}
-              className="gemini-analyze-btn w-full max-w-[340px] flex items-center justify-center gap-2 px-6 py-4"
+              role="tab"
+              aria-selected={addMode === 'ai'}
+              onClick={() => setAddMode('ai')}
+              className={`add-mode-toggle__option ${addMode === 'ai' ? 'add-mode-toggle__option--active' : ''}`}
             >
-              <span className="gemini-analyze-btn__shine" aria-hidden />
-              <Sparkles size={18} strokeWidth={2.5} aria-hidden className="shrink-0 gemini-analyze-btn__icon text-white drop-shadow-sm" />
-              <span
-                className="gemini-analyze-btn__label"
-                style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#fff', lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}
-              >
-                {analyzing ? t('addPlant.analyzingWithAi') : t('addPlant.analyzeWithAi')}
-              </span>
-              <Sparkles size={18} strokeWidth={2.5} aria-hidden className="shrink-0 gemini-analyze-btn__icon text-white drop-shadow-sm" />
+              <Sparkles size={13} strokeWidth={2.5} aria-hidden className="shrink-0" />
+              <span>{t('addPlant.modeAiScan')}</span>
             </button>
-            {!photo && (
-              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}>
-                {t('addPlant.addPhotoFirst')}
-              </p>
-            )}
-            {analyzeError && (
-              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: RED }} role="alert">
-                {analyzeError}
-              </p>
-            )}
-            {analyzeNotice && !analyzeError && (
-              <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#9a7b00' }} role="status">
-                {analyzeNotice}
-              </p>
-            )}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={addMode === 'manual'}
+              onClick={() => setAddMode('manual')}
+              className={`add-mode-toggle__option ${addMode === 'manual' ? 'add-mode-toggle__option--active' : ''}`}
+            >
+              <Check size={13} strokeWidth={2.5} aria-hidden className="shrink-0" />
+              <span>{t('addPlant.modeManual')}</span>
+            </button>
           </div>
+
+          {addMode === 'ai' && (
+            <>
+              {/* Photo uploader */}
+              <div className="neo-card rounded-3xl w-full shrink-0">
+                <div className="flex flex-col items-center gap-4 p-4">
+                  <div className="bg-white rounded-full shrink-0 size-20 overflow-hidden border-2 border-black flex items-center justify-center">
+                    {photo ? (
+                      <img src={photo} alt={t('photo.selectedPlant')} className="block w-full h-full object-cover" />
+                    ) : (
+                      <svg fill="none" height="28" viewBox="0 0 24 24" width="28" aria-hidden>
+                        <path d={svgAdd.p22b7c700} fill="black" />
+                      </svg>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPhotoPicker(true)}
+                    className="btn-primary btn-green inline-flex items-center justify-center gap-1.5 rounded-full border-2 border-black cursor-pointer px-4 py-2"
+                    style={{ background: GREEN, minHeight: 36 }}
+                  >
+                    <svg fill="none" height="14" viewBox="0 0 20 20" width="14" aria-hidden className="shrink-0">
+                      <path d={svgAdd.p3e11a380} stroke="black" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                    </svg>
+                    <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 11, color: '#000', lineHeight: 1 }}>
+                      {t('addPlant.takePhoto')}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* AI analyze */}
+              <div className="w-full flex flex-col items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleAiScanClick}
+                  disabled={!photo || analyzing}
+                  className="gemini-analyze-btn w-full max-w-[340px] flex items-center justify-center gap-2 px-6 py-4"
+                  style={aiScanLocked ? { filter: 'grayscale(0.35)' } : undefined}
+                >
+                  <span className="gemini-analyze-btn__shine" aria-hidden />
+                  {aiScanLocked ? (
+                    <Lock size={18} strokeWidth={2.5} aria-hidden className="shrink-0 gemini-analyze-btn__icon text-white drop-shadow-sm" />
+                  ) : (
+                    <Sparkles size={18} strokeWidth={2.5} aria-hidden className="shrink-0 gemini-analyze-btn__icon text-white drop-shadow-sm" />
+                  )}
+                  <span
+                    className="gemini-analyze-btn__label"
+                    style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 13, color: '#fff', lineHeight: 1, textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}
+                  >
+                    {analyzing ? t('addPlant.analyzingWithAi') : aiScanLocked ? t('addPlant.unlockAiScan') : t('addPlant.analyzeWithAi')}
+                  </span>
+                  {aiScanLocked ? (
+                    <Lock size={18} strokeWidth={2.5} aria-hidden className="shrink-0 gemini-analyze-btn__icon text-white drop-shadow-sm" />
+                  ) : (
+                    <Sparkles size={18} strokeWidth={2.5} aria-hidden className="shrink-0 gemini-analyze-btn__icon text-white drop-shadow-sm" />
+                  )}
+                </button>
+                {!photo && (
+                  <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888' }}>
+                    {t('addPlant.addPhotoFirst')}
+                  </p>
+                )}
+                {analyzeError && (
+                  <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: RED }} role="alert">
+                    {analyzeError}
+                  </p>
+                )}
+                {analyzeNotice && !analyzeError && (
+                  <p style={{ fontFamily: 'Geist, sans-serif', fontWeight: 600, fontSize: 12, color: '#9a7b00' }} role="status">
+                    {analyzeNotice}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Plant name */}
           <div className="flex flex-col gap-1.5 w-full shrink-0">
@@ -1803,7 +1854,7 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
 
           {!(settings.isProUser || settings.isPro) && (
             <div className="w-full shrink-0">
-              <AddPlantForm currentPlantCount={plants.length} onUpgrade={onUpgrade} />
+              <AddPlantForm proSlotsUsed={user.proSlotsUsed} onUpgrade={onUpgrade} />
             </div>
           )}
 
@@ -1849,6 +1900,14 @@ function AddScreen({ plants, settings, onSave, onCancel, onUpgrade, onEditGlobal
             setShowPhotoPicker(false)
             libraryInputRef.current?.click()
           }}
+        />
+      )}
+
+      {showSlotConfirm && (
+        <SlotConfirmationModal
+          plantName={name.trim() || t('addPlant.plantNamePlaceholder')}
+          onCancel={() => setShowSlotConfirm(false)}
+          onConfirm={confirmSlotAndScan}
         />
       )}
 
@@ -2290,9 +2349,10 @@ function GrowthHistorySection({
 
 // ─── Screen 6: Plant Details ─────────────────────────────────────────────────
 
-function PlantDetailScreen({ plant, user, globalWaterSchedule, onBack, onDelete, onUpdate, onMarkWatered, onShowPro, onActivateProSlot, onEditGlobalSchedule, onTabChange, todayIdx }: {
+function PlantDetailScreen({ plant, user, globalWaterSchedule, onBack, onDelete, onUpdate, onMarkWatered, onShowPro, onActivateProSlot, onOpenHealth, onEditGlobalSchedule, onTabChange, todayIdx }: {
   plant: Plant; user: UserState; globalWaterSchedule: DayCode[]; onBack: () => void; onDelete: () => void; onUpdate: (p: Plant) => void
-  onMarkWatered: () => void; onShowPro: () => void; onActivateProSlot: (plant: Plant) => void; onEditGlobalSchedule: () => void; onTabChange: (t: TabScreen) => void; todayIdx: number
+  onMarkWatered: () => void; onShowPro: () => void; onActivateProSlot: (plant: Plant) => void; onOpenHealth: () => void
+  onEditGlobalSchedule: () => void; onTabChange: (t: TabScreen) => void; todayIdx: number
 }) {
   const { t } = useTranslation()
   const globalIndices = scheduleToIndices(globalWaterSchedule)
@@ -2301,10 +2361,7 @@ function PlantDetailScreen({ plant, user, globalWaterSchedule, onBack, onDelete,
   const [showEdit, setShowEdit] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
-  const [showLogGrowth, setShowLogGrowth] = useState(false)
-  const [showPhotoPicker, setShowPhotoPicker] = useState(false)
   const [showSlotConfirm, setShowSlotConfirm] = useState(false)
-  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null)
   const [editName, setEditName] = useState(plant.name)
   const [editRoom, setEditRoom] = useState(plant.room)
   const [editNote, setEditNote] = useState(plant.careNote)
@@ -2314,59 +2371,10 @@ function PlantDetailScreen({ plant, user, globalWaterSchedule, onBack, onDelete,
   const [editLightNeed, setEditLightNeed] = useState<LightNeed>(plant.lightNeed ?? 'Medium')
   const [editPetToxicity, setEditPetToxicity] = useState<PetToxicityChoice>(petToxicityFromBoolean(plant.isToxicToPets))
   const [editToxicityNotes, setEditToxicityNotes] = useState(plant.toxicityNotes ?? '')
-  const [growthNote, setGrowthNote] = useState('')
-  const [growthHeight, setGrowthHeight] = useState('')
-  const cameraInputRef = useRef<HTMLInputElement>(null)
-  const libraryInputRef = useRef<HTMLInputElement>(null)
 
   const needsWater = isPlantDueToday(plant, todayIdx) && !plant.isWateredToday
   const waterFills = getWaterNeedFills(plant.waterNeed)
   const lightFills = getLightNeedFills(plant.lightNeed ?? 'Medium')
-
-  async function handlePhotoFile(file: File, asGrowthLog = false) {
-    try {
-      const compressed = await readAndCompressPhotoFile(file)
-      if (asGrowthLog && hasAccess) {
-        const height = growthHeight ? Number(growthHeight) : undefined
-        onUpdate({
-          ...plant,
-          photo: compressed,
-          history: [{
-            id: Date.now().toString(),
-            date: new Date().toISOString(),
-            note: growthNote.trim() || t('growth.defaultSnapshotNote'),
-            photo: compressed,
-            heightCm: height,
-          }, ...plantHistory(plant)],
-        })
-        setGrowthNote('')
-        setGrowthHeight('')
-        setShowLogGrowth(false)
-      } else if (asGrowthLog) {
-        onUpdate({
-          ...plant,
-          history: [{
-            id: Date.now().toString(),
-            date: new Date().toISOString(),
-            note: t('growth.defaultSnapshotNote'),
-            photo: compressed,
-            heightCm: growthHeight ? Number(growthHeight) : getGrowthHeights(plant).current,
-          }, ...plantHistory(plant)],
-        })
-        setShowPhotoPicker(false)
-      } else {
-        onUpdate({ ...plant, photo: compressed })
-      }
-    } catch (error) {
-      console.error('[myJungle] Photo processing failed:', error)
-    }
-  }
-
-  function handlePhotoInputChange(e: React.ChangeEvent<HTMLInputElement>, asGrowthLog = false) {
-    const file = e.target.files?.[0]
-    if (file) handlePhotoFile(file, asGrowthLog)
-    e.target.value = ''
-  }
 
   function saveEdit() {
     if (!editName.trim() || editDays.length === 0) return
@@ -2436,40 +2444,6 @@ function PlantDetailScreen({ plant, user, globalWaterSchedule, onBack, onDelete,
     setShowEdit(true)
   }
 
-  function logGrowthEntry() {
-    onUpdate({
-      ...plant,
-      history: [{
-        id: Date.now().toString(),
-        date: new Date().toISOString(),
-        note: growthNote.trim() || t('growth.defaultNote'),
-        photo: plant.photo,
-        heightCm: growthHeight ? Number(growthHeight) : getGrowthHeights(plant).current,
-      }, ...plantHistory(plant)],
-    })
-    setGrowthNote('')
-    setGrowthHeight('')
-    setShowLogGrowth(false)
-  }
-
-  function saveHealthLog(data: HealthLogSubmitData) {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-    const timestamp = new Date().toISOString()
-    const log = {
-      id,
-      timestamp,
-      photo: data.photo,
-      healthScore: clampHealthScore(data.healthScore),
-      diagnosis: data.diagnosis,
-      treatmentNotes: data.treatmentNotes,
-      analyzedByAI: true,
-    }
-    onUpdate({
-      ...plant,
-      healthLogs: [log, ...(plant.healthLogs ?? [])],
-    })
-  }
-
   function requestProAccess() {
     if (hasAccess) return
     if (canActivateSlot) setShowSlotConfirm(true)
@@ -2479,10 +2453,7 @@ function PlantDetailScreen({ plant, user, globalWaterSchedule, onBack, onDelete,
   function confirmActivateSlot() {
     setShowSlotConfirm(false)
     onActivateProSlot(plant)
-  }
-
-  function openLightbox(photo: string) {
-    void getPhotoBlob(photo).then((resolved) => setLightboxPhoto(resolved ?? photo))
+    onOpenHealth()
   }
 
   return (
@@ -2605,25 +2576,28 @@ function PlantDetailScreen({ plant, user, globalWaterSchedule, onBack, onDelete,
               </div>
             </div>
 
-            <GrowthHistorySection
-              plant={plant}
-              hasAccess={hasAccess}
-              canActivateSlot={canActivateSlot}
-              onActivateSlot={requestProAccess}
-              onUpgrade={onShowPro}
-              onLogGrowth={() => (hasAccess ? setShowLogGrowth(true) : requestProAccess())}
-              onNewSnapshot={() => (hasAccess ? setShowPhotoPicker(true) : requestProAccess())}
-              onPhotoClick={openLightbox}
-            />
-
-            <PlantHealthTracker
-              plant={plant}
-              hasAccess={hasAccess}
-              canActivateSlot={canActivateSlot}
-              onActivateSlot={requestProAccess}
-              onUpgrade={onShowPro}
-              onSaveHealthLog={saveHealthLog}
-            />
+            <button
+              type="button"
+              onClick={hasAccess ? onOpenHealth : requestProAccess}
+              className="plant-detail-section-card w-full flex items-center gap-3 p-4 cursor-pointer text-left active:scale-[0.99] transition-all"
+            >
+              <div className="flex items-center justify-center rounded-full shrink-0 size-10 border-2 border-black" style={{ background: GREEN }}>
+                <Stethoscope className="size-4 text-black" strokeWidth={2.5} aria-hidden />
+              </div>
+              <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                <span style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 12, color: '#000', textTransform: 'uppercase' }}>
+                  {t('plantDetails.healthSectionTitle')}
+                </span>
+                <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 500, fontSize: 12, color: '#888', lineHeight: 1.4 }}>
+                  {hasAccess
+                    ? t('plantDetails.viewHealthCta')
+                    : canActivateSlot
+                      ? t('slots.activateHint')
+                      : t('slots.unlockHint')}
+                </span>
+              </div>
+              <ChevronRight className="size-4 text-black shrink-0" strokeWidth={2.5} aria-hidden />
+            </button>
 
             <button
               type="button"
@@ -2637,9 +2611,6 @@ function PlantDetailScreen({ plant, user, globalWaterSchedule, onBack, onDelete,
       </div>
 
       <TabBar active="home" onChange={(t) => { onBack(); onTabChange(t) }} isPro={user.isProUser} />
-
-      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoInputChange(e, true)} />
-      <input ref={libraryInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoInputChange(e, true)} />
 
       {showEdit && (
         <DetailModal title={t('plantDetails.editPlant')} onClose={() => setShowEdit(false)}>
@@ -2719,6 +2690,165 @@ function PlantDetailScreen({ plant, user, globalWaterSchedule, onBack, onDelete,
           onConfirm={() => { setShowDeleteConfirm(false); onDelete() }}
         />
       )}
+
+      {showSlotConfirm && (
+        <SlotConfirmationModal
+          plantName={plant.name}
+          onCancel={() => setShowSlotConfirm(false)}
+          onConfirm={confirmActivateSlot}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Screen 6b: Plant Health & Growth (Health tab detail) ────────────────────
+
+function PlantHealthDetailScreen({ plant, user, onBack, onUpdate, onShowPro, onActivateProSlot, onTabChange }: {
+  plant: Plant; user: UserState; onBack: () => void; onUpdate: (p: Plant) => void
+  onShowPro: () => void; onActivateProSlot: (plant: Plant) => void; onTabChange: (t: TabScreen) => void
+}) {
+  const { t } = useTranslation()
+  const hasAccess = canAccessProFeatures(plant, user)
+  const canActivateSlot = hasFreeProSlotsRemaining(user)
+  const [showSlotConfirm, setShowSlotConfirm] = useState(false)
+  const [showLogGrowth, setShowLogGrowth] = useState(false)
+  const [showPhotoPicker, setShowPhotoPicker] = useState(false)
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null)
+  const [growthNote, setGrowthNote] = useState('')
+  const [growthHeight, setGrowthHeight] = useState('')
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const libraryInputRef = useRef<HTMLInputElement>(null)
+
+  function requestProAccess() {
+    if (hasAccess) return
+    if (canActivateSlot) setShowSlotConfirm(true)
+    else onShowPro()
+  }
+
+  function confirmActivateSlot() {
+    setShowSlotConfirm(false)
+    onActivateProSlot(plant)
+  }
+
+  async function handlePhotoFile(file: File) {
+    try {
+      const compressed = await readAndCompressPhotoFile(file)
+      const height = growthHeight ? Number(growthHeight) : undefined
+      onUpdate({
+        ...plant,
+        photo: compressed,
+        history: [{
+          id: Date.now().toString(),
+          date: new Date().toISOString(),
+          note: growthNote.trim() || t('growth.defaultSnapshotNote'),
+          photo: compressed,
+          heightCm: height,
+        }, ...plantHistory(plant)],
+      })
+      setGrowthNote('')
+      setGrowthHeight('')
+      setShowPhotoPicker(false)
+    } catch (error) {
+      console.error('[myJungle] Photo processing failed:', error)
+    }
+  }
+
+  function handlePhotoInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) handlePhotoFile(file)
+    e.target.value = ''
+  }
+
+  function logGrowthEntry() {
+    onUpdate({
+      ...plant,
+      history: [{
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        note: growthNote.trim() || t('growth.defaultNote'),
+        photo: plant.photo,
+        heightCm: growthHeight ? Number(growthHeight) : getGrowthHeights(plant).current,
+      }, ...plantHistory(plant)],
+    })
+    setGrowthNote('')
+    setGrowthHeight('')
+    setShowLogGrowth(false)
+  }
+
+  function saveHealthLog(data: HealthLogSubmitData) {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    const timestamp = new Date().toISOString()
+    const log = {
+      id,
+      timestamp,
+      photo: data.photo,
+      healthScore: clampHealthScore(data.healthScore),
+      diagnosis: data.diagnosis,
+      treatmentNotes: data.treatmentNotes,
+      analyzedByAI: true,
+    }
+    onUpdate({
+      ...plant,
+      healthLogs: [log, ...(plant.healthLogs ?? [])],
+    })
+  }
+
+  function openLightbox(photo: string) {
+    void getPhotoBlob(photo).then((resolved) => setLightboxPhoto(resolved ?? photo))
+  }
+
+  return (
+    <div className="content-stretch flex flex-col items-start justify-between relative size-full" style={{ background: BG }}>
+      <div className="content-stretch flex flex-col items-start relative shrink-0 w-full flex-1 min-h-0">
+        <div className="app-header shrink-0">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center justify-center rounded-full border-2 border-black bg-white cursor-pointer shrink-0"
+            style={{ width: 38, height: 38 }}
+            aria-label={t('plantDetails.close')}
+          >
+            <ChevronLeft className="size-5 text-black" strokeWidth={2.5} aria-hidden />
+          </button>
+          <div className="flex items-center gap-2 min-w-0 flex-1 justify-center px-2">
+            <PlantPhoto photo={plant.photo} alt="" className="size-8 rounded-full object-cover border-2 border-black shrink-0" />
+            <span className="truncate" style={{ fontFamily: 'Unbounded, sans-serif', fontWeight: 900, fontSize: 14, color: '#000', textTransform: 'uppercase' }}>
+              {plant.name}
+            </span>
+          </div>
+          <div style={{ width: 38 }} aria-hidden />
+        </div>
+
+        <div className="flex-1 overflow-y-auto w-full pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
+          <div className="content-stretch flex flex-col gap-4 items-start px-5 pt-4 pb-6 relative w-full">
+            <GrowthHistorySection
+              plant={plant}
+              hasAccess={hasAccess}
+              canActivateSlot={canActivateSlot}
+              onActivateSlot={requestProAccess}
+              onUpgrade={onShowPro}
+              onLogGrowth={() => (hasAccess ? setShowLogGrowth(true) : requestProAccess())}
+              onNewSnapshot={() => (hasAccess ? setShowPhotoPicker(true) : requestProAccess())}
+              onPhotoClick={openLightbox}
+            />
+
+            <PlantHealthTracker
+              plant={plant}
+              hasAccess={hasAccess}
+              canActivateSlot={canActivateSlot}
+              onActivateSlot={requestProAccess}
+              onUpgrade={onShowPro}
+              onSaveHealthLog={saveHealthLog}
+            />
+          </div>
+        </div>
+      </div>
+
+      <TabBar active="health" onChange={(t) => { onBack(); onTabChange(t) }} isPro={user.isProUser} />
+
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInputChange} />
+      <input ref={libraryInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoInputChange} />
 
       {showSlotConfirm && (
         <SlotConfirmationModal
@@ -3489,6 +3619,13 @@ export default function App() {
     handleUpdatePlant({ ...plant, isProSlotActivated: true })
   }
 
+  function handleActivateSlotForDraft() {
+    setSettings((s) => ({
+      ...s,
+      proSlotsUsed: clampProSlotsUsed((s.proSlotsUsed ?? 0) + 1),
+    }))
+  }
+
   function handleUnlockPro() {
     setSettings((s) => ({ ...s, isPro: true, isProUser: true }))
     setShowPaywall(false)
@@ -3526,7 +3663,20 @@ export default function App() {
         onMarkWatered={() => handleWaterToggle(live.id)}
         onShowPro={openPaywall}
         onActivateProSlot={handleActivateProSlot}
+        onOpenHealth={() => setScreen('healthDetail')}
         onEditGlobalSchedule={() => setScreen('settings')}
+        onTabChange={(nextTab) => { setTab(nextTab); setScreen('main'); setSelectedPlant(null) }}
+      />
+    )
+  } else if (screen === 'healthDetail' && selectedPlant) {
+    const live = plants.find((p) => p.id === selectedPlant.id) || selectedPlant
+    content = (
+      <PlantHealthDetailScreen
+        plant={live} user={user}
+        onBack={() => { setScreen('main'); setSelectedPlant(null) }}
+        onUpdate={handleUpdatePlant}
+        onShowPro={openPaywall}
+        onActivateProSlot={handleActivateProSlot}
         onTabChange={(nextTab) => { setTab(nextTab); setScreen('main'); setSelectedPlant(null) }}
       />
     )
@@ -3541,12 +3691,11 @@ export default function App() {
           onDeletePlant={handleDeletePlant}
           onWaterPlant={handleWaterToggle}
           onGoAdd={() => setTab('add')}
-          onSettings={() => setTab('profile')}
           onShowPro={openPaywall}
         />
       )
     } else if (tab === 'add') {
-      tabContent = <AddScreen plants={plants} settings={settings} onSave={handleAddPlant} onCancel={() => setTab('home')} onUpgrade={openPaywall} onEditGlobalSchedule={() => { setTab('profile'); setScreen('main') }} />
+      tabContent = <AddScreen plants={plants} settings={settings} user={user} onSave={handleAddPlant} onCancel={() => setTab('home')} onUpgrade={openPaywall} onActivateSlot={handleActivateSlotForDraft} onEditGlobalSchedule={() => { setTab('profile'); setScreen('main') }} />
     } else if (tab === 'schedule') {
       tabContent = <WateringScreen plants={plants} globalWaterSchedule={settings.globalWaterSchedule} todayIdx={todayIdx} onMarkWatered={handleWaterToggle} onMarkAll={handleMarkAll} />
     } else if (tab === 'health') {
@@ -3554,7 +3703,7 @@ export default function App() {
         <HealthHubScreen
           plants={plants}
           user={user}
-          onOpenPlant={(p) => { setSelectedPlant(p); setScreen('detail') }}
+          onOpenPlant={(p) => { setSelectedPlant(p); setScreen('healthDetail') }}
           onShowPaywall={openPaywall}
         />
       )
@@ -3563,13 +3712,14 @@ export default function App() {
         <SettingsScreen
           plants={plants} settings={settings} user={user} onSave={handleSaveSettings}
           onExport={handleExport} onReset={handleReset}
+          onClose={() => setTab('home')}
           onShowPro={openPaywall}
         />
       )
     }
     content = (
       <div className="flex flex-col h-full min-h-0">
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
           {tabContent}
         </div>
         <TabBar active={tab} onChange={(t) => { setTab(t); setScreen('main') }} plantCount={plants.length} isPro={user.isProUser} onUpgrade={openPaywall} />
