@@ -99,6 +99,7 @@
   .btn-fill {
     font-family: var(--font-heading);
     font-weight: 700;
+    text-transform: uppercase;
     border-radius: 9999px;
     background: var(--color-green);
     color: #05170c;

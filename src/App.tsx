@@ -264,13 +264,13 @@ function OnboardingWelcome({ onNext }: { onNext: () => void }) {
           <path d="M42.5 2.9C45.9 16.9 53.7 29.9 63.9 38.2l1.1 0.9C77.4 48.9 83 59.4 83 71.9c0 11-4.4 21.6-12.1 29.4C63.2 109 52.6 113.4 42.5 113.4S21.8 109 14 101.3C6.3 93.5 1.9 82.9 1.9 71.9c0-11.6 5.7-22.7 17.2-32.2l1.1-0.9C29.5 29.9 39.1 16.9 42.5 2.9z" />
         </svg>
       </div>
-      <h1 className="font-heading" style={{ fontSize: 34, lineHeight: 1.08, color: '#fff' }}>
+      <h1 className="font-heading" style={{ fontSize: 34, lineHeight: 1.08, color: '#fff', textTransform: 'uppercase' }}>
         Watering,<br />made simple.
       </h1>
       <div className="flex flex-col gap-4 mt-8 flex-1">
         {ONBOARDING_STEPS.map((step, i) => (
           <div key={i} className="flex items-center gap-3">
-            <div className="icon-circle" style={{ color: step.pro ? GREEN : '#fff' }}>
+            <div className="icon-circle" style={{ color: GREEN }}>
               <step.icon size={20} />
             </div>
             <span className="font-body" style={{ fontSize: 16, color: '#fff', fontWeight: 500 }}>
@@ -444,7 +444,10 @@ async function identifyPhoto(dataUrl: string): Promise<DraftPlant> {
 function AnalysisResultScreen({ drafts, onDone }: { drafts: DraftPlant[]; onDone: () => void }) {
   const daySet = new Set<number>()
   drafts.forEach((d) => d.wateringDays.forEach((i) => daySet.add(i)))
-  const dayLabel = Array.from(daySet).sort((a, b) => a - b).map((i) => DAYS[i][0]).join(' & ')
+  const dayLabel = Array.from(daySet)
+    .sort((a, b) => a - b)
+    .map((i) => DAYS[i][0] + DAYS[i].slice(1).toLowerCase())
+    .join(', ')
 
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
@@ -453,7 +456,7 @@ function AnalysisResultScreen({ drafts, onDone }: { drafts: DraftPlant[]; onDone
           {drafts.length} plant{drafts.length === 1 ? '' : 's'} added <IconCheck size={22} />
         </h1>
         <p className="font-body" style={{ fontSize: 14, color: '#8E8E93', marginTop: 6 }}>
-          AI filled in the profiles and computed your watering days.
+          AI filled the profile and computed your watering days.
         </p>
       </div>
       <div className="scroll-y flex-1 px-5 flex flex-col gap-3 pb-4">
@@ -467,7 +470,10 @@ function AnalysisResultScreen({ drafts, onDone }: { drafts: DraftPlant[]; onDone
       </div>
       {dayLabel && (
         <div className="px-5 pb-3 shrink-0">
-          <p className="font-body text-center" style={{ fontSize: 13, color: '#8E8E93' }}>Watering day: {dayLabel}</p>
+          <div className="surface-dark rounded-2xl px-4 py-3 flex items-center justify-center gap-2">
+            <div style={{ color: GREEN }}><IconCalendarSmall size={16} /></div>
+            <span className="font-heading" style={{ fontSize: 14, color: GREEN }}>Watering day: {dayLabel}</span>
+          </div>
         </div>
       )}
       <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
@@ -516,6 +522,29 @@ function TabBar({ active, onChange, onAdd }: { active: Tab; onChange: (t: Tab) =
 
 // ─── Screen: Home ─────────────────────────────────────────────────────────────
 
+function titleCaseDay(dayIdx: number): string {
+  return DAYS[dayIdx][0] + DAYS[dayIdx].slice(1).toLowerCase()
+}
+
+function nextWaterStatus(plant: Plant, todayIdx: number): { label: string; dotColor: string } {
+  if (plant.isWateredToday) {
+    const dow = plant.lastWateredAt ? (new Date(plant.lastWateredAt).getDay() + 6) % 7 : null
+    return { label: `Watered: ${dow !== null ? titleCaseDay(dow) : 'today'}`, dotColor: '#8E8E93' }
+  }
+  if (isPlantDueToday(plant, todayIdx)) {
+    return { label: 'Water today', dotColor: GREEN }
+  }
+  for (let step = 1; step <= 7; step++) {
+    const dayIdx = (todayIdx + step) % 7
+    const refDate = new Date()
+    refDate.setDate(refDate.getDate() + step)
+    if (isPlantDueOnDay(plant, dayIdx, refDate)) {
+      return { label: `Next water: ${step === 1 ? 'Tomorrow' : titleCaseDay(dayIdx)}`, dotColor: GREEN }
+    }
+  }
+  return { label: 'No schedule', dotColor: '#8E8E93' }
+}
+
 function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayIdx: number; onOpenPlant: (p: Plant) => void }) {
   const thirsty = plants.filter((p) => isPlantDueToday(p, todayIdx) && !p.isWateredToday).length
   const streak = getStreakDays(plants)
@@ -538,17 +567,21 @@ function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayI
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          {plants.map((p) => (
+          {plants.map((p) => {
+            const status = nextWaterStatus(p, todayIdx)
+            return (
             <button key={p.id} type="button" onClick={() => onOpenPlant(p)} className="plant-tile text-left">
               <PlantPhoto photo={p.photo} alt={p.name} className="w-full h-full object-cover" />
-              {isPlantDueToday(p, todayIdx) && !p.isWateredToday && (
-                <span className="plant-tile__badge" style={{ background: GREEN, color: '#05170c' }}>Thirsty</span>
-              )}
               <div className="plant-tile__label">
                 <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{p.name}</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span style={{ width: 6, height: 6, borderRadius: 9999, background: status.dotColor, flexShrink: 0 }} />
+                  <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>{status.label}</span>
+                </div>
               </div>
             </button>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -821,6 +854,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro }: {
   }
 
   const timesPerWeekLabel = draft ? `${draft.wateringDays.length}x weekly` : ''
+  const usedSlots = Math.max(0, MAX_FREE_PLANTS - remainingFreeSlots)
 
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
@@ -832,67 +866,96 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro }: {
           {isPro ? 'Unlimited plants' : `${remainingFreeSlots} of ${MAX_FREE_PLANTS} free slots left`}
         </span>
       </div>
-      <div className="scroll-y flex-1 px-5">
+      <div className="px-5 pb-4 shrink-0" style={{ height: 220 }}>
         {!photo ? (
-          <div className="dash-picker w-full flex flex-col items-center justify-center gap-4" style={{ height: 340 }}>
-            <IconCamera size={30} />
-            <div className="flex gap-3 w-full px-6">
-              <button type="button" onClick={() => cameraInputRef.current?.click()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>Take photo</button>
-              <button type="button" onClick={() => galleryInputRef.current?.click()} className="font-heading flex-1" style={{ height: 48, fontSize: 13, borderRadius: 9999, background: 'transparent', border: '1.5px solid #fff', color: '#fff' }}>From gallery</button>
-            </div>
+          <div className="dash-picker w-full h-full flex flex-col items-center justify-center gap-2">
+            <IconCamera size={28} />
+            <span className="font-body" style={{ fontSize: 14, color: '#fff' }}>Upload photo</span>
           </div>
         ) : (
-          <img src={photo} alt="" className="w-full rounded-[1.5rem] object-cover mb-4" style={{ height: 260 }} />
-        )}
-        {analyzing && (
-          <p className="font-body text-center mt-4" style={{ fontSize: 14, color: '#8E8E93' }}>Identifying your plant…</p>
-        )}
-        {draft && (
-          <div className="flex flex-col gap-3 mt-4">
-            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>AI identified:</span>
-            <span className="font-heading" style={{ fontSize: 28, color: '#fff' }}>{draft.name}</span>
-
-            <label className="flex flex-col gap-1.5">
-              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>Category</span>
-              <select
-                value={draft.category}
-                onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-                className="surface-dark font-body px-4"
-                style={{ height: 48, fontSize: 15, color: '#fff', border: 'none' }}
-              >
-                {PLANT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </label>
-
-            <div className="surface-dark p-4 flex items-center justify-between">
-              <span className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>Light requirement</span>
-              <span className="font-heading" style={{ fontSize: 14, color: '#fff' }}>{draft.lightNeed.toLowerCase()}</span>
-            </div>
-            <div className="surface-dark p-4 flex items-center justify-between">
-              <span className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>Humidity</span>
-              <span className="font-heading" style={{ fontSize: 14, color: '#fff' }}>{draft.humidityNeed}</span>
-            </div>
-
-            <div className="rounded-2xl px-4 py-3 flex items-center gap-2" style={{ border: `1.5px solid ${GREEN}`, background: 'var(--color-green-dim)' }}>
-              <IconCalendarSmall size={16} />
-              <span className="font-body" style={{ fontSize: 13, color: '#fff' }}>
-                Watering days: the system suggests {timesPerWeekLabel}
-              </span>
-            </div>
-
-            <div className="surface-dark p-4 flex items-center justify-between">
-              <div>
-                <div className="font-heading" style={{ fontSize: 14, color: '#fff' }}>Set reminders</div>
-                <div className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Receive watering notifications</div>
-              </div>
-              <Toggle on={remindersOn} onChange={setRemindersOn} />
-            </div>
-          </div>
+          <img src={photo} alt="" className="w-full h-full rounded-[1.5rem] object-cover" />
         )}
       </div>
-      <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-3 flex gap-3 shrink-0">
-        <button type="button" onClick={onBack} className="btn-ghost-dark flex-1" style={{ height: 52 }}>Edit</button>
-        <button type="button" disabled={!draft} onClick={() => draft && onAdd(draft)} className="btn-fill flex-1" style={{ height: 52, textTransform: 'uppercase' }}>Add to jungle</button>
+      <div className="flex-1 min-h-0 flex flex-col" style={{ background: '#fff', borderRadius: '1.75rem 1.75rem 0 0' }}>
+        <div className="scroll-y flex-1 px-5 pt-5">
+          <button type="button" onClick={() => cameraInputRef.current?.click()} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>Take photo</button>
+          <button
+            type="button"
+            onClick={() => galleryInputRef.current?.click()}
+            className="font-heading w-full mt-3"
+            style={{ height: 52, fontSize: 15, textTransform: 'uppercase', borderRadius: 9999, background: 'transparent', border: '1.5px solid #ddd', color: '#111' }}
+          >
+            From gallery
+          </button>
+
+          {analyzing && (
+            <p className="font-body text-center mt-4" style={{ fontSize: 14, color: '#8E8E93' }}>Identifying your plant…</p>
+          )}
+
+          {draft && (
+            <>
+              <div style={{ height: 1, background: '#eee', margin: '20px 0' }} />
+              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Enter details manually</span>
+
+              <label className="flex flex-col gap-1.5 mt-4">
+                <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>Plant name</span>
+                <input
+                  type="text"
+                  value={draft.name}
+                  onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                  className="font-heading px-4"
+                  style={{ height: 48, fontSize: 16, color: '#111', background: '#f5f5f5', borderRadius: 14, border: 'none' }}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1.5 mt-4">
+                <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>Category</span>
+                <select
+                  value={draft.category}
+                  onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+                  className="font-body px-4"
+                  style={{ height: 48, fontSize: 15, color: '#111', background: '#f5f5f5', borderRadius: 14, border: 'none' }}
+                >
+                  {PLANT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </label>
+
+              <div className="mt-4 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#f5f5f5' }}>
+                <span className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>Light requirement</span>
+                <span className="font-heading" style={{ fontSize: 14, color: '#111' }}>{draft.lightNeed.toLowerCase()}</span>
+              </div>
+              <div className="mt-3 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#f5f5f5' }}>
+                <span className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>Humidity</span>
+                <span className="font-heading" style={{ fontSize: 14, color: '#111' }}>{draft.humidityNeed}</span>
+              </div>
+
+              <div className="mt-3 rounded-2xl px-4 py-3 flex items-center gap-2" style={{ border: `1.5px solid ${GREEN}`, background: '#e6fbee' }}>
+                <div style={{ color: '#0a8f3f' }}><IconCalendarSmall size={16} /></div>
+                <span className="font-body" style={{ fontSize: 13, color: '#0a8f3f' }}>
+                  Watering days: the system suggests {timesPerWeekLabel}
+                </span>
+              </div>
+
+              <div className="mt-3 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#f5f5f5' }}>
+                <div>
+                  <div className="font-heading" style={{ fontSize: 14, color: '#111' }}>Set reminders</div>
+                  <div className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Receive watering notifications</div>
+                </div>
+                <Toggle on={remindersOn} onChange={setRemindersOn} />
+              </div>
+
+              {!isPro && (
+                <p className="font-body text-center mt-4" style={{ fontSize: 12, color: '#8E8E93' }}>
+                  {usedSlots}/{MAX_FREE_PLANTS} free slots used
+                </p>
+              )}
+            </>
+          )}
+        </div>
+        <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-3 flex gap-3 shrink-0">
+          <button type="button" onClick={onBack} className="font-heading flex-1" style={{ height: 52, borderRadius: 9999, background: '#f0f0f0', color: '#111' }}>Edit</button>
+          <button type="button" disabled={!draft} onClick={() => draft && onAdd(draft)} className="btn-fill flex-1" style={{ height: 52 }}>Add to jungle</button>
+        </div>
       </div>
     </div>
   )
@@ -921,9 +984,10 @@ function ProfileScreen({ plants, settings, user, onSave, onExport, onReset, onSh
         <div className="stat-tile"><span className="stat-tile__value">{waterings}</span><span className="stat-tile__label">waterings</span></div>
         <div className="stat-tile"><span className="stat-tile__value">{plants.length > 0 ? 100 : 0}%</span><span className="stat-tile__label">health</span></div>
       </div>
+      <span className="font-body block" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Settings &amp; configuration</span>
       <div className="card-white overflow-hidden">
         <button type="button" onClick={() => setShowNotifSettings((v) => !v)} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
-          <span className="font-heading" style={{ fontSize: 16 }}>Notifications</span>
+          <span className="font-heading" style={{ fontSize: 16 }}>Notification preferences</span>
           <span style={{ transform: showNotifSettings ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}><IconChevronLeft size={16} /></span>
         </button>
         {showNotifSettings && (
@@ -945,11 +1009,11 @@ function ProfileScreen({ plants, settings, user, onSave, onExport, onReset, onSh
           </div>
         )}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
-          <span className="font-heading" style={{ fontSize: 16 }}>Reminders toggle</span>
+          <span className="font-heading" style={{ fontSize: 16 }}>Watering reminders</span>
           <Toggle on={settings.pushNotifications} onChange={(v) => onSave({ ...settings, pushNotifications: v })} />
         </div>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
-          <span className="font-heading" style={{ fontSize: 16 }}>Dark mode toggle</span>
+          <span className="font-heading" style={{ fontSize: 16 }}>Dark mode</span>
           <Toggle on={settings.darkMode} onChange={(v) => onSave({ ...settings, darkMode: v })} />
         </div>
         <button type="button" onClick={onExport} className="flex items-center gap-3 w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
@@ -984,10 +1048,10 @@ function LimitReachedSheet({ onUnlock, onCancel }: { onUnlock: () => void; onCan
           </div>
           <h2 className="font-heading" style={{ fontSize: 22 }}>You have reached your {MAX_FREE_PLANTS} free plants</h2>
           <p className="font-body" style={{ fontSize: 14, color: '#666', lineHeight: 1.5 }}>
-            Pro lets you add unlimited plants, one at a time or in bulk.
+            Pro lets you add unlimited plants, plus health &amp; growth tracking and priority support.
           </p>
           <button type="button" onClick={() => close(onUnlock)} className="btn-fill w-full" style={{ height: 52 }}>Unlock Pro</button>
-          <button type="button" onClick={() => close(onCancel)} className="font-body" style={{ fontSize: 14, color: '#888' }}>Cancel</button>
+          <button type="button" onClick={() => close(onCancel)} className="font-heading w-full" style={{ height: 52, borderRadius: 9999, background: '#f0f0f0', color: '#888' }}>Cancel</button>
         </div>
       </div>
     </>
@@ -1020,41 +1084,44 @@ function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock:
         <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Upgrade</span>
         <div style={{ width: 44 }} />
       </div>
-      <div className="scroll-y flex-1 flex flex-col items-center px-6 pt-6 text-center">
-        <div className="flex items-center justify-center rounded-full mb-6" style={{ width: 96, height: 96, background: 'var(--color-surface)' }}>
+      <div className="flex items-center justify-center shrink-0" style={{ height: 160 }}>
+        <div className="flex items-center justify-center rounded-full" style={{ width: 96, height: 96, background: 'var(--color-surface)' }}>
           <div className="flex items-center justify-center rounded-full" style={{ width: 64, height: 64, border: `2px solid ${GREEN}`, color: GREEN }}>
             <IconX size={28} />
           </div>
         </div>
-        <h1 className="font-heading" style={{ fontSize: 34, lineHeight: 1.1, color: '#fff' }}>Unlimited<br />growth.</h1>
-
-        <div className="grid grid-cols-2 gap-3 mt-8 w-full">
-          <div className="surface-dark p-4 flex flex-col gap-1 items-start text-left">
-            <span className="font-body" style={{ fontSize: 11, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Free plan</span>
-            <span className="font-heading" style={{ fontSize: 15, color: '#fff' }}>{MAX_FREE_PLANTS} plants limit</span>
-          </div>
-          <div className="p-4 flex flex-col gap-1 items-start text-left rounded-2xl" style={{ background: 'var(--color-green-dim)', border: `1.5px solid ${GREEN}` }}>
-            <span className="font-body" style={{ fontSize: 11, color: GREEN, textTransform: 'uppercase', letterSpacing: 0.5 }}>Pro membership</span>
-            <span className="font-heading" style={{ fontSize: 15, color: '#fff' }}>Unlimited plants</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3 mt-6 items-start w-full">
-          {PRO_BENEFITS.map((b) => (
-            <div key={b} className="flex items-center gap-3">
-              <div style={{ color: GREEN }}><IconCheck size={18} /></div>
-              <span className="font-body" style={{ fontSize: 15, color: '#fff' }}>{b}</span>
-            </div>
-          ))}
-        </div>
       </div>
-      <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4 flex flex-col items-center gap-3 shrink-0">
-        <span className="font-heading" style={{ fontSize: 34, color: '#fff' }}>$6.99</span>
-        <span className="font-body" style={{ fontSize: 13, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>One-time purchase</span>
-        <button type="button" onClick={() => void handleUnlock()} disabled={purchasing} className="btn-fill w-full mt-2" style={{ height: 56, fontSize: 16 }}>
-          {purchasing ? 'Processing…' : 'Unlock forever'}
-        </button>
-        <button type="button" onClick={() => void handleUnlock()} className="font-body underline" style={{ fontSize: 12, color: '#8E8E93' }}>Restore purchase</button>
+      <div className="flex-1 min-h-0 flex flex-col" style={{ background: '#fff', borderRadius: '1.75rem 1.75rem 0 0' }}>
+        <div className="scroll-y flex-1 px-6 pt-6">
+          <div className="grid grid-cols-2 rounded-2xl overflow-hidden" style={{ background: '#f5f5f5' }}>
+            <div className="p-4 flex flex-col gap-1 items-start text-left">
+              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Free plan</span>
+              <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{MAX_FREE_PLANTS} plants limit</span>
+            </div>
+            <div className="p-4 flex flex-col gap-1 items-start text-left" style={{ borderLeft: '1px solid #e5e5e5' }}>
+              <span className="font-body" style={{ fontSize: 11, color: '#0a8f3f', textTransform: 'uppercase', letterSpacing: 0.5 }}>Pro membership</span>
+              <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>Unlimited plants</span>
+            </div>
+          </div>
+
+          <span className="font-body block mt-6" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Features unlocked</span>
+          <div className="flex flex-col gap-3 mt-3 items-start w-full">
+            {PRO_BENEFITS.map((b) => (
+              <div key={b} className="flex items-center gap-3">
+                <div style={{ color: '#111' }}><IconCheck size={18} /></div>
+                <span className="font-body" style={{ fontSize: 15, color: '#111' }}>{b}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4 flex flex-col items-center gap-3 shrink-0" style={{ borderTop: '1px solid #eee' }}>
+          <span className="font-heading" style={{ fontSize: 34, color: '#111' }}>$6.99</span>
+          <span className="font-body" style={{ fontSize: 13, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>One-time purchase</span>
+          <button type="button" onClick={() => void handleUnlock()} disabled={purchasing} className="btn-fill w-full mt-2" style={{ height: 56, fontSize: 16 }}>
+            {purchasing ? 'Processing…' : 'Unlock forever'}
+          </button>
+          <button type="button" onClick={() => void handleUnlock()} className="font-body underline" style={{ fontSize: 12, color: '#8E8E93' }}>Restore purchase</button>
+        </div>
       </div>
     </div>
   )
