@@ -1490,9 +1490,9 @@ function HealthReportCard({ photo, plantName, scannedAt, result }: {
   )
 }
 
-function HealthHubScreen({ plants, isPro, onScanNew, onCheckExisting, onOpenPlant }: {
+function HealthHubScreen({ plants, isPro, onScanNew, onCheckExisting, onOpenPlant, onShowPro }: {
   plants: Plant[]; isPro: boolean
-  onScanNew: () => void; onCheckExisting: () => void; onOpenPlant: (p: Plant) => void
+  onScanNew: () => void; onCheckExisting: () => void; onOpenPlant: (p: Plant) => void; onShowPro: () => void
 }) {
   const recentChecks = plants
     .flatMap((p) => p.healthLogs.map((log) => ({ plant: p, log })))
@@ -1507,7 +1507,7 @@ function HealthHubScreen({ plants, isPro, onScanNew, onCheckExisting, onOpenPlan
         Scan your plant to diagnose issues and get care advice.
       </p>
 
-      <button type="button" onClick={onScanNew} className="card-white p-4 flex items-center gap-3 w-full text-left mb-3">
+      <button type="button" onClick={isPro ? onScanNew : onShowPro} className="card-white p-4 flex items-center gap-3 w-full text-left mb-3">
         <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 44, height: 44, background: '#111', color: GREEN }}>
           <IconCamera size={20} />
         </div>
@@ -1515,15 +1515,15 @@ function HealthHubScreen({ plants, isPro, onScanNew, onCheckExisting, onOpenPlan
           <div className="font-heading" style={{ fontSize: 16 }}>Scan a new plant</div>
           <div className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Take a photo of any plant to check its health.</div>
         </div>
-        <div style={{ color: '#8E8E93' }}><IconChevronRight size={18} /></div>
+        <div style={{ color: '#8E8E93' }}>{isPro ? <IconChevronRight size={18} /> : <IconLock size={18} />}</div>
       </button>
 
       <button
         type="button"
-        onClick={onCheckExisting}
-        disabled={plants.length === 0}
+        onClick={isPro ? onCheckExisting : onShowPro}
+        disabled={isPro && plants.length === 0}
         className="card-white p-4 flex items-center gap-3 w-full text-left"
-        style={{ opacity: plants.length === 0 ? 0.5 : 1 }}
+        style={{ opacity: isPro && plants.length === 0 ? 0.5 : 1 }}
       >
         <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 44, height: 44, background: '#111', color: GREEN }}>
           <IconLeaf size={20} />
@@ -1532,7 +1532,7 @@ function HealthHubScreen({ plants, isPro, onScanNew, onCheckExisting, onOpenPlan
           <div className="font-heading" style={{ fontSize: 16 }}>Check an existing plant</div>
           <div className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Select from your jungle to run a health check.</div>
         </div>
-        <div style={{ color: '#8E8E93' }}><IconChevronRight size={18} /></div>
+        <div style={{ color: '#8E8E93' }}>{isPro ? <IconChevronRight size={18} /> : <IconLock size={18} />}</div>
       </button>
 
       {recentChecks.length > 0 && (
@@ -2470,6 +2470,7 @@ export default function App() {
           onScanNew={() => { setHealthFlowConfig({ mode: 'new', presetPlant: null }); setScreen('healthFlow') }}
           onCheckExisting={() => { setHealthFlowConfig({ mode: 'existing', presetPlant: null }); setScreen('healthFlow') }}
           onOpenPlant={(p) => { setSelectedPlant(p); setScreen('plantDetail') }}
+          onShowPro={() => setScreen('proUnlock')}
         />
       )
     } else {
@@ -2502,7 +2503,7 @@ export default function App() {
         {tabContent}
         <TabBar
           active={tab}
-          onChange={(t) => { if (t === 'health' && !user.isPro) { setScreen('proUnlock') } else { setTab(t) } }}
+          onChange={(t) => setTab(t)}
           onAdd={openAddFlow}
         />
       </div>
