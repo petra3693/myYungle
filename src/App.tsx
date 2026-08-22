@@ -488,6 +488,7 @@ function BatchCaptureScreen({
 interface DraftPlant {
   photo: string
   name: string
+  room: string
   category: string
   waterNeed: WaterNeed
   lightNeed: LightNeed
@@ -508,7 +509,7 @@ interface DraftPlant {
 const PLANT_CATEGORIES = ['Houseplant', 'Succulent', 'Herb', 'Flowering', 'Tree', 'Other']
 
 const FALLBACK_DRAFT_BASE = {
-  name: 'Unknown plant', category: 'Houseplant', waterNeed: 'Moderate' as WaterNeed, lightNeed: 'Medium' as LightNeed,
+  name: 'Unknown plant', room: 'Unknown', category: 'Houseplant', waterNeed: 'Moderate' as WaterNeed, lightNeed: 'Medium' as LightNeed,
   humidityNeed: 'normal' as const, temperatureRangeC: '18-27°C', careNote: '',
   wateringFrequency: 'weekly' as WateringFrequency, wateringCycleAnchor: null as string | null,
   isToxicToPets: null, toxicityNotes: '', confidence: 40, identified: false as const,
@@ -539,6 +540,7 @@ async function identifyPhoto(dataUrl: string, language: AppLanguage = 'en', prim
     return {
       photo: dataUrl,
       name: result.data.name,
+      room: 'Unknown',
       category: 'Houseplant',
       waterNeed,
       lightNeed: mapLightNeedToForm(result.data.lightNeed),
@@ -559,10 +561,12 @@ async function identifyPhoto(dataUrl: string, language: AppLanguage = 'en', prim
   }
 }
 
-function DraftNameSheet({ draft, retrying, onRetry, onCancel, onSave }: {
-  draft: DraftPlant; retrying: boolean; onRetry?: () => void; onCancel: () => void; onSave: (name: string) => void
+function DraftEditSheet({ draft, existingRooms, retrying, onRetry, onCancel, onSave }: {
+  draft: DraftPlant; existingRooms: string[]; retrying: boolean; onRetry?: () => void; onCancel: () => void
+  onSave: (name: string, room: string) => void
 }) {
   const [name, setName] = useState(draft.name === 'Unknown plant' ? '' : draft.name)
+  const [room, setRoom] = useState(draft.room === 'Unknown' ? '' : draft.room)
   const [open, setOpen] = useState(false)
   useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
   function close(action: () => void) { setOpen(false); setTimeout(action, 180) }
@@ -574,6 +578,11 @@ function DraftNameSheet({ draft, retrying, onRetry, onCancel, onSave }: {
           {!draft.identified && (
             <p className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>
               AI couldn&apos;t identify this plant{draft.error ? ` (${draft.error})` : ''}. Give it a name, or try again.
+            </p>
+          )}
+          {draft.identified && draft.confidence < 70 && (
+            <p className="font-body flex items-center gap-1.5" style={{ fontSize: 13, color: '#B8860B' }}>
+              <IconAlert size={14} /> AI wasn&apos;t very confident about this one — check it&apos;s right.
             </p>
           )}
           <label className="flex flex-col gap-1.5">
@@ -588,6 +597,32 @@ function DraftNameSheet({ draft, retrying, onRetry, onCancel, onSave }: {
               style={{ height: 48, fontSize: 16, color: '#111', background: '#f5f5f5', borderRadius: 14, border: 'none' }}
             />
           </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>Room</span>
+            <input
+              type="text"
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              placeholder="e.g. Living room"
+              className="font-heading px-4"
+              style={{ height: 48, fontSize: 16, color: '#111', background: '#f5f5f5', borderRadius: 14, border: 'none' }}
+            />
+            {existingRooms.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-1">
+                {existingRooms.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRoom(r)}
+                    className="font-body"
+                    style={{ fontSize: 13, padding: '5px 12px', borderRadius: 9999, background: r === room ? GREEN : '#f0f0f0', color: '#111' }}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            )}
+          </label>
           <div className="flex gap-3">
             {onRetry && (
               <button type="button" onClick={onRetry} disabled={retrying} className="font-heading flex-1" style={{ height: 48, borderRadius: 9999, background: '#f0f0f0', color: '#111', opacity: retrying ? 0.6 : 1 }}>
@@ -597,7 +632,7 @@ function DraftNameSheet({ draft, retrying, onRetry, onCancel, onSave }: {
             <button
               type="button"
               disabled={!name.trim()}
-              onClick={() => close(() => onSave(name.trim()))}
+              onClick={() => close(() => onSave(name.trim(), room.trim() || 'Unknown'))}
               className="btn-fill flex-1"
               style={{ height: 48 }}
             >
@@ -638,8 +673,8 @@ function DayPickerSheet({ selected, onSelect, onClose }: { selected: number; onS
   )
 }
 
-function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: initialPrimaryDay, onChangePrimaryDay, onDone }: {
-  drafts: DraftPlant[]; language: AppLanguage; primaryDay: number; onChangePrimaryDay: (day: number) => void
+function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: initialPrimaryDay, existingRooms, onChangePrimaryDay, onDone }: {
+  drafts: DraftPlant[]; language: AppLanguage; primaryDay: number; existingRooms: string[]; onChangePrimaryDay: (day: number) => void
   onDone: (drafts: DraftPlant[]) => void
 }) {
   const [drafts, setDrafts] = useState(initialDrafts)
@@ -696,13 +731,18 @@ function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: ini
           >
             <img src={d.photo} alt="" className="rounded-full object-cover shrink-0" style={{ width: 56, height: 56 }} />
             <span className="font-heading flex-1 min-w-0 truncate" style={{ fontSize: 18, color: '#111' }}>{d.name}</span>
-            {d.identified ? (
-              <span className="font-heading" style={{ fontSize: 18, color: '#8E8E93' }}>{d.confidence}%</span>
-            ) : (
+            {!d.identified ? (
               <span className="flex items-center gap-1.5" style={{ color: '#B8860B' }}>
                 <IconAlert size={16} />
                 <span className="font-body" style={{ fontSize: 13 }}>Name it</span>
               </span>
+            ) : d.confidence < 70 ? (
+              <span className="flex items-center gap-1.5" style={{ color: '#B8860B' }}>
+                <span style={{ width: 7, height: 7, borderRadius: 9999, background: '#B8860B', flexShrink: 0 }} />
+                <span className="font-body" style={{ fontSize: 13 }}>Check this one</span>
+              </span>
+            ) : (
+              <span className="font-heading" style={{ fontSize: 18, color: '#8E8E93' }}>{d.confidence}%</span>
             )}
           </button>
         ))}
@@ -725,13 +765,14 @@ function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: ini
         </button>
       </div>
       {editingIndex !== null && (
-        <DraftNameSheet
+        <DraftEditSheet
           draft={drafts[editingIndex]}
+          existingRooms={existingRooms}
           retrying={retryingIndex === editingIndex}
           onRetry={drafts[editingIndex].identified ? undefined : () => void retry(editingIndex)}
           onCancel={() => setEditingIndex(null)}
-          onSave={(name) => {
-            setDrafts((prev) => prev.map((d, idx) => (idx === editingIndex ? { ...d, name } : d)))
+          onSave={(name, room) => {
+            setDrafts((prev) => prev.map((d, idx) => (idx === editingIndex ? { ...d, name, room } : d)))
             setEditingIndex(null)
           }}
         />
@@ -2257,7 +2298,7 @@ export default function App() {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: d.name,
       category: d.category,
-      room: 'Unknown',
+      room: d.room,
       careNote: d.careNote,
       wateringDays: d.wateringDays,
       scheduleDays: d.wateringDays.map((i) => DAYS[i]),
@@ -2352,6 +2393,7 @@ export default function App() {
         drafts={pendingDrafts}
         language={language}
         primaryDay={settings.primaryWateringDay}
+        existingRooms={Array.from(new Set(plants.map((p) => p.room).filter((r) => r && r !== 'Unknown')))}
         onChangePrimaryDay={(day) => setSettings((s) => ({ ...s, primaryWateringDay: day }))}
         onDone={(finalDrafts) => {
           setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
@@ -2428,6 +2470,7 @@ export default function App() {
         drafts={pendingDrafts}
         language={language}
         primaryDay={settings.primaryWateringDay}
+        existingRooms={Array.from(new Set(plants.map((p) => p.room).filter((r) => r && r !== 'Unknown')))}
         onChangePrimaryDay={(day) => setSettings((s) => ({ ...s, primaryWateringDay: day }))}
         onDone={(finalDrafts) => {
           setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
