@@ -496,6 +496,9 @@ interface DraftPlant {
   isToxicToPets: boolean | null
   toxicityNotes: string
   confidence: number
+  /** false when the AI call failed or errored and this is just a placeholder the user must confirm/rename. */
+  identified: boolean
+  error?: string
 }
 
 const PLANT_CATEGORIES = ['Houseplant', 'Succulent', 'Herb', 'Flowering', 'Tree', 'Other']
@@ -516,7 +519,7 @@ function batchedWateringDays(waterNeed: WaterNeed): number[] {
 const FALLBACK_DRAFT_BASE = {
   name: 'Unknown plant', category: 'Houseplant', waterNeed: 'Moderate' as WaterNeed, lightNeed: 'Medium' as LightNeed,
   humidityNeed: 'normal' as const, temperatureRangeC: '18-27°C', careNote: '', wateringDays: [BATCH_PRIMARY_DAY],
-  isToxicToPets: null, toxicityNotes: '', confidence: 40,
+  isToxicToPets: null, toxicityNotes: '', confidence: 40, identified: false as const,
 }
 
 function withMinDelay<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -537,7 +540,7 @@ async function identifyPhoto(dataUrl: string, language: AppLanguage = 'en'): Pro
   try {
     const result = await analyzePlantImage(dataUrl, [], language)
     if (!result.ok) {
-      return { photo: dataUrl, ...FALLBACK_DRAFT_BASE }
+      return { photo: dataUrl, ...FALLBACK_DRAFT_BASE, error: result.error }
     }
     const waterNeed = mapWaterNeedToForm(result.data.waterNeed)
     return {
@@ -553,14 +556,70 @@ async function identifyPhoto(dataUrl: string, language: AppLanguage = 'en'): Pro
       isToxicToPets: result.data.isToxicToPets,
       toxicityNotes: result.data.toxicityNotes ?? '',
       confidence: confidenceLabel(result.data.confidence),
+      identified: true,
     }
   } catch (error) {
     console.error('[myJungle] identify failed:', error)
-    return { photo: dataUrl, ...FALLBACK_DRAFT_BASE }
+    return { photo: dataUrl, ...FALLBACK_DRAFT_BASE, error: error instanceof Error ? error.message : String(error) }
   }
 }
 
-function AnalysisResultScreen({ drafts, onDone }: { drafts: DraftPlant[]; onDone: () => void }) {
+function DraftNameSheet({ draft, retrying, onRetry, onCancel, onSave }: {
+  draft: DraftPlant; retrying: boolean; onRetry?: () => void; onCancel: () => void; onSave: (name: string) => void
+}) {
+  const [name, setName] = useState(draft.name === 'Unknown plant' ? '' : draft.name)
+  const [open, setOpen] = useState(false)
+  useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
+  function close(action: () => void) { setOpen(false); setTimeout(action, 180) }
+  return (
+    <>
+      <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onCancel)} />
+      <div className="fixed left-0 right-0 bottom-0 z-[70]">
+        <div className={`sheet-panel ${open ? 'is-open' : ''} p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-4`}>
+          {!draft.identified && (
+            <p className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>
+              AI couldn&apos;t identify this plant{draft.error ? ` (${draft.error})` : ''}. Give it a name, or try again.
+            </p>
+          )}
+          <label className="flex flex-col gap-1.5">
+            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>Plant name</span>
+            <input
+              type="text"
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Monstera"
+              className="font-heading px-4"
+              style={{ height: 48, fontSize: 16, color: '#111', background: '#f5f5f5', borderRadius: 14, border: 'none' }}
+            />
+          </label>
+          <div className="flex gap-3">
+            {onRetry && (
+              <button type="button" onClick={onRetry} disabled={retrying} className="font-heading flex-1" style={{ height: 48, borderRadius: 9999, background: '#f0f0f0', color: '#111', opacity: retrying ? 0.6 : 1 }}>
+                {retrying ? 'Retrying…' : 'Retry AI'}
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={!name.trim()}
+              onClick={() => close(() => onSave(name.trim()))}
+              className="btn-fill flex-1"
+              style={{ height: 48 }}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function AnalysisResultScreen({ drafts: initialDrafts, language, onDone }: { drafts: DraftPlant[]; language: AppLanguage; onDone: (drafts: DraftPlant[]) => void }) {
+  const [drafts, setDrafts] = useState(initialDrafts)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [retryingIndex, setRetryingIndex] = useState<number | null>(null)
+
   const daySet = new Set<number>()
   drafts.forEach((d) => d.wateringDays.forEach((i) => daySet.add(i)))
   const dayLabel = Array.from(daySet)
@@ -568,23 +627,50 @@ function AnalysisResultScreen({ drafts, onDone }: { drafts: DraftPlant[]; onDone
     .map((i) => DAYS[i][0] + DAYS[i].slice(1).toLowerCase())
     .join(', ')
 
+  const failedCount = drafts.filter((d) => !d.identified).length
+  const subtitle =
+    failedCount === 0
+      ? 'AI filled the profile and computed your watering days.'
+      : `AI filled ${drafts.length - failedCount} of ${drafts.length} profile${drafts.length === 1 ? '' : 's'}. Tap the flagged ones to fix them.`
+
+  async function retry(i: number) {
+    setRetryingIndex(i)
+    try {
+      const updated = await identifyPhoto(drafts[i].photo, language)
+      setDrafts((prev) => prev.map((d, idx) => (idx === i ? updated : d)))
+    } finally {
+      setRetryingIndex(null)
+    }
+  }
+
   return (
     <div className="app-shell-light fixed inset-0 flex flex-col">
       <div className="px-5 pt-[calc(2rem+env(safe-area-inset-top,0px))] pb-4 shrink-0">
         <h1 className="font-heading flex items-center gap-2" style={{ fontSize: 26, color: '#000' }}>
           {drafts.length} plant{drafts.length === 1 ? '' : 's'} added <IconCheck size={22} />
         </h1>
-        <p className="font-body" style={{ fontSize: 14, color: '#666', marginTop: 6 }}>
-          AI filled the profile and computed your watering days.
-        </p>
+        <p className="font-body" style={{ fontSize: 14, color: '#666', marginTop: 6 }}>{subtitle}</p>
       </div>
       <div className="scroll-y flex-1 px-5 flex flex-col gap-3 pb-4">
         {drafts.map((d, i) => (
-          <div key={i} className="flex items-center gap-3 p-3 rounded-[1.5rem]" style={{ background: '#f0f0ec' }}>
+          <button
+            key={i}
+            type="button"
+            onClick={() => setEditingIndex(i)}
+            className="flex items-center gap-3 p-3 rounded-[1.5rem] text-left w-full"
+            style={{ background: d.identified ? '#f0f0ec' : '#fbeed9' }}
+          >
             <img src={d.photo} alt="" className="rounded-full object-cover shrink-0" style={{ width: 56, height: 56 }} />
             <span className="font-heading flex-1 min-w-0 truncate" style={{ fontSize: 18, color: '#111' }}>{d.name}</span>
-            <span className="font-heading" style={{ fontSize: 18, color: '#8E8E93' }}>{d.confidence}%</span>
-          </div>
+            {d.identified ? (
+              <span className="font-heading" style={{ fontSize: 18, color: '#8E8E93' }}>{d.confidence}%</span>
+            ) : (
+              <span className="flex items-center gap-1.5" style={{ color: '#B8860B' }}>
+                <IconAlert size={16} />
+                <span className="font-body" style={{ fontSize: 13 }}>Name it</span>
+              </span>
+            )}
+          </button>
         ))}
       </div>
       {dayLabel && (
@@ -596,11 +682,23 @@ function AnalysisResultScreen({ drafts, onDone }: { drafts: DraftPlant[]; onDone
         </div>
       )}
       <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
-        <button type="button" onClick={onDone} className="btn-fill btn-forward w-full" style={{ height: 56, fontSize: 15 }}>
+        <button type="button" onClick={() => onDone(drafts)} className="btn-fill btn-forward w-full" style={{ height: 56, fontSize: 15 }}>
           Go to home
           <span className="btn-forward__arrow"><IconChevronRight size={20} /></span>
         </button>
       </div>
+      {editingIndex !== null && (
+        <DraftNameSheet
+          draft={drafts[editingIndex]}
+          retrying={retryingIndex === editingIndex}
+          onRetry={drafts[editingIndex].identified ? undefined : () => void retry(editingIndex)}
+          onCancel={() => setEditingIndex(null)}
+          onSave={(name) => {
+            setDrafts((prev) => prev.map((d, idx) => (idx === editingIndex ? { ...d, name } : d)))
+            setEditingIndex(null)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -2177,8 +2275,9 @@ export default function App() {
     content = (
       <AnalysisResultScreen
         drafts={pendingDrafts}
-        onDone={() => {
-          setPlants((prev) => [...prev, ...pendingDrafts.map(draftToPlant)])
+        language={language}
+        onDone={(finalDrafts) => {
+          setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
           setPendingDrafts([])
           setSettings((s) => ({ ...s, hasCompletedOnboarding: true }))
           if (settings.pushNotifications) void requestNotificationPermission()
@@ -2249,8 +2348,9 @@ export default function App() {
     content = (
       <AnalysisResultScreen
         drafts={pendingDrafts}
-        onDone={() => {
-          setPlants((prev) => [...prev, ...pendingDrafts.map(draftToPlant)])
+        language={language}
+        onDone={(finalDrafts) => {
+          setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
           setPendingDrafts([])
           setScreen('main')
           setTab('home')
