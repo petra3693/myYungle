@@ -80,6 +80,7 @@ export interface PlantHealthLog {
   healthScore: number
   diagnosis: string
   treatmentNotes: string
+  recommendedActions: string[]
   analyzedByAI: boolean
 }
 

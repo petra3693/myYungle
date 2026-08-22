@@ -16,7 +16,7 @@ import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, t
 import { clearAllPhotos, deletePlantPhotos } from '@/lib/photoStore'
 import { MAX_FREE_PLANTS, canAccessProFeatures, canAddMorePlants } from '@/lib/proAccess'
 import { useUserState } from '@/hooks/useUserState'
-import type { AppSettings, DayCode, HistoryEntry, LightNeed, Plant, UserState, WaterNeed, WateringFrequency } from '@/types/plant'
+import type { AppSettings, DayCode, HistoryEntry, LightNeed, Plant, PlantHealthLog, UserState, WaterNeed, WateringFrequency } from '@/types/plant'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -49,6 +49,7 @@ type Screen =
   | 'proUnlock'
   | 'bulkAdd'
   | 'bulkResult'
+  | 'healthFlow'
 
 type Tab = 'home' | 'days' | 'health' | 'profile'
 
@@ -168,6 +169,7 @@ const IconNavProfile = (p: { size?: number }) => (
 const IconLeaf = (p: { size?: number }) => <Icon {...p}><path d="M11 20A7 7 0 0 1 4 13c0-6 5-11 11-11 1 6-3 11-9 13" /><path d="M4 13c0 5 4 7 7 7" /></Icon>
 const IconCalendar = (p: { size?: number }) => <Icon {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18" /></Icon>
 const IconChevronLeft = (p: { size?: number }) => <Icon {...p}><path d="M15 5l-7 7 7 7" /></Icon>
+const IconChevronDown = (p: { size?: number }) => <Icon {...p}><path d="M5 9l7 7 7-7" /></Icon>
 const IconX = (p: { size?: number }) => <Icon {...p}><path d="M6 6l12 12M18 6L6 18" /></Icon>
 const IconCamera = (p: { size?: number }) => <Icon {...p}><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" /><circle cx="12" cy="14" r="3.5" /></Icon>
 const IconBell = (p: { size?: number }) => <Icon {...p}><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" /><path d="M10 19a2 2 0 0 0 4 0" /></Icon>
@@ -683,12 +685,13 @@ function DaysScreen({ plants, todayIdx, onToggleWatered }: { plants: Plant[]; to
 // ─── Screen: Plant detail ─────────────────────────────────────────────────────
 
 function PlantDetailScreen({
-  plant, user, todayIdx, onBack, onDelete, onWater, onOpenSchedule, onShowLimitOrPro,
+  plant, user, todayIdx, onBack, onDelete, onWater, onOpenSchedule, onShowLimitOrPro, onRunHealthCheck,
 }: {
   plant: Plant; user: UserState; todayIdx: number; onBack: () => void; onDelete: () => void; onWater: () => void
-  onOpenSchedule: () => void; onShowLimitOrPro: () => void
+  onOpenSchedule: () => void; onShowLimitOrPro: () => void; onRunHealthCheck: () => void
 }) {
   const [showDelete, setShowDelete] = useState(false)
+  const [expandedLog, setExpandedLog] = useState<string | null>(null)
   const hasAccess = canAccessProFeatures(user)
   const timesPerWeek = plant.wateringFrequency === 'monthly' ? 1 : plant.wateringDays.length * (plant.wateringFrequency === 'biweekly' ? 0.5 : 1)
   const health = computeHealthStatus(plant, todayIdx)
@@ -787,6 +790,62 @@ function PlantDetailScreen({
               {hasAccess ? 'Growth & health tracking unlocked' : 'Growth & health — unlocks with Pro'}
             </span>
           </button>
+
+          {hasAccess && (
+            <div>
+              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Health log</span>
+              {plant.healthLogs.length === 0 ? (
+                <p className="font-body mt-2" style={{ fontSize: 13, color: '#8E8E93' }}>No health checks yet.</p>
+              ) : (
+                <div className="flex flex-col gap-2 mt-2">
+                  {plant.healthLogs.map((log) => {
+                    const healthy = log.healthScore >= 70
+                    const isOpen = expandedLog === log.id
+                    return (
+                      <div key={log.id} className="rounded-2xl overflow-hidden" style={{ background: '#f5f5f5' }}>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedLog(isOpen ? null : log.id)}
+                          className="flex items-center gap-3 w-full p-3 text-left"
+                        >
+                          <span className="font-heading shrink-0" style={{ fontSize: 11, background: '#111', color: GREEN, borderRadius: 8, padding: '4px 8px' }}>
+                            {new Date(log.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase()}
+                          </span>
+                          <span style={{ width: 6, height: 6, borderRadius: 9999, background: healthScoreColor(log.healthScore), flexShrink: 0 }} />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-heading truncate" style={{ fontSize: 14 }}>{log.diagnosis}</div>
+                            <div className="font-body truncate" style={{ fontSize: 11, color: healthy ? '#0a8f3f' : '#8E8E93' }}>
+                              {healthy ? 'Healthy' : log.treatmentNotes}
+                            </div>
+                          </div>
+                          <div style={{ color: '#8E8E93', transform: isOpen ? 'rotate(180deg)' : 'none' }}><IconChevronDown size={16} /></div>
+                        </button>
+                        {isOpen && (
+                          <div className="px-3 pb-3 flex flex-col gap-1.5">
+                            {log.recommendedActions.map((a, i) => (
+                              <div key={i} className="flex items-start gap-2">
+                                <div style={{ color: '#111', marginTop: 2 }}><IconCheck size={14} /></div>
+                                <span className="font-body" style={{ fontSize: 13 }}>{a}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={onRunHealthCheck}
+                className="font-heading w-full mt-3"
+                style={{ height: 48, borderRadius: 9999, background: 'transparent', border: `1.5px solid ${GREEN}`, color: '#0a8f3f', textTransform: 'uppercase', fontSize: 13 }}
+              >
+                Run new health check
+              </button>
+            </div>
+          )}
+
           <button type="button" onClick={onWater} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>
             {plant.isWateredToday ? 'Watered ✓' : 'Water now'}
           </button>
@@ -1016,11 +1075,141 @@ function healthScoreColor(score: number): string {
   return '#FF3B30'
 }
 
-function HealthCheckScreen() {
+function daysAgoLabel(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
+  if (days <= 0) return 'Today'
+  if (days === 1) return '1 day ago'
+  return `${days} days ago`
+}
+
+function HealthReportCard({ photo, plantName, scannedAt, result }: {
+  photo: string; plantName: string; scannedAt: string; result: AnalyzePlantHealthResult
+}) {
+  const healthy = result.healthScore >= 70
+  return (
+    <>
+      <img src={photo} alt="" className="w-full rounded-[1.5rem] object-cover mb-4" style={{ height: 220 }} />
+      <div className="mb-4">
+        <div className="font-heading" style={{ fontSize: 22, color: '#fff' }}>{plantName}</div>
+        <div className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>
+          Scanned: {new Date(scannedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+        </div>
+      </div>
+      <div className="card-white p-5 flex flex-col gap-2 mb-4">
+        <div className="flex items-center gap-2">
+          <span style={{ width: 8, height: 8, borderRadius: 9999, background: healthScoreColor(result.healthScore) }} />
+          <span className="font-body font-semibold" style={{ fontSize: 12, color: healthScoreColor(result.healthScore), textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            {healthy ? 'Healthy' : 'Needs attention'}
+          </span>
+        </div>
+        <div className="font-heading" style={{ fontSize: 20 }}>{result.diagnosis}</div>
+        <p className="font-body" style={{ fontSize: 14, color: '#555', lineHeight: 1.5 }}>{result.treatmentNotes}</p>
+      </div>
+      <div className="card-white p-5 flex flex-col gap-3">
+        <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Recommended actions</span>
+        {result.recommendedActions.map((a, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <div style={{ color: '#111', marginTop: 2 }}><IconCheck size={16} /></div>
+            <span className="font-body" style={{ fontSize: 14 }}>{a}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function HealthHubScreen({ plants, isPro, onScanNew, onCheckExisting, onOpenPlant }: {
+  plants: Plant[]; isPro: boolean
+  onScanNew: () => void; onCheckExisting: () => void; onOpenPlant: (p: Plant) => void
+}) {
+  const recentChecks = plants
+    .flatMap((p) => p.healthLogs.map((log) => ({ plant: p, log })))
+    .sort((a, b) => new Date(b.log.timestamp).getTime() - new Date(a.log.timestamp).getTime())
+    .slice(0, 6)
+
+  return (
+    <div className="scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
+      {isPro && <span className="btn-outline-pro inline-block" style={{ fontSize: 10, padding: '3px 10px', marginBottom: 12 }}>PRO</span>}
+      <h1 className="font-heading" style={{ fontSize: 26, color: '#fff' }}>Health Check</h1>
+      <p className="font-body" style={{ fontSize: 14, color: '#8E8E93', marginTop: 4, marginBottom: 20 }}>
+        Scan your plant to diagnose issues and get care advice.
+      </p>
+
+      <button type="button" onClick={onScanNew} className="card-white p-4 flex items-center gap-3 w-full text-left mb-3">
+        <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 44, height: 44, background: '#111', color: GREEN }}>
+          <IconCamera size={20} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-heading" style={{ fontSize: 16 }}>Scan a new plant</div>
+          <div className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Take a photo of any plant to check its health.</div>
+        </div>
+        <div style={{ color: '#8E8E93' }}><IconChevronRight size={18} /></div>
+      </button>
+
+      <button
+        type="button"
+        onClick={onCheckExisting}
+        disabled={plants.length === 0}
+        className="card-white p-4 flex items-center gap-3 w-full text-left"
+        style={{ opacity: plants.length === 0 ? 0.5 : 1 }}
+      >
+        <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 44, height: 44, background: '#111', color: GREEN }}>
+          <IconLeaf size={20} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-heading" style={{ fontSize: 16 }}>Check an existing plant</div>
+          <div className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Select from your jungle to run a health check.</div>
+        </div>
+        <div style={{ color: '#8E8E93' }}><IconChevronRight size={18} /></div>
+      </button>
+
+      {recentChecks.length > 0 && (
+        <>
+          <h2 className="font-heading mt-6 mb-3" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Recent checks</h2>
+          <div className="flex flex-col gap-3">
+            {recentChecks.map(({ plant, log }) => {
+              const healthy = log.healthScore >= 70
+              return (
+                <button
+                  key={log.id}
+                  type="button"
+                  onClick={() => onOpenPlant(plant)}
+                  className="flex items-center gap-3 w-full p-3 rounded-2xl text-left"
+                  style={{ background: 'var(--color-surface)' }}
+                >
+                  <PlantPhoto photo={plant.photo} alt={plant.name} className="rounded-2xl object-cover shrink-0 w-12 h-12" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-heading truncate" style={{ fontSize: 15, color: '#fff' }}>{plant.name}</div>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>{daysAgoLabel(log.timestamp)}</span>
+                      <span style={{ width: 4, height: 4, borderRadius: 9999, background: '#8E8E93' }} />
+                      <span className="font-body font-semibold" style={{ fontSize: 12, color: healthScoreColor(log.healthScore) }}>{healthy ? 'Healthy' : 'Needs attention'}</span>
+                    </div>
+                  </div>
+                  <div style={{ color: '#8E8E93' }}><IconChevronRight size={18} /></div>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, onDone }: {
+  plants: Plant[]; mode: 'new' | 'existing'; presetPlant: Plant | null
+  onBack: () => void; onSaveLog: (plantId: string, log: PlantHealthLog) => void; onDone: () => void
+}) {
+  const [step, setStep] = useState<'picker' | 'capture'>(mode === 'existing' && !presetPlant ? 'picker' : 'capture')
+  const [selectedPlant, setSelectedPlant] = useState<Plant | null>(presetPlant)
   const [photo, setPhoto] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<AnalyzePlantHealthResult | null>(null)
+  const [scannedAt, setScannedAt] = useState<string | null>(null)
+  const [showAttachPicker, setShowAttachPicker] = useState(false)
+  const [saved, setSaved] = useState(false)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
@@ -1030,10 +1219,12 @@ function HealthCheckScreen() {
       setPhoto(compressed)
       setResult(null)
       setError(null)
+      setSaved(false)
       setAnalyzing(true)
       const outcome = await withMinDelay(analyzePlantHealthImage(compressed), 700)
       if (outcome.ok) {
         setResult(outcome.data)
+        setScannedAt(new Date().toISOString())
       } else {
         setError(outcome.error)
       }
@@ -1045,77 +1236,146 @@ function HealthCheckScreen() {
     }
   }
 
+  function handleLogToProfile(targetPlant: Plant) {
+    if (!photo || !result || !scannedAt) return
+    const log: PlantHealthLog = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: scannedAt,
+      photo,
+      healthScore: result.healthScore,
+      diagnosis: result.diagnosis,
+      treatmentNotes: result.treatmentNotes,
+      recommendedActions: result.recommendedActions,
+      analyzedByAI: true,
+    }
+    onSaveLog(targetPlant.id, log)
+    setShowAttachPicker(false)
+    setSaved(true)
+  }
+
   function reset() {
     setPhoto(null)
     setResult(null)
     setError(null)
+    setSaved(false)
+  }
+
+  if (step === 'picker') {
+    return (
+      <div className="app-shell fixed inset-0 flex flex-col">
+        <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
+          <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
+          <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Select plant</span>
+          <div style={{ width: 44 }} />
+        </div>
+        <div className="scroll-y flex-1 px-5 flex flex-col gap-3">
+          {plants.map((p) => (
+            <button key={p.id} type="button" onClick={() => { setSelectedPlant(p); setStep('capture') }} className="check-row text-left">
+              <PlantPhoto photo={p.photo} alt={p.name} className="rounded-2xl object-cover shrink-0 w-12 h-12" />
+              <span className="font-heading flex-1 min-w-0 truncate" style={{ fontSize: 16, color: '#111' }}>{p.name}</span>
+              <div style={{ color: '#8E8E93' }}><IconChevronRight size={18} /></div>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
+    <div className="app-shell fixed inset-0 flex flex-col">
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.target.value = '' }} />
       <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.target.value = '' }} />
-      <h1 className="font-heading" style={{ fontSize: 24, color: '#fff' }}>Health check</h1>
-      <p className="font-body" style={{ fontSize: 14, color: '#8E8E93', marginTop: 4, marginBottom: 20 }}>
-        Snap a photo of a plant and AI will spot pests, disease, or watering issues.
-      </p>
+      <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
+        <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
+        <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Health report</span>
+        <div style={{ width: 44 }} />
+      </div>
+      <div className="scroll-y flex-1 px-5 pb-6">
+        {!photo && (
+          <div className="dash-picker w-full flex flex-col items-center justify-center gap-4" style={{ height: 260 }}>
+            <div style={{ color: GREEN }}><IconNavHealth size={30} /></div>
+            <div className="flex gap-3 w-full px-6">
+              <button type="button" onClick={() => cameraInputRef.current?.click()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>Take photo</button>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="font-heading flex-1"
+                style={{ height: 48, fontSize: 13, textTransform: 'uppercase', borderRadius: 9999, background: 'transparent', border: '1.5px solid #fff', color: '#fff' }}
+              >
+                From gallery
+              </button>
+            </div>
+          </div>
+        )}
 
-      {!photo && (
-        <div className="dash-picker w-full flex flex-col items-center justify-center gap-4" style={{ height: 260 }}>
-          <div style={{ color: GREEN }}><IconNavHealth size={30} /></div>
-          <div className="flex gap-3 w-full px-6">
-            <button type="button" onClick={() => cameraInputRef.current?.click()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>Take photo</button>
+        {photo && !result && (
+          <img src={photo} alt="" className="w-full rounded-[1.5rem] object-cover" style={{ height: 260 }} />
+        )}
+
+        {analyzing && (
+          <div className="flex flex-col items-center gap-2 mt-4">
+            <AiThinkingLoader size={140} />
+            <p className="font-body text-center" style={{ fontSize: 14, color: '#8E8E93' }}>Diagnosing plant health…</p>
+          </div>
+        )}
+
+        {error && !analyzing && (
+          <>
+            <p className="font-body text-center mt-4" style={{ fontSize: 13, color: '#FF3B30' }}>{error}</p>
+            <button type="button" onClick={reset} className="font-heading w-full mt-4" style={{ height: 52, borderRadius: 9999, background: '#1c1c1e', color: '#fff' }}>Try again</button>
+          </>
+        )}
+
+        {photo && result && !analyzing && (
+          <HealthReportCard photo={photo} plantName={selectedPlant?.name ?? 'New plant'} scannedAt={scannedAt ?? new Date().toISOString()} result={result} />
+        )}
+      </div>
+      {photo && result && !analyzing && (
+        <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-3 flex flex-col gap-3 shrink-0">
+          {saved ? (
+            <button type="button" onClick={onDone} className="btn-fill w-full" style={{ height: 52 }}>Done</button>
+          ) : (
             <button
               type="button"
-              onClick={() => galleryInputRef.current?.click()}
-              className="font-heading flex-1"
-              style={{ height: 48, fontSize: 13, textTransform: 'uppercase', borderRadius: 9999, background: 'transparent', border: '1.5px solid #fff', color: '#fff' }}
+              onClick={() => (selectedPlant ? handleLogToProfile(selectedPlant) : setShowAttachPicker(true))}
+              className="btn-fill w-full"
+              style={{ height: 52 }}
             >
-              From gallery
+              Log to plant profile
             </button>
-          </div>
+          )}
+          <button
+            type="button"
+            onClick={reset}
+            className="font-heading w-full"
+            style={{ height: 52, borderRadius: 9999, background: 'transparent', border: `1.5px solid ${GREEN}`, color: GREEN, textTransform: 'uppercase' }}
+          >
+            Scan again
+          </button>
         </div>
       )}
-
-      {photo && (
-        <img src={photo} alt="" className="w-full rounded-[1.5rem] object-cover mb-4" style={{ height: 260 }} />
-      )}
-
-      {analyzing && (
-        <div className="flex flex-col items-center gap-2 mt-4">
-          <AiThinkingLoader size={120} />
-          <p className="font-body text-center" style={{ fontSize: 14, color: '#8E8E93' }}>Diagnosing plant health…</p>
-        </div>
-      )}
-
-      {error && !analyzing && (
-        <p className="font-body text-center mt-4" style={{ fontSize: 13, color: '#FF3B30' }}>{error}</p>
-      )}
-
-      {result && !analyzing && (
-        <div className="card-white p-5 flex flex-col gap-4 mt-4">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Health score</span>
-              <span className="font-body font-semibold" style={{ fontSize: 13, color: healthScoreColor(result.healthScore) }}>{result.healthScore}%</span>
+      {showAttachPicker && (
+        <>
+          <div className="sheet-backdrop is-open" onClick={() => setShowAttachPicker(false)} />
+          <div className="fixed left-0 right-0 bottom-0 z-[70]">
+            <div className="sheet-panel is-open p-5 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3">
+              <span className="font-heading" style={{ fontSize: 18 }}>Attach to which plant?</span>
+              {plants.length === 0 ? (
+                <p className="font-body" style={{ fontSize: 14, color: '#666' }}>Add a plant first to save this check to its profile.</p>
+              ) : (
+                <div className="scroll-y flex flex-col gap-2" style={{ maxHeight: 320 }}>
+                  {plants.map((p) => (
+                    <button key={p.id} type="button" onClick={() => handleLogToProfile(p)} className="flex items-center gap-3 rounded-2xl px-3 py-2" style={{ background: '#f5f5f5' }}>
+                      <PlantPhoto photo={p.photo} alt={p.name} className="rounded-xl object-cover shrink-0 w-10 h-10" />
+                      <span className="font-heading" style={{ fontSize: 15 }}>{p.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button type="button" onClick={() => setShowAttachPicker(false)} className="font-body text-center mt-1" style={{ fontSize: 14, color: '#888' }}>Cancel</button>
             </div>
-            <div style={{ height: 8, borderRadius: 9999, background: '#eee', overflow: 'hidden' }}>
-              <div style={{ width: `${result.healthScore}%`, height: '100%', background: healthScoreColor(result.healthScore), borderRadius: 9999 }} />
-            </div>
           </div>
-          <div>
-            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Diagnosis</span>
-            <div className="font-heading" style={{ fontSize: 20, marginTop: 4 }}>{result.diagnosis}</div>
-          </div>
-          <div>
-            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>What to do</span>
-            <p className="font-body" style={{ fontSize: 14, marginTop: 4, lineHeight: 1.5 }}>{result.treatmentNotes}</p>
-          </div>
-        </div>
-      )}
-
-      {photo && !analyzing && (
-        <button type="button" onClick={reset} className="btn-ghost-dark w-full mt-4" style={{ height: 52 }}>Check another photo</button>
+        </>
       )}
     </div>
   )
@@ -1297,6 +1557,7 @@ export default function App() {
   const [showLimitSheet, setShowLimitSheet] = useState(false)
   const [pendingDrafts, setPendingDrafts] = useState<DraftPlant[]>([])
   const [aiThinkingLabel, setAiThinkingLabel] = useState<string | null>(null)
+  const [healthFlowConfig, setHealthFlowConfig] = useState<{ mode: 'new' | 'existing'; presetPlant: Plant | null } | null>(null)
   const user = useUserState(settings)
   const todayIdx = getTodayDayIndex()
 
@@ -1345,6 +1606,10 @@ export default function App() {
         history: [{ id: `${Date.now()}`, date: now, note: 'Watered.', photo: p.photo }, ...plantHistory(p)],
       }
     }))
+  }
+
+  function handleSaveHealthLog(plantId: string, log: PlantHealthLog) {
+    setPlants((prev) => prev.map((p) => (p.id === plantId ? { ...p, healthLogs: [log, ...p.healthLogs] } : p)))
   }
 
   function draftToPlant(d: DraftPlant): Plant {
@@ -1460,6 +1725,7 @@ export default function App() {
         onWater={() => handleWaterToggle(live.id)}
         onOpenSchedule={() => setScreen('customSchedule')}
         onShowLimitOrPro={() => setScreen('proUnlock')}
+        onRunHealthCheck={() => { setHealthFlowConfig({ mode: 'existing', presetPlant: live }); setScreen('healthFlow') }}
       />
     )
   } else if (screen === 'customSchedule' && selectedPlant) {
@@ -1528,6 +1794,17 @@ export default function App() {
         }}
       />
     )
+  } else if (screen === 'healthFlow' && healthFlowConfig) {
+    content = (
+      <HealthCheckFlowScreen
+        plants={plants}
+        mode={healthFlowConfig.mode}
+        presetPlant={healthFlowConfig.presetPlant}
+        onBack={() => { setHealthFlowConfig(null); setScreen('main'); setTab('health') }}
+        onSaveLog={handleSaveHealthLog}
+        onDone={() => { setHealthFlowConfig(null); setScreen('main'); setTab('health') }}
+      />
+    )
   } else {
     let tabContent: React.ReactNode
     if (tab === 'home') {
@@ -1535,7 +1812,15 @@ export default function App() {
     } else if (tab === 'days') {
       tabContent = <DaysScreen plants={plants} todayIdx={todayIdx} onToggleWatered={handleWaterToggle} />
     } else if (tab === 'health') {
-      tabContent = <HealthCheckScreen />
+      tabContent = (
+        <HealthHubScreen
+          plants={plants}
+          isPro={user.isPro}
+          onScanNew={() => { setHealthFlowConfig({ mode: 'new', presetPlant: null }); setScreen('healthFlow') }}
+          onCheckExisting={() => { setHealthFlowConfig({ mode: 'existing', presetPlant: null }); setScreen('healthFlow') }}
+          onOpenPlant={(p) => { setSelectedPlant(p); setScreen('plantDetail') }}
+        />
+      )
     } else {
       tabContent = (
         <ProfileScreen

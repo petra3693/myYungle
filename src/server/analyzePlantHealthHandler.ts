@@ -18,6 +18,7 @@ export interface AnalyzePlantHealthResult {
   healthScore: number
   diagnosis: string
   treatmentNotes: string
+  recommendedActions: string[]
 }
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash'
@@ -26,10 +27,15 @@ const responseSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
     healthScore: { type: SchemaType.NUMBER, description: 'Health percentage 0-100' },
-    diagnosis: { type: SchemaType.STRING, description: 'Short issue name' },
-    treatmentNotes: { type: SchemaType.STRING, description: 'Actionable care advice' },
+    diagnosis: { type: SchemaType.STRING, description: 'Short issue name, e.g. "Yellow leaves detected" or "Healthy"' },
+    treatmentNotes: { type: SchemaType.STRING, description: 'One short sentence describing the likely cause of the issue' },
+    recommendedActions: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description: '2-4 short, concrete actions the owner should take, each under 60 characters',
+    },
   },
-  required: ['healthScore', 'diagnosis', 'treatmentNotes'],
+  required: ['healthScore', 'diagnosis', 'treatmentNotes', 'recommendedActions'],
 }
 
 async function generateHealthAnalysis(
@@ -68,9 +74,10 @@ export async function handleAnalyzePlantHealthRequest(
       'Analyze this plant photo for diseases, pests, nutrient deficiencies, watering issues, or other health problems. ' +
       'Respond with RAW JSON only — no markdown code fences and no prose outside the JSON object. ' +
       'Return healthScore as an integer from 0 to 100 (100 = perfectly healthy). ' +
-      'Set diagnosis to a short label like "Healthy", "Overwatered", "Spider mites", or "Leaf spot". ' +
+      'Set diagnosis to a short label like "Healthy", "Overwatered", "Spider mites", or "Yellow leaves detected". ' +
       'If the photo is unclear, still return JSON with a best-effort diagnosis and lower healthScore. ' +
-      'Provide brief, actionable treatmentNotes under 400 characters. ' +
+      'Provide one short sentence in treatmentNotes describing the likely cause of the issue (or confirming health if none). ' +
+      'Provide recommendedActions as 2-4 short, concrete, actionable steps (each under 60 characters), e.g. "Reduce watering frequency to once per week". ' +
       languagePromptInstruction(language)
 
     const text = await generateHealthAnalysis(genAI, prompt, imagePart)
@@ -83,7 +90,8 @@ export async function handleAnalyzePlantHealthRequest(
         body: {
           healthScore: 50,
           diagnosis: 'Unclear photo',
-          treatmentNotes: 'Photo quality was too low for a confident diagnosis. Retake in brighter, even light and try again.',
+          treatmentNotes: 'Photo quality was too low for a confident diagnosis.',
+          recommendedActions: ['Retake in brighter, even light and try again.'],
         },
       }
     }
@@ -95,8 +103,14 @@ export async function handleAnalyzePlantHealthRequest(
     const treatmentNotes =
       typeof healthData.treatmentNotes === 'string' && healthData.treatmentNotes.trim()
         ? healthData.treatmentNotes.trim().slice(0, 400)
-        : 'Check soil moisture, light exposure, and leaf condition. Retake a clearer photo for a more precise diagnosis.'
+        : 'Check soil moisture, light exposure, and leaf condition.'
     const healthScore = clampHealthScore(Number(healthData.healthScore ?? 50))
+    const recommendedActions = Array.isArray(healthData.recommendedActions)
+      ? healthData.recommendedActions
+          .filter((a): a is string => typeof a === 'string' && a.trim().length > 0)
+          .map((a) => a.trim().slice(0, 80))
+          .slice(0, 4)
+      : []
 
     return {
       status: 200,
@@ -104,6 +118,10 @@ export async function handleAnalyzePlantHealthRequest(
         healthScore,
         diagnosis,
         treatmentNotes,
+        recommendedActions:
+          recommendedActions.length > 0
+            ? recommendedActions
+            : ['Check soil moisture and drainage', 'Ensure adequate indirect light', 'Monitor for pests over the next few days'],
       },
     }
   } catch (error) {

@@ -7,7 +7,10 @@ export interface AnalyzePlantHealthResult {
   healthScore: number
   diagnosis: string
   treatmentNotes: string
+  recommendedActions: string[]
 }
+
+const DEFAULT_ACTIONS = ['Check soil moisture and drainage', 'Ensure adequate indirect light', 'Monitor for pests over the next few days']
 
 const FRIENDLY_FALLBACK = 'Could not analyze this plant photo. Please try again with a clearer image.'
 
@@ -65,8 +68,14 @@ export async function analyzePlantHealthImage(
       typeof record.treatmentNotes === 'string' && record.treatmentNotes.trim()
         ? record.treatmentNotes.trim()
         : 'Check soil moisture, light exposure, and leaf condition.'
+    const recommendedActions = Array.isArray(record.recommendedActions)
+      ? record.recommendedActions.filter((a): a is string => typeof a === 'string' && a.trim().length > 0)
+      : []
 
-    return { ok: true, data: { healthScore, diagnosis, treatmentNotes } }
+    return {
+      ok: true,
+      data: { healthScore, diagnosis, treatmentNotes, recommendedActions: recommendedActions.length > 0 ? recommendedActions : DEFAULT_ACTIONS },
+    }
   } catch (error) {
     console.error('[myJungle] analyze-plant-health unexpected error:', error)
     return {
