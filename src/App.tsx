@@ -245,9 +245,9 @@ function AiThinkingLoader({ size = 160 }: { size?: number }) {
 
 function AiThinkingScreen({ label }: { label: string }) {
   return (
-    <div className="app-shell fixed inset-0 flex flex-col items-center justify-center gap-6">
+    <div className="app-shell-light fixed inset-0 flex flex-col items-center justify-center gap-6">
       <AiThinkingLoader size={220} />
-      <span className="font-heading text-center px-10" style={{ fontSize: 18, color: '#fff' }}>{label}</span>
+      <span className="font-body text-center px-10" style={{ fontSize: 16, color: '#666' }}>{label}</span>
     </div>
   )
 }
@@ -299,32 +299,29 @@ const ONBOARDING_STEPS = [
 
 function OnboardingWelcome({ onNext }: { onNext: () => void }) {
   return (
-    <div className="app-shell fixed inset-0 flex flex-col px-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
-      <div style={{ color: GREEN }} className="mb-4">
-        <svg width="56" height="66" viewBox="0 0 85 116" fill="currentColor">
-          <path d="M42.5 2.9C45.9 16.9 53.7 29.9 63.9 38.2l1.1 0.9C77.4 48.9 83 59.4 83 71.9c0 11-4.4 21.6-12.1 29.4C63.2 109 52.6 113.4 42.5 113.4S21.8 109 14 101.3C6.3 93.5 1.9 82.9 1.9 71.9c0-11.6 5.7-22.7 17.2-32.2l1.1-0.9C29.5 29.9 39.1 16.9 42.5 2.9z" />
-        </svg>
-      </div>
-      <h1 className="font-heading" style={{ fontSize: 34, lineHeight: 1.08, color: '#fff', textTransform: 'uppercase' }}>
+    <div className="app-shell-light fixed inset-0 flex flex-col px-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+      <div style={{ height: 40 }} />
+      <h1 className="font-heading" style={{ fontSize: 34, lineHeight: 1.08, color: '#000', textTransform: 'uppercase' }}>
         Watering,<br />made simple.
       </h1>
       <div className="flex flex-col gap-4 mt-8 flex-1">
         {ONBOARDING_STEPS.map((step, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <div className="icon-circle" style={{ color: GREEN }}>
+          <div key={i} className="flex items-center gap-3 rounded-full px-5" style={{ background: '#000', border: 'var(--border-thick)', height: 64 }}>
+            <div style={{ color: GREEN }}>
               <step.icon size={20} />
             </div>
-            <span className="font-body" style={{ fontSize: 16, color: '#fff', fontWeight: 500 }}>
+            <span className="font-body flex-1" style={{ fontSize: 16, color: '#fff', fontWeight: 500 }}>
               {step.text}
             </span>
             {step.pro && (
-              <span className="btn-outline-pro" style={{ fontSize: 10, padding: '3px 10px' }}>PRO</span>
+              <span className="btn-outline-pro shrink-0" style={{ fontSize: 10, padding: '3px 10px' }}>PRO</span>
             )}
           </div>
         ))}
       </div>
-      <button type="button" onClick={onNext} className="btn-fill w-full" style={{ height: 56, fontSize: 16 }}>
-        Get started →
+      <button type="button" onClick={onNext} className="btn-fill btn-forward w-full" style={{ height: 56, fontSize: 16 }}>
+        Get started
+        <span className="btn-forward__arrow"><IconChevronRight size={20} /></span>
       </button>
     </div>
   )
@@ -368,28 +365,28 @@ function BatchCaptureScreen({
   const slotsCells = Math.max(6, photos.length + (atLimit ? 0 : 1))
 
   return (
-    <div className="app-shell fixed inset-0 flex flex-col">
+    <div className="app-shell-light fixed inset-0 flex flex-col">
       <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { void handleFiles(e.target.files); e.target.value = '' }} />
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-4 shrink-0">
         {onBack ? <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn> : <div style={{ width: 44 }} />}
-        <span className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>
+        <span className="font-body" style={{ fontSize: 14, color: '#666' }}>
           {freeSlots !== null ? `${Math.max(0, limit - photos.length)} free slot${limit - photos.length === 1 ? '' : 's'} left` : `${photos.length} photos — no upper limit`}
         </span>
       </div>
       <div className="px-5 shrink-0">
-        <h1 className="font-heading" style={{ fontSize: 24, color: '#fff' }}>{title}</h1>
-        <p className="font-body" style={{ fontSize: 14, color: '#8E8E93', marginTop: 4 }}>{subtitle}</p>
+        <h1 className="font-heading" style={{ fontSize: 24, color: '#000' }}>{title}</h1>
+        <p className="font-body" style={{ fontSize: 14, color: '#666', marginTop: 4 }}>{subtitle}</p>
       </div>
       <div className="scroll-y flex-1 px-5 pt-4 pb-4">
         <div className="grid grid-cols-2 gap-3">
           {photos.map((p) => (
-            <div key={p.id} className="relative rounded-[1.5rem] overflow-hidden" style={{ aspectRatio: '1/1' }}>
+            <div key={p.id} className="relative rounded-[1.5rem] overflow-hidden" style={{ aspectRatio: '1/1', border: 'var(--border-thick)' }}>
               <img src={p.dataUrl} alt="" className="w-full h-full object-cover" />
               <button
                 type="button"
                 onClick={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))}
                 className="absolute top-2 right-2 icon-circle"
-                style={{ width: 30, height: 30, background: 'rgba(0,0,0,0.55)' }}
+                style={{ width: 30, height: 30, background: 'rgba(0,0,0,0.75)' }}
                 aria-label="Remove photo"
               >
                 <IconX size={14} />
@@ -400,16 +397,16 @@ function BatchCaptureScreen({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="dash-picker"
-              style={{ aspectRatio: '1/1' }}
+              className="rounded-[1.5rem] flex flex-col items-center justify-center gap-2"
+              style={{ aspectRatio: '1/1', background: '#ececE6', border: 'var(--border-thick)' }}
               disabled={busy}
             >
               <IconCamera size={26} />
-              <span className="font-body" style={{ fontSize: 13, color: '#fff' }}>{busy ? 'Adding…' : 'Add photo'}</span>
+              <span className="font-body" style={{ fontSize: 13, color: '#000' }}>{busy ? 'Adding…' : 'Add photo'}</span>
             </button>
           )}
           {Array.from({ length: Math.max(0, slotsCells - photos.length - (atLimit ? 0 : 1)) }).map((_, i) => (
-            <div key={`empty-${i}`} className="surface-dark" style={{ aspectRatio: '1/1', opacity: 0.4 }} />
+            <div key={`empty-${i}`} className="rounded-[1.5rem]" style={{ aspectRatio: '1/1', background: '#ececE6', border: 'var(--border-thick)', opacity: 0.5 }} />
           ))}
         </div>
       </div>
@@ -418,10 +415,11 @@ function BatchCaptureScreen({
           type="button"
           disabled={photos.length === 0}
           onClick={() => onDone(photos)}
-          className="btn-fill w-full"
+          className="btn-fill btn-forward w-full"
           style={{ height: 56, fontSize: 15 }}
         >
           {doneLabel}
+          <span className="btn-forward__arrow"><IconChevronRight size={20} /></span>
         </button>
       </div>
     </div>
@@ -543,8 +541,9 @@ function AnalysisResultScreen({ drafts, onDone }: { drafts: DraftPlant[]; onDone
         </div>
       )}
       <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
-        <button type="button" onClick={onDone} className="btn-fill w-full" style={{ height: 56, fontSize: 15 }}>
-          Go to home →
+        <button type="button" onClick={onDone} className="btn-fill btn-forward w-full" style={{ height: 56, fontSize: 15 }}>
+          Go to home
+          <span className="btn-forward__arrow"><IconChevronRight size={20} /></span>
         </button>
       </div>
     </div>
@@ -617,28 +616,40 @@ function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayI
   const avgHealth = healthScores.length > 0 ? Math.round(healthScores.reduce((a, b) => a + b, 0) / healthScores.length) : 0
   const alerts = healthScores.filter((s) => s < 70).length
   return (
-    <div className="scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
+    <div className="app-shell-light scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <div style={{ color: GREEN }}>
+          <div style={{ color: '#000' }}>
             <svg width="20" height="24" viewBox="0 0 85 116" fill="currentColor">
               <path d="M42.5 2.9C45.9 16.9 53.7 29.9 63.9 38.2l1.1 0.9C77.4 48.9 83 59.4 83 71.9c0 11-4.4 21.6-12.1 29.4C63.2 109 52.6 113.4 42.5 113.4S21.8 109 14 101.3C6.3 93.5 1.9 82.9 1.9 71.9c0-11.6 5.7-22.7 17.2-32.2l1.1-0.9C29.5 29.9 39.1 16.9 42.5 2.9z" />
             </svg>
           </div>
-          <h1 className="font-heading" style={{ fontSize: 22, color: '#fff' }}>MyJungle</h1>
+          <h1 className="font-heading" style={{ fontSize: 22, color: '#000' }}>MyJungle</h1>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="stat-tile"><span className="stat-tile__value">{plants.length}</span><span className="stat-tile__label">Total plants</span></div>
-        <div className="stat-tile"><span className="stat-tile__value">{thirsty}</span><span className="stat-tile__label">Thirsty plants</span></div>
-        <div className="stat-tile"><span className="stat-tile__value">{avgHealth}%</span><span className="stat-tile__label">Avg. health</span></div>
-        <div className="stat-tile"><span className="stat-tile__value">{alerts}</span><span className="stat-tile__label">Alerts active</span></div>
+        <div className="stat-tile" style={{ background: GREEN, borderColor: '#000' }}>
+          <span className="stat-tile__value" style={{ color: '#000' }}>{plants.length}</span>
+          <span className="stat-tile__label" style={{ color: '#000', opacity: 0.6 }}>Total plants</span>
+        </div>
+        <div className="stat-tile" style={{ background: '#fff', borderColor: '#000' }}>
+          <span className="stat-tile__value" style={{ color: '#000' }}>{thirsty}</span>
+          <span className="stat-tile__label" style={{ color: '#666' }}>Thirsty plants</span>
+        </div>
+        <div className="stat-tile" style={{ background: '#000', borderColor: '#000' }}>
+          <span className="stat-tile__value" style={{ color: GREEN }}>{avgHealth}%</span>
+          <span className="stat-tile__label" style={{ color: '#8E8E93' }}>Avg. health</span>
+        </div>
+        <div className="stat-tile" style={{ background: '#fff', borderColor: '#000' }}>
+          <span className="stat-tile__value" style={{ color: '#000' }}>{alerts}</span>
+          <span className="stat-tile__label" style={{ color: '#666' }}>Alerts active</span>
+        </div>
       </div>
-      <h2 className="font-heading mb-3" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Your plants</h2>
+      <h2 className="font-heading mb-3" style={{ fontSize: 16, color: '#000', textTransform: 'uppercase' }}>Your plants</h2>
       {plants.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-          <div style={{ color: '#3a3a3c' }}><IconLeaf size={40} /></div>
-          <p className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>No plants yet. Tap + to add your jungle.</p>
+          <div style={{ color: '#c7c7cc' }}><IconLeaf size={40} /></div>
+          <p className="font-body" style={{ fontSize: 14, color: '#666' }}>No plants yet. Tap + to add your jungle.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -729,14 +740,14 @@ function PlantDetailScreen({
   const health = computeHealthStatus(plant, todayIdx)
 
   return (
-    <div className="app-shell fixed inset-0 flex flex-col">
+    <div className="app-shell-light fixed inset-0 flex flex-col">
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
         <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
-        <span className="font-heading truncate px-2" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>{plant.name}</span>
+        <span className="font-heading truncate px-2" style={{ fontSize: 16, color: '#000', textTransform: 'uppercase' }}>{plant.name}</span>
         <IconCircleBtn onClick={() => setShowActions(true)} label="More options"><IconDotsHorizontal /></IconCircleBtn>
       </div>
       <div className="scroll-y flex-1 px-5 pb-6">
-        <div className="rounded-[1.5rem] overflow-hidden mb-4" style={{ height: 240 }}>
+        <div className="rounded-[1.5rem] overflow-hidden mb-4" style={{ height: 240, border: 'var(--border-thick)' }}>
           <PlantPhoto photo={plant.photo} alt={plant.name} className="w-full h-full object-cover" />
         </div>
         <div className="card-white p-5 flex flex-col gap-4">
@@ -775,32 +786,32 @@ function PlantDetailScreen({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#111' }}>
-              <div style={{ color: GREEN }}><IconDroplet size={16} /></div>
-              <span className="font-heading" style={{ fontSize: 15, color: GREEN }}>{timesPerWeek}x/week</span>
-              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Watering</span>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5', border: '2px solid #000' }}>
+              <div style={{ color: '#000' }}><IconDroplet size={16} /></div>
+              <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{timesPerWeek}x/week</span>
+              <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Watering</span>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#111' }}>
-              <div style={{ color: GREEN }}><IconSun size={16} /></div>
-              <span className="font-heading" style={{ fontSize: 15, color: GREEN }}>{plant.lightNeed === 'High' ? 'Direct' : plant.lightNeed === 'Low' ? 'Shade' : 'Indirect'}</span>
-              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Light need</span>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5', border: '2px solid #000' }}>
+              <div style={{ color: '#000' }}><IconSun size={16} /></div>
+              <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{plant.lightNeed === 'High' ? 'Direct' : plant.lightNeed === 'Low' ? 'Shade' : 'Indirect'}</span>
+              <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Light need</span>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#111' }}>
-              <div style={{ color: GREEN }}><IconThermometer size={16} /></div>
-              <span className="font-heading" style={{ fontSize: 15, color: GREEN }}>{plant.temperatureRangeC ?? '18-27°C'}</span>
-              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Temperature</span>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5', border: '2px solid #000' }}>
+              <div style={{ color: '#000' }}><IconThermometer size={16} /></div>
+              <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{plant.temperatureRangeC ?? '18-27°C'}</span>
+              <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Temperature</span>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#111' }}>
-              <div style={{ color: GREEN }}><IconDroplets size={16} /></div>
-              <span className="font-heading" style={{ fontSize: 15, color: GREEN }}>{plant.humidityNeed === 'high' ? 'High (60%+)' : plant.humidityNeed === 'low' ? 'Low' : 'Normal'}</span>
-              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Humidity</span>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5', border: '2px solid #000' }}>
+              <div style={{ color: '#000' }}><IconDroplets size={16} /></div>
+              <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{plant.humidityNeed === 'high' ? 'High (60%+)' : plant.humidityNeed === 'low' ? 'Low' : 'Normal'}</span>
+              <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Humidity</span>
             </div>
           </div>
 
           <div>
             <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Watering schedule</span>
             <div className="flex items-center gap-2 mt-2">
-              <span className="font-heading" style={{ fontSize: 11, background: '#111', color: GREEN, borderRadius: 8, padding: '4px 8px' }}>
+              <span className="font-heading" style={{ fontSize: 11, background: '#000', color: GREEN, borderRadius: 8, padding: '4px 8px' }}>
                 {plant.isWateredToday ? 'DONE' : isPlantDueToday(plant, todayIdx) ? 'TODAY' : (plant.scheduleDays[0] ?? '—')}
               </span>
               <div style={{ flex: 1, height: 1, background: '#eee' }} />
@@ -1161,7 +1172,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro }: {
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   className="font-heading px-4"
-                  style={{ height: 48, fontSize: 16, color: '#111', background: '#f5f5f5', borderRadius: 14, border: 'none' }}
+                  style={{ height: 48, fontSize: 16, color: '#111', background: '#f5f5f5', borderRadius: 14, border: '2px solid #000' }}
                 />
               </label>
 
@@ -1171,7 +1182,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro }: {
                   value={draft.category}
                   onChange={(e) => setDraft({ ...draft, category: e.target.value })}
                   className="font-body px-4"
-                  style={{ height: 48, fontSize: 15, color: '#111', background: '#f5f5f5', borderRadius: 14, border: 'none' }}
+                  style={{ height: 48, fontSize: 15, color: '#111', background: '#f5f5f5', borderRadius: 14, border: '2px solid #000' }}
                 >
                   {PLANT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -1699,56 +1710,56 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
         </button>
       )}
       <span className="font-body block" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, marginTop: 20 }}>Settings &amp; configuration</span>
-      <div className="card-white overflow-hidden">
-        <button type="button" onClick={() => setShowNotifSettings((v) => !v)} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
-          <span className="font-heading" style={{ fontSize: 16 }}>Notification preferences</span>
-          <span style={{ transform: showNotifSettings ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}><IconChevronLeft size={16} /></span>
+      <div className="card-white overflow-hidden" style={{ background: '#000', color: '#fff' }}>
+        <button type="button" onClick={() => setShowNotifSettings((v) => !v)} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #333' }}>
+          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Notification preferences</span>
+          <span style={{ color: '#fff', transform: showNotifSettings ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}><IconChevronLeft size={16} /></span>
         </button>
         {showNotifSettings && (
-          <div className="px-5 py-4 flex flex-col gap-4" style={{ borderBottom: '1px solid #eee' }}>
+          <div className="px-5 py-4 flex flex-col gap-4" style={{ borderBottom: '1px solid #333' }}>
             <div className="flex items-center justify-between">
-              <span className="font-body" style={{ fontSize: 14 }}>Reminder time</span>
+              <span className="font-body" style={{ fontSize: 14, color: '#fff' }}>Reminder time</span>
               <input
                 type="time"
                 value={settings.reminderTime}
                 onChange={(e) => onSave({ ...settings, reminderTime: e.target.value })}
                 className="font-body"
-                style={{ fontSize: 14, border: '1px solid #ddd', borderRadius: 8, padding: '4px 8px' }}
+                style={{ fontSize: 14, border: '2px solid #fff', borderRadius: 8, padding: '4px 8px', background: '#000', color: '#fff' }}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-body" style={{ fontSize: 14 }}>Sound alerts</span>
+              <span className="font-body" style={{ fontSize: 14, color: '#fff' }}>Sound alerts</span>
               <Toggle on={settings.soundAlerts} onChange={(v) => onSave({ ...settings, soundAlerts: v })} />
             </div>
           </div>
         )}
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
-          <span className="font-heading" style={{ fontSize: 16 }}>Watering reminders</span>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #333' }}>
+          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Watering reminders</span>
           <Toggle on={settings.pushNotifications} onChange={(v) => onSave({ ...settings, pushNotifications: v })} />
         </div>
-        <button type="button" onClick={onExport} className="flex items-center gap-3 w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
-          <IconDownload size={18} />
-          <span className="font-heading" style={{ fontSize: 16 }}>Export my data</span>
+        <button type="button" onClick={onExport} className="flex items-center gap-3 w-full px-5 py-4" style={{ borderBottom: '1px solid #333' }}>
+          <div style={{ color: '#fff' }}><IconDownload size={18} /></div>
+          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Export my data</span>
         </button>
-        <button type="button" onClick={onReset} className="flex items-center gap-3 w-full px-5 py-4">
+        <button type="button" onClick={onReset} className="flex items-center gap-3 w-full px-5 py-4" style={{ color: '#FF3B30' }}>
           <IconTrash size={18} />
           <span className="font-heading" style={{ fontSize: 16, color: '#FF3B30' }}>Reset all data</span>
         </button>
       </div>
 
       <span className="font-body block" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, marginTop: 20 }}>Legal</span>
-      <div className="card-white overflow-hidden">
-        <button type="button" onClick={() => onOpenLegal('terms')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
-          <span className="font-heading" style={{ fontSize: 16 }}>Terms of Use</span>
-          <div style={{ color: '#8E8E93' }}><IconChevronRight size={16} /></div>
+      <div className="card-white overflow-hidden" style={{ background: '#000', color: '#fff' }}>
+        <button type="button" onClick={() => onOpenLegal('terms')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #333' }}>
+          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Terms of Use</span>
+          <div style={{ color: '#fff' }}><IconChevronRight size={16} /></div>
         </button>
-        <button type="button" onClick={() => onOpenLegal('privacy')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
-          <span className="font-heading" style={{ fontSize: 16 }}>Privacy Policy</span>
-          <div style={{ color: '#8E8E93' }}><IconChevronRight size={16} /></div>
+        <button type="button" onClick={() => onOpenLegal('privacy')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #333' }}>
+          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Privacy Policy</span>
+          <div style={{ color: '#fff' }}><IconChevronRight size={16} /></div>
         </button>
         <button type="button" onClick={() => onOpenLegal('impressum')} className="flex items-center justify-between w-full px-5 py-4">
-          <span className="font-heading" style={{ fontSize: 16 }}>Impressum</span>
-          <div style={{ color: '#8E8E93' }}><IconChevronRight size={16} /></div>
+          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Impressum</span>
+          <div style={{ color: '#fff' }}><IconChevronRight size={16} /></div>
         </button>
       </div>
 
@@ -1857,29 +1868,28 @@ function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock:
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-2 shrink-0">
-        <IconCircleBtn onClick={onClose} label="Close"><IconChevronLeft /></IconCircleBtn>
+        <IconCircleBtn onClick={onClose} label="Close"><IconX /></IconCircleBtn>
         <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Upgrade</span>
         <div style={{ width: 44 }} />
       </div>
-      <div className="flex flex-col items-center justify-center px-8 pb-4 text-center shrink-0" style={{ minHeight: 170 }}>
-        <span className="btn-outline-pro" style={{ fontSize: 11, padding: '4px 12px', marginBottom: 14 }}>Pro version</span>
-        <h1 className="font-heading" style={{ fontSize: 28, lineHeight: 1.15, color: '#fff', textTransform: 'uppercase' }}>Unlimited growth</h1>
-        <p className="font-body mt-2" style={{ fontSize: 13, color: '#8E8E93' }}>Unlock your full care potential, no limits.</p>
-      </div>
-      <div className="flex-1 min-h-0 flex flex-col" style={{ background: '#fff', borderRadius: '1.75rem 1.75rem 0 0' }}>
-        <div className="scroll-y flex-1 px-6 pt-6">
-          <div className="grid grid-cols-2 rounded-2xl overflow-hidden" style={{ background: '#f5f5f5' }}>
+      <div className="scroll-y flex-1 px-6 pb-6 flex flex-col items-center">
+        <div className="flex items-center justify-center rounded-full mb-6 mt-2" style={{ width: 88, height: 88, background: GREEN, border: 'var(--border-thick)' }}>
+          <IconLock size={32} />
+        </div>
+
+        <div className="card-white w-full p-5">
+          <div className="grid grid-cols-2 rounded-2xl overflow-hidden" style={{ background: '#f5f5f5', border: '2px solid #000' }}>
             <div className="p-4 flex flex-col gap-1 items-start text-left">
               <span className="font-body" style={{ fontSize: 11, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Free plan</span>
               <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{MAX_FREE_PLANTS} plants limit</span>
             </div>
-            <div className="p-4 flex flex-col gap-1 items-start text-left" style={{ borderLeft: '1px solid #e5e5e5' }}>
+            <div className="p-4 flex flex-col gap-1 items-start text-left" style={{ borderLeft: '2px solid #000' }}>
               <span className="font-body" style={{ fontSize: 11, color: '#0a8f3f', textTransform: 'uppercase', letterSpacing: 0.5 }}>Pro membership</span>
               <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>Unlimited plants</span>
             </div>
           </div>
 
-          <span className="font-body block mt-6" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Features unlocked</span>
+          <span className="font-body block mt-5" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Features unlocked</span>
           <div className="flex flex-col gap-3 mt-3 items-start w-full">
             {PRO_BENEFITS.map((b) => (
               <div key={b} className="flex items-center gap-3">
@@ -1889,14 +1899,13 @@ function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock:
             ))}
           </div>
         </div>
-        <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4 flex flex-col items-center gap-3 shrink-0" style={{ borderTop: '1px solid #eee' }}>
-          <span className="font-heading" style={{ fontSize: 34, color: '#111' }}>$6.99</span>
-          <span className="font-body" style={{ fontSize: 13, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>One-time purchase</span>
-          <button type="button" onClick={() => void handleUnlock()} disabled={purchasing} className="btn-fill w-full mt-2" style={{ height: 56, fontSize: 16 }}>
-            {purchasing ? 'Processing…' : 'Unlock forever'}
-          </button>
-          <button type="button" onClick={() => void handleUnlock()} className="font-body underline" style={{ fontSize: 12, color: '#8E8E93' }}>Restore purchase</button>
-        </div>
+
+        <span className="font-heading mt-6" style={{ fontSize: 34, color: '#fff' }}>$6.99</span>
+        <span className="font-body" style={{ fontSize: 13, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>One-time purchase</span>
+        <button type="button" onClick={() => void handleUnlock()} disabled={purchasing} className="btn-fill w-full mt-4" style={{ height: 56, fontSize: 16 }}>
+          {purchasing ? 'Processing…' : 'Unlock forever'}
+        </button>
+        <button type="button" onClick={() => void handleUnlock()} className="font-body underline mt-3" style={{ fontSize: 12, color: '#8E8E93' }}>Restore purchase</button>
       </div>
     </div>
   )

@@ -32,9 +32,11 @@
   --font-body: 'Inter', sans-serif;
   --color-bg: #0d0d0d;
   --color-bg-true: #000000;
+  --color-bg-light: #f4f4f0;
   --color-surface: #1c1c1e;
   --color-surface-2: #2c2c2e;
   --color-card: #ffffff;
+  --color-card-muted: #ececE6;
   --color-green: #00ff66;
   --color-green-dim: #0e3d22;
   --color-text: #ffffff;
@@ -43,6 +45,8 @@
   --color-ink-dim: #6b6b70;
   --color-danger: #ff3b30;
   --color-warn-bg: #f3ecec;
+  --border-thick: 3px solid #000000;
+  --border-thin: 2px solid #000000;
 }
 
 @layer base {
@@ -78,11 +82,18 @@
     min-height: 100dvh;
   }
 
+  .app-shell-light {
+    background: var(--color-bg-light);
+    color: var(--color-ink);
+    min-height: 100dvh;
+  }
+
   /* ── Cards & surfaces ── */
   .card-white {
     background: var(--color-card);
     border-radius: 1.75rem;
     color: var(--color-ink);
+    border: var(--border-thick);
   }
 
   .surface-dark {
@@ -102,19 +113,43 @@
     text-transform: uppercase;
     border-radius: 9999px;
     background: var(--color-green);
-    color: #05170c;
+    color: #000000;
+    border: var(--border-thick);
     cursor: pointer;
     transition: transform 0.12s ease, opacity 0.12s ease;
   }
   .btn-fill:active { transform: scale(0.97); }
   .btn-fill:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  /* ── Forward/continue button: green pill + black circle-arrow badge ── */
+  .btn-forward {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    position: relative;
+  }
+  .btn-forward__arrow {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 9999px;
+    background: #000000;
+    color: #ffffff;
+  }
+
   .btn-outline-pro {
     font-family: var(--font-heading);
     font-weight: 700;
     border-radius: 9999px;
     background: var(--color-green-dim);
-    border: 1.5px solid var(--color-green);
+    border: 2px solid var(--color-green);
     color: var(--color-green);
     cursor: pointer;
     transition: transform 0.12s ease;
@@ -138,6 +173,7 @@
     height: 44px;
     border-radius: 9999px;
     background: var(--color-surface);
+    border: var(--border-thin);
     flex-shrink: 0;
     cursor: pointer;
   }
@@ -153,11 +189,12 @@
     font-family: var(--font-heading);
     font-weight: 700;
     cursor: pointer;
+    border: var(--border-thin);
     transition: background 0.15s ease, color 0.15s ease;
   }
   .day-pill.is-active {
     background: var(--color-green);
-    color: #05170c;
+    color: #000000;
   }
 
   /* ── Toggle switch ── */
@@ -167,6 +204,7 @@
     height: 30px;
     border-radius: 9999px;
     background: var(--color-surface-2);
+    border: var(--border-thin);
     flex-shrink: 0;
     cursor: pointer;
     transition: background 0.15s ease;
@@ -193,6 +231,7 @@
     flex-direction: column;
     gap: 0.35rem;
     min-width: 0;
+    border: var(--border-thick);
   }
   .stat-tile__value {
     font-family: var(--font-heading);
@@ -245,12 +284,13 @@
     border-radius: 1.5rem;
     padding: 0.6rem 0.9rem;
     cursor: pointer;
+    border: var(--border-thick);
   }
   .check-circle {
     width: 26px;
     height: 26px;
     border-radius: 9999px;
-    border: 2px solid #c7c7cc;
+    border: 2px solid #000000;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -294,7 +334,7 @@
 
   /* ── Upload / dashed picker ── */
   .dash-picker {
-    border: 2px dashed var(--color-surface-2);
+    border: 3px dashed #000000;
     border-radius: 1.5rem;
     background: var(--color-surface);
     display: flex;
@@ -320,43 +360,36 @@
   }
   .btn-ai:disabled { opacity: 0.5; animation: none; cursor: not-allowed; }
 
-  /* ── Bottom tab bar ── */
+  /* ── Bottom tab bar: separate neobrutalist circle buttons ── */
   .tab-bar {
     display: flex;
-    align-items: stretch;
-    justify-content: space-around;
-    background: var(--color-card);
-    border-radius: 9999px;
-    padding: 8px 10px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+    align-items: center;
+    justify-content: space-between;
   }
   .tab-bar__item {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    flex: 1;
-    padding: 6px 0;
+    width: 52px;
+    height: 52px;
     border-radius: 9999px;
     cursor: pointer;
-    color: var(--color-ink);
+    color: #000000;
+    background: var(--color-card);
+    border: var(--border-thick);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+    flex-shrink: 0;
   }
-  .tab-bar__item.is-active { color: var(--color-ink); }
+  .tab-bar__item.is-active {
+    background: var(--color-green);
+    color: #000000;
+  }
   .tab-bar__icon-badge {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 9999px;
   }
-  .tab-bar__item.is-active .tab-bar__icon-badge { background: var(--color-green); }
-  .tab-bar__label {
-    font-family: var(--font-body);
-    font-weight: 600;
-    font-size: 10px;
-  }
+  .tab-bar__label { display: none; }
 
   .scroll-y { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 }
