@@ -268,9 +268,16 @@ function AiThinkingLoader({ size = 160 }: { size?: number }) {
 
 function AiThinkingScreen({ label }: { label: string }) {
   return (
-    <div className="app-shell-light fixed inset-0 flex flex-col items-center justify-center gap-6">
-      <AiThinkingLoader size={220} />
-      <span className="font-body text-center px-10" style={{ fontSize: 16, color: '#666' }}>{label}</span>
+    <div className="app-shell fixed inset-0 flex flex-col">
+      <div className="px-6 pt-[calc(3rem+env(safe-area-inset-top,0px))] pb-10 shrink-0">
+        <h1 className="font-heading" style={{ fontSize: 32, lineHeight: 1.1, color: '#fff', textTransform: 'uppercase' }}>
+          Plants<br />analysis
+        </h1>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center gap-6" style={{ background: 'var(--color-bg-light)', borderRadius: '1.75rem 1.75rem 0 0' }}>
+        <AiThinkingLoader size={220} />
+        <span className="font-body text-center px-10" style={{ fontSize: 16, color: '#666' }}>{label}</span>
+      </div>
     </div>
   )
 }
@@ -561,27 +568,27 @@ function AnalysisResultScreen({ drafts, onDone }: { drafts: DraftPlant[]; onDone
     .join(', ')
 
   return (
-    <div className="app-shell fixed inset-0 flex flex-col">
+    <div className="app-shell-light fixed inset-0 flex flex-col">
       <div className="px-5 pt-[calc(2rem+env(safe-area-inset-top,0px))] pb-4 shrink-0">
-        <h1 className="font-heading flex items-center gap-2" style={{ fontSize: 26, color: '#fff' }}>
+        <h1 className="font-heading flex items-center gap-2" style={{ fontSize: 26, color: '#000' }}>
           {drafts.length} plant{drafts.length === 1 ? '' : 's'} added <IconCheck size={22} />
         </h1>
-        <p className="font-body" style={{ fontSize: 14, color: '#8E8E93', marginTop: 6 }}>
+        <p className="font-body" style={{ fontSize: 14, color: '#666', marginTop: 6 }}>
           AI filled the profile and computed your watering days.
         </p>
       </div>
       <div className="scroll-y flex-1 px-5 flex flex-col gap-3 pb-4">
         {drafts.map((d, i) => (
-          <div key={i} className="card-white flex items-center gap-3 p-3">
+          <div key={i} className="flex items-center gap-3 p-3 rounded-[1.5rem]" style={{ background: '#f0f0ec' }}>
             <img src={d.photo} alt="" className="rounded-full object-cover shrink-0" style={{ width: 56, height: 56 }} />
-            <span className="font-heading flex-1 min-w-0 truncate" style={{ fontSize: 18 }}>{d.name}</span>
+            <span className="font-heading flex-1 min-w-0 truncate" style={{ fontSize: 18, color: '#111' }}>{d.name}</span>
             <span className="font-heading" style={{ fontSize: 18, color: '#8E8E93' }}>{d.confidence}%</span>
           </div>
         ))}
       </div>
       {dayLabel && (
         <div className="px-5 pb-3 shrink-0">
-          <div className="surface-dark rounded-2xl px-4 py-3 flex items-center justify-center gap-2">
+          <div className="rounded-2xl px-4 py-3 flex items-center justify-center gap-2" style={{ background: '#000' }}>
             <div style={{ color: GREEN }}><IconCalendarSmall size={16} /></div>
             <span className="font-heading" style={{ fontSize: 14, color: GREEN }}>Watering day: {dayLabel}</span>
           </div>
