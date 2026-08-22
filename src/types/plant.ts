@@ -131,4 +131,6 @@ export interface AppSettings {
   timezoneAutoSync: boolean
   timezone: string
   isPro: boolean
+  /** Day index (0 = Monday .. 6 = Sunday) new AI-batched plants are consolidated onto. */
+  primaryWateringDay: number
 }

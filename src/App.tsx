@@ -16,6 +16,7 @@ import {
 } from '@/lib/wateringDue'
 import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, type StorageResult } from '@/lib/plantStorage'
 import { LAST_ACTIVE_DATE_KEY, localDateString, rolloverWateredState } from '@/lib/dailyRollover'
+import { batchedWateringDays, frequencyForWaterNeed, frequencyLabel, secondaryWateringDay } from '@/lib/wateringBatch'
 import { clearAllPhotos, deletePlantPhotos } from '@/lib/photoStore'
 import { MAX_FREE_PLANTS, canAccessProFeatures, canAddMorePlants } from '@/lib/proAccess'
 import { useUserState } from '@/hooks/useUserState'
@@ -39,6 +40,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   timezoneAutoSync: true,
   timezone: 'UTC',
   isPro: false,
+  primaryWateringDay: 0,
 }
 
 type Screen =
@@ -493,6 +495,8 @@ interface DraftPlant {
   temperatureRangeC: string
   careNote: string
   wateringDays: number[]
+  wateringFrequency: WateringFrequency
+  wateringCycleAnchor: string | null
   isToxicToPets: boolean | null
   toxicityNotes: string
   confidence: number
@@ -503,22 +507,10 @@ interface DraftPlant {
 
 const PLANT_CATEGORIES = ['Houseplant', 'Succulent', 'Herb', 'Flowering', 'Tree', 'Other']
 
-/**
- * Batching engine: instead of scattering each plant's AI-suggested day across
- * the week, every 1x/week plant shares one common day and every 2x/week plant
- * shares the same day plus one fixed second day. Keeps watering consolidated
- * onto as few days as possible.
- */
-const BATCH_PRIMARY_DAY = 0 // Monday
-const BATCH_SECONDARY_DAY = 3 // Thursday
-
-function batchedWateringDays(waterNeed: WaterNeed): number[] {
-  return waterNeed === 'Heavy' ? [BATCH_PRIMARY_DAY, BATCH_SECONDARY_DAY] : [BATCH_PRIMARY_DAY]
-}
-
 const FALLBACK_DRAFT_BASE = {
   name: 'Unknown plant', category: 'Houseplant', waterNeed: 'Moderate' as WaterNeed, lightNeed: 'Medium' as LightNeed,
-  humidityNeed: 'normal' as const, temperatureRangeC: '18-27°C', careNote: '', wateringDays: [BATCH_PRIMARY_DAY],
+  humidityNeed: 'normal' as const, temperatureRangeC: '18-27°C', careNote: '',
+  wateringFrequency: 'weekly' as WateringFrequency, wateringCycleAnchor: null as string | null,
   isToxicToPets: null, toxicityNotes: '', confidence: 40, identified: false as const,
 }
 
@@ -536,13 +528,14 @@ async function requestNotificationPermission(): Promise<void> {
   }
 }
 
-async function identifyPhoto(dataUrl: string, language: AppLanguage = 'en'): Promise<DraftPlant> {
+async function identifyPhoto(dataUrl: string, language: AppLanguage = 'en', primaryDay = 0): Promise<DraftPlant> {
   try {
     const result = await analyzePlantImage(dataUrl, [], language)
     if (!result.ok) {
-      return { photo: dataUrl, ...FALLBACK_DRAFT_BASE, error: result.error }
+      return { photo: dataUrl, ...FALLBACK_DRAFT_BASE, wateringDays: [primaryDay], error: result.error }
     }
     const waterNeed = mapWaterNeedToForm(result.data.waterNeed)
+    const wateringFrequency = frequencyForWaterNeed(waterNeed)
     return {
       photo: dataUrl,
       name: result.data.name,
@@ -552,7 +545,9 @@ async function identifyPhoto(dataUrl: string, language: AppLanguage = 'en'): Pro
       humidityNeed: result.data.humidityNeed,
       temperatureRangeC: result.data.temperatureRangeC,
       careNote: result.data.careNotes.slice(0, 300),
-      wateringDays: batchedWateringDays(waterNeed),
+      wateringDays: batchedWateringDays(waterNeed, primaryDay),
+      wateringFrequency,
+      wateringCycleAnchor: cycleAnchorForFrequency(wateringFrequency, null),
       isToxicToPets: result.data.isToxicToPets,
       toxicityNotes: result.data.toxicityNotes ?? '',
       confidence: confidenceLabel(result.data.confidence),
@@ -560,7 +555,7 @@ async function identifyPhoto(dataUrl: string, language: AppLanguage = 'en'): Pro
     }
   } catch (error) {
     console.error('[myJungle] identify failed:', error)
-    return { photo: dataUrl, ...FALLBACK_DRAFT_BASE, error: error instanceof Error ? error.message : String(error) }
+    return { photo: dataUrl, ...FALLBACK_DRAFT_BASE, wateringDays: [primaryDay], error: error instanceof Error ? error.message : String(error) }
   }
 }
 
@@ -615,10 +610,43 @@ function DraftNameSheet({ draft, retrying, onRetry, onCancel, onSave }: {
   )
 }
 
-function AnalysisResultScreen({ drafts: initialDrafts, language, onDone }: { drafts: DraftPlant[]; language: AppLanguage; onDone: (drafts: DraftPlant[]) => void }) {
+function DayPickerSheet({ selected, onSelect, onClose }: { selected: number; onSelect: (day: number) => void; onClose: () => void }) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
+  function close(action?: () => void) { setOpen(false); setTimeout(() => action?.(), 180) }
+  return (
+    <>
+      <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onClose)} />
+      <div className="fixed left-0 right-0 bottom-0 z-[70]">
+        <div className={`sheet-panel ${open ? 'is-open' : ''} p-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-1`}>
+          <span className="font-body block px-4 pt-2 pb-1" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Watering day</span>
+          {FULL_DAY_NAMES.map((n, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => close(() => onSelect(i))}
+              className="font-heading text-left px-4 py-3 flex items-center justify-between"
+              style={{ fontSize: 16 }}
+            >
+              {n}
+              {i === selected && <IconCheck size={18} />}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: initialPrimaryDay, onChangePrimaryDay, onDone }: {
+  drafts: DraftPlant[]; language: AppLanguage; primaryDay: number; onChangePrimaryDay: (day: number) => void
+  onDone: (drafts: DraftPlant[]) => void
+}) {
   const [drafts, setDrafts] = useState(initialDrafts)
+  const [primaryDay, setPrimaryDay] = useState(initialPrimaryDay)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [retryingIndex, setRetryingIndex] = useState<number | null>(null)
+  const [showDayPicker, setShowDayPicker] = useState(false)
 
   const daySet = new Set<number>()
   drafts.forEach((d) => d.wateringDays.forEach((i) => daySet.add(i)))
@@ -630,17 +658,23 @@ function AnalysisResultScreen({ drafts: initialDrafts, language, onDone }: { dra
   const failedCount = drafts.filter((d) => !d.identified).length
   const subtitle =
     failedCount === 0
-      ? 'AI filled the profile and computed your watering days.'
+      ? 'We group your plants onto as few days as possible.'
       : `AI filled ${drafts.length - failedCount} of ${drafts.length} profile${drafts.length === 1 ? '' : 's'}. Tap the flagged ones to fix them.`
 
   async function retry(i: number) {
     setRetryingIndex(i)
     try {
-      const updated = await identifyPhoto(drafts[i].photo, language)
+      const updated = await identifyPhoto(drafts[i].photo, language, primaryDay)
       setDrafts((prev) => prev.map((d, idx) => (idx === i ? updated : d)))
     } finally {
       setRetryingIndex(null)
     }
+  }
+
+  function changePrimaryDay(day: number) {
+    setPrimaryDay(day)
+    setDrafts((prev) => prev.map((d) => ({ ...d, wateringDays: batchedWateringDays(d.waterNeed, day) })))
+    onChangePrimaryDay(day)
   }
 
   return (
@@ -679,6 +713,9 @@ function AnalysisResultScreen({ drafts: initialDrafts, language, onDone }: { dra
             <div style={{ color: GREEN }}><IconCalendarSmall size={16} /></div>
             <span className="font-heading" style={{ fontSize: 14, color: GREEN }}>Watering day: {dayLabel}</span>
           </div>
+          <button type="button" onClick={() => setShowDayPicker(true)} className="font-body w-full text-center mt-2" style={{ fontSize: 13, color: '#666', textDecoration: 'underline' }}>
+            Change
+          </button>
         </div>
       )}
       <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
@@ -698,6 +735,9 @@ function AnalysisResultScreen({ drafts: initialDrafts, language, onDone }: { dra
             setEditingIndex(null)
           }}
         />
+      )}
+      {showDayPicker && (
+        <DayPickerSheet selected={primaryDay} onClose={() => setShowDayPicker(false)} onSelect={changePrimaryDay} />
       )}
     </div>
   )
@@ -1171,15 +1211,15 @@ function LanguagePickerSheet({ current, onSelect, onClose }: { current: AppLangu
 
 // ─── Screen: Edit plant ─────────────────────────────────────────────────────
 
-function EditPlantScreen({ plant, onBack, onSave }: {
-  plant: Plant; onBack: () => void
+function EditPlantScreen({ plant, primaryDay, onBack, onSave }: {
+  plant: Plant; primaryDay: number; onBack: () => void
   onSave: (updates: Pick<Plant, 'name' | 'category' | 'wateringDays' | 'scheduleDays' | 'isCustomSchedule'>) => void
 }) {
   const [name, setName] = useState(plant.name)
   const [category, setCategory] = useState(plant.category ?? 'Houseplant')
-  const [day1, setDay1] = useState(plant.wateringDays[0] ?? BATCH_PRIMARY_DAY)
+  const [day1, setDay1] = useState(plant.wateringDays[0] ?? primaryDay)
   const [needsSecondDay, setNeedsSecondDay] = useState(plant.wateringDays.length >= 2)
-  const [day2, setDay2] = useState(plant.wateringDays[1] ?? BATCH_SECONDARY_DAY)
+  const [day2, setDay2] = useState(plant.wateringDays[1] ?? secondaryWateringDay(primaryDay))
 
   function handleSave() {
     const days = needsSecondDay ? [day1, day2].filter((d, i, arr) => arr.indexOf(d) === i).sort((a, b) => a - b) : [day1]
@@ -1263,8 +1303,8 @@ function EditPlantScreen({ plant, onBack, onSave }: {
 
 // ─── Screen: Manual add (single, AI-assisted) ──────────────────────────────────
 
-function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language }: {
-  onBack: () => void; onAdd: (draft: DraftPlant) => void; remainingFreeSlots: number; isPro: boolean; language: AppLanguage
+function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, primaryDay }: {
+  onBack: () => void; onAdd: (draft: DraftPlant) => void; remainingFreeSlots: number; isPro: boolean; language: AppLanguage; primaryDay: number
 }) {
   const [photo, setPhoto] = useState<string | null>(null)
   const [draft, setDraft] = useState<DraftPlant | null>(null)
@@ -1279,7 +1319,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language }:
       setPhoto(compressed)
       setDraft(null)
       setAnalyzing(true)
-      const result = await withMinDelay(identifyPhoto(compressed, language), 700)
+      const result = await withMinDelay(identifyPhoto(compressed, language, primaryDay), 700)
       setDraft(result)
     } catch (error) {
       console.error('[myJungle] manual add analyze failed:', error)
@@ -1288,7 +1328,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language }:
     }
   }
 
-  const timesPerWeekLabel = draft ? `${draft.wateringDays.length}x weekly` : ''
+  const wateringFrequencyLabel = draft ? frequencyLabel(draft.wateringFrequency, draft.wateringDays.length) : ''
   const usedSlots = Math.max(0, MAX_FREE_PLANTS - remainingFreeSlots)
 
   return (
@@ -1370,7 +1410,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language }:
               <div className="mt-3 rounded-2xl px-4 py-3 flex items-center gap-2" style={{ border: `1.5px solid ${GREEN}`, background: '#e6fbee' }}>
                 <div style={{ color: '#0a8f3f' }}><IconCalendarSmall size={16} /></div>
                 <span className="font-body" style={{ fontSize: 13, color: '#0a8f3f' }}>
-                  Watering days: the system suggests {timesPerWeekLabel}
+                  Watering days: the system suggests {wateringFrequencyLabel}
                 </span>
               </div>
 
@@ -1864,12 +1904,13 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
 
 // ─── Screen: Profile ────────────────────────────────────────────────────────
 
-function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, onOpenLegal, language, onPickLanguage }: {
+function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, onOpenLegal, language, onPickLanguage, onChangePrimaryWateringDay }: {
   settings: AppSettings; user: UserState; onSave: (s: AppSettings) => void
   onExport: () => void; onReset: () => void; onShowPro: () => void; onOpenLegal: (doc: LegalDoc) => void
-  language: AppLanguage; onPickLanguage: () => void
+  language: AppLanguage; onPickLanguage: () => void; onChangePrimaryWateringDay: (day: number) => void
 }) {
   const [showNotifSettings, setShowNotifSettings] = useState(false)
+  const [showDayPicker, setShowDayPicker] = useState(false)
 
   return (
     <div className="scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
@@ -1908,6 +1949,13 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
           <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Watering reminders</span>
           <Toggle on={settings.pushNotifications} onChange={(v) => onSave({ ...settings, pushNotifications: v })} />
         </div>
+        <button type="button" onClick={() => setShowDayPicker(true)} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Watering day</span>
+          <span className="flex items-center gap-1.5">
+            <span className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>{FULL_DAY_NAMES[settings.primaryWateringDay]}</span>
+            <div style={{ color: '#111' }}><IconChevronRight size={16} /></div>
+          </span>
+        </button>
         <button type="button" onClick={onPickLanguage} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
           <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Language</span>
           <span className="flex items-center gap-1.5">
@@ -1944,6 +1992,13 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
       <p className="font-body text-center mt-6" style={{ fontSize: 12, color: '#5a5a5c' }}>
         Plant parent since {new Date().getFullYear()} · my Jungle v{APP_VERSION}
       </p>
+      {showDayPicker && (
+        <DayPickerSheet
+          selected={settings.primaryWateringDay}
+          onClose={() => setShowDayPicker(false)}
+          onSelect={onChangePrimaryWateringDay}
+        />
+      )}
     </div>
   )
 }
@@ -2187,8 +2242,8 @@ export default function App() {
       wateringDays: d.wateringDays,
       scheduleDays: d.wateringDays.map((i) => DAYS[i]),
       isCustomSchedule: false,
-      wateringFrequency: 'weekly',
-      wateringCycleAnchor: null,
+      wateringFrequency: d.wateringFrequency,
+      wateringCycleAnchor: d.wateringCycleAnchor,
       waterNeed: d.waterNeed,
       lightNeed: d.lightNeed,
       humidityNeed: d.humidityNeed,
@@ -2263,7 +2318,7 @@ export default function App() {
         doneLabel="Start AI analysis"
         onDone={(photos) => {
           setAiThinkingLabel(`Identifying ${photos.length} plant${photos.length === 1 ? '' : 's'}…`)
-          void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl, language))), 900).then((drafts) => {
+          void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl, language, settings.primaryWateringDay))), 900).then((drafts) => {
             setPendingDrafts(drafts)
             setAiThinkingLabel(null)
             setScreen('onboardingResult')
@@ -2276,6 +2331,8 @@ export default function App() {
       <AnalysisResultScreen
         drafts={pendingDrafts}
         language={language}
+        primaryDay={settings.primaryWateringDay}
+        onChangePrimaryDay={(day) => setSettings((s) => ({ ...s, primaryWateringDay: day }))}
         onDone={(finalDrafts) => {
           setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
           setPendingDrafts([])
@@ -2307,6 +2364,7 @@ export default function App() {
       <ManualAddScreen
         isPro={user.isPro}
         language={language}
+        primaryDay={settings.primaryWateringDay}
         remainingFreeSlots={Math.max(0, MAX_FREE_PLANTS - plants.length)}
         onBack={() => { setScreen('main'); setTab('home') }}
         onAdd={(draft) => {
@@ -2336,7 +2394,7 @@ export default function App() {
         onBack={() => { setScreen('main'); setTab('home') }}
         onDone={(photos) => {
           setAiThinkingLabel(`Identifying ${photos.length} plant${photos.length === 1 ? '' : 's'}…`)
-          void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl, language))), 900).then((drafts) => {
+          void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl, language, settings.primaryWateringDay))), 900).then((drafts) => {
             setPendingDrafts(drafts)
             setAiThinkingLabel(null)
             setScreen('bulkResult')
@@ -2349,6 +2407,8 @@ export default function App() {
       <AnalysisResultScreen
         drafts={pendingDrafts}
         language={language}
+        primaryDay={settings.primaryWateringDay}
+        onChangePrimaryDay={(day) => setSettings((s) => ({ ...s, primaryWateringDay: day }))}
         onDone={(finalDrafts) => {
           setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
           setPendingDrafts([])
@@ -2376,6 +2436,7 @@ export default function App() {
     content = (
       <EditPlantScreen
         plant={live}
+        primaryDay={settings.primaryWateringDay}
         onBack={() => setScreen('plantDetail')}
         onSave={(updates) => {
           setPlants((prev) => prev.map((p) => (p.id === live.id ? { ...p, ...updates } : p)))
@@ -2423,6 +2484,16 @@ export default function App() {
           onOpenLegal={(doc) => { setLegalDoc(doc); setScreen('legal') }}
           language={language}
           onPickLanguage={() => setShowLanguagePicker(true)}
+          onChangePrimaryWateringDay={(day) => {
+            setSettings((s) => ({ ...s, primaryWateringDay: day }))
+            // Only remap plants still on the AI-batched schedule — a manually
+            // customized schedule (isCustomSchedule) is left exactly as the user set it.
+            setPlants((prev) => prev.map((p) => (
+              p.isCustomSchedule
+                ? p
+                : { ...p, wateringDays: batchedWateringDays(p.waterNeed, day), scheduleDays: batchedWateringDays(p.waterNeed, day).map((i) => DAYS[i]) }
+            )))
+          }}
         />
       )
     }
