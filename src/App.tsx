@@ -15,6 +15,7 @@ import {
   isPlantDueToday,
 } from '@/lib/wateringDue'
 import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, type StorageResult } from '@/lib/plantStorage'
+import { LAST_ACTIVE_DATE_KEY, localDateString, rolloverWateredState } from '@/lib/dailyRollover'
 import { clearAllPhotos, deletePlantPhotos } from '@/lib/photoStore'
 import { MAX_FREE_PLANTS, canAccessProFeatures, canAddMorePlants } from '@/lib/proAccess'
 import { useUserState } from '@/hooks/useUserState'
@@ -2031,6 +2032,23 @@ export default function App() {
     return () => { cancelled = true }
   }, [plants])
   useEffect(() => { saveSettings(settings) }, [settings])
+
+  useEffect(() => {
+    function checkDailyRollover() {
+      const today = localDateString(new Date())
+      const storedDate = localStorage.getItem(LAST_ACTIVE_DATE_KEY)
+      // rolloverWateredState returns the same array reference when nothing changed,
+      // so this is a no-op re-render whenever the date hasn't advanced.
+      setPlants((prev) => rolloverWateredState(prev, storedDate, today).plants)
+      localStorage.setItem(LAST_ACTIVE_DATE_KEY, today)
+    }
+    checkDailyRollover()
+    function onVisible() {
+      if (document.visibilityState === 'visible') checkDailyRollover()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
 
   useEffect(() => {
     const bg = screen === 'splash' ? GREEN : '#0D0D0D'
