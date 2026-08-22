@@ -131,10 +131,36 @@ function Icon({ children, size = 20 }: { children: React.ReactNode; size?: numbe
     </svg>
   )
 }
+
+function NavIcon({ children, size = 20, viewBox }: { children: React.ReactNode; size?: number; viewBox: string }) {
+  return (
+    <svg width={size} height={size} viewBox={viewBox} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {children}
+    </svg>
+  )
+}
+const IconNavHome = (p: { size?: number }) => (
+  <NavIcon {...p} viewBox="26 17 20 21">
+    <path d="M38.75 36.2497V28.9163C38.75 28.6732 38.6534 28.4401 38.4815 28.2682C38.3096 28.0963 38.0764 27.9997 37.8333 27.9997H34.1667C33.9236 27.9997 33.6904 28.0963 33.5185 28.2682C33.3466 28.4401 33.25 28.6732 33.25 28.9163V36.2497M27.75 26.1668C27.7499 25.9001 27.8081 25.6366 27.9203 25.3947C28.0326 25.1528 28.1962 24.9383 28.3999 24.7661L34.8166 19.2661C35.1475 18.9864 35.5667 18.833 36 18.833C36.4333 18.833 36.8525 18.9864 37.1834 19.2661L43.6001 24.7661C43.8038 24.9383 43.9674 25.1528 44.0797 25.3947C44.1919 25.6366 44.2501 25.9001 44.25 26.1668V34.4168C44.25 34.903 44.0568 35.3693 43.713 35.7131C43.3692 36.057 42.9029 36.2501 42.4167 36.2501H29.5833C29.0971 36.2501 28.6308 36.057 28.287 35.7131C27.9432 35.3693 27.75 34.903 27.75 34.4168V26.1668Z" />
+  </NavIcon>
+)
+const IconNavCalendar = (p: { size?: number }) => (
+  <NavIcon {...p} viewBox="102 17 20 22">
+    <path d="M108.333 18.833V22.5M115.667 18.833V22.5M103.75 26.1669H120.25M105.583 20.6665H118.417C119.429 20.6665 120.25 21.4874 120.25 22.5V35.3343C120.25 36.3469 119.429 37.1678 118.417 37.1678H105.583C104.571 37.1678 103.75 36.3469 103.75 35.3343V22.5C103.75 21.4874 104.571 20.6665 105.583 20.6665Z" />
+  </NavIcon>
+)
+const IconNavAdd = (p: { size?: number }) => (
+  <NavIcon {...p} viewBox="165 17 22 22">
+    <path d="M172.333 28.0004H179.667M176 24.3334V31.6674M185.168 28.0004C185.168 33.0634 181.063 37.1678 176 37.1678C170.937 37.1678 166.833 33.0634 166.833 28.0004C166.833 22.9374 170.937 18.833 176 18.833C181.063 18.833 185.168 22.9374 185.168 28.0004Z" />
+  </NavIcon>
+)
+const IconNavProfile = (p: { size?: number }) => (
+  <NavIcon {...p} viewBox="308 18 16 20">
+    <path d="M322.418 36.25V34.4167C322.418 33.4442 322.031 32.5116 321.344 31.8239C320.656 31.1363 319.723 30.75 318.751 30.75H313.25C312.278 30.75 311.345 31.1363 310.657 31.8239C309.969 32.5116 309.583 33.4442 309.583 34.4167V36.25M319.667 23.4167C319.667 25.4417 318.026 27.0833 316 27.0833C313.975 27.0833 312.333 25.4417 312.333 23.4167C312.333 21.3916 313.975 19.75 316 19.75C318.026 19.75 319.667 21.3916 319.667 23.4167Z" />
+  </NavIcon>
+)
 const IconLeaf = (p: { size?: number }) => <Icon {...p}><path d="M11 20A7 7 0 0 1 4 13c0-6 5-11 11-11 1 6-3 11-9 13" /><path d="M4 13c0 5 4 7 7 7" /></Icon>
-const IconPlus = (p: { size?: number }) => <Icon {...p}><path d="M12 5v14M5 12h14" /></Icon>
 const IconCalendar = (p: { size?: number }) => <Icon {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18" /></Icon>
-const IconUser = (p: { size?: number }) => <Icon {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" /></Icon>
 const IconChevronLeft = (p: { size?: number }) => <Icon {...p}><path d="M15 5l-7 7 7 7" /></Icon>
 const IconX = (p: { size?: number }) => <Icon {...p}><path d="M6 6l12 12M18 6L6 18" /></Icon>
 const IconCamera = (p: { size?: number }) => <Icon {...p}><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" /><circle cx="12" cy="14" r="3.5" /></Icon>
@@ -492,11 +518,11 @@ function AnalysisResultScreen({ drafts, onDone }: { drafts: DraftPlant[]; onDone
 
 function TabBar({ active, onChange, onAdd }: { active: Tab; onChange: (t: Tab) => void; onAdd: () => void }) {
   const items: { id: Tab; label: string; icon: (p: { size?: number }) => React.ReactNode }[] = [
-    { id: 'home', label: 'Home', icon: IconLeaf },
-    { id: 'days', label: 'Days', icon: IconCalendar },
+    { id: 'home', label: 'Home', icon: IconNavHome },
+    { id: 'days', label: 'Days', icon: IconNavCalendar },
   ]
   const items2: { id: Tab; label: string; icon: (p: { size?: number }) => React.ReactNode }[] = [
-    { id: 'profile', label: 'Profile', icon: IconUser },
+    { id: 'profile', label: 'Profile', icon: IconNavProfile },
   ]
   return (
     <div className="fixed left-4 right-4 z-40" style={{ bottom: 'calc(14px + env(safe-area-inset-bottom,0px))' }}>
@@ -508,9 +534,8 @@ function TabBar({ active, onChange, onAdd }: { active: Tab; onChange: (t: Tab) =
           </button>
         ))}
         <button type="button" onClick={onAdd} className="tab-bar__item" aria-label="Add plant">
-          <div className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, background: GREEN, color: '#05170c', marginTop: -14, boxShadow: '0 4px 10px rgba(0,0,0,0.35)' }}>
-            <IconPlus size={20} />
-          </div>
+          <IconNavAdd size={20} />
+          <span className="tab-bar__label">Add</span>
         </button>
         {items2.map((t) => (
           <button key={t.id} type="button" onClick={() => onChange(t.id)} className={`tab-bar__item ${active === t.id ? 'is-active' : ''}`}>
