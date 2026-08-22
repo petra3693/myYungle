@@ -4,6 +4,7 @@ import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor'
 import Spline from '@splinetool/react-spline'
 import PlantPhoto from '@/components/PlantPhoto'
 import { analyzePlantImage, mapLightNeedToForm, mapWaterNeedToForm } from '@/lib/analyzePlant'
+import { analyzePlantHealthImage, type AnalyzePlantHealthResult } from '@/lib/analyzePlantHealth'
 import {
   cycleAnchorForFrequency,
   getDateForDayIndex,
@@ -49,7 +50,7 @@ type Screen =
   | 'bulkAdd'
   | 'bulkResult'
 
-type Tab = 'home' | 'days' | 'profile'
+type Tab = 'home' | 'days' | 'health' | 'profile'
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,11 @@ const IconNavCalendar = (p: { size?: number }) => (
 const IconNavAdd = (p: { size?: number }) => (
   <NavIcon {...p} viewBox="165 17 22 22">
     <path d="M172.333 28.0004H179.667M176 24.3334V31.6674M185.168 28.0004C185.168 33.0634 181.063 37.1678 176 37.1678C170.937 37.1678 166.833 33.0634 166.833 28.0004C166.833 22.9374 170.937 18.833 176 18.833C181.063 18.833 185.168 22.9374 185.168 28.0004Z" />
+  </NavIcon>
+)
+const IconNavHealth = (p: { size?: number }) => (
+  <NavIcon {...p} viewBox="236 19 22 21">
+    <path d="M253.999 30.9996V33.9996H256.999V35.9996H253.999V38.9996H251.999V35.9996H248.999V33.9996H251.999V30.9996H253.999ZM255.242 21.7566C256.325 22.8396 256.953 24.2959 256.997 25.827C257.041 27.3581 256.498 28.8481 255.479 29.9916L254.059 28.5736C255.389 27.0496 255.319 24.6596 253.826 23.1696C253.103 22.4481 252.132 22.0304 251.111 22.002C250.091 21.9735 249.098 22.3365 248.336 23.0166L247.001 24.2146L245.665 23.0176C244.907 22.3395 243.919 21.9758 242.902 22.0005C241.885 22.0252 240.915 22.4365 240.191 23.1507C239.466 23.8648 239.041 24.8282 239.002 25.8447C238.962 26.8613 239.312 27.8546 239.979 28.6226L248.411 37.0686L246.999 38.4846L238.519 29.9926C237.498 28.8485 236.954 27.3571 236.999 25.8246C237.043 24.292 237.672 22.8345 238.757 21.7514C239.843 20.6683 241.301 20.0417 242.834 20.0002C244.367 19.9588 245.857 20.5057 246.999 21.5286C248.142 20.5062 249.633 19.9602 251.165 20.0026C252.698 20.045 254.158 20.6726 255.242 21.7566Z" />
   </NavIcon>
 )
 const IconNavProfile = (p: { size?: number }) => (
@@ -522,6 +528,7 @@ function TabBar({ active, onChange, onAdd }: { active: Tab; onChange: (t: Tab) =
     { id: 'days', label: 'Days', icon: IconNavCalendar },
   ]
   const items2: { id: Tab; label: string; icon: (p: { size?: number }) => React.ReactNode }[] = [
+    { id: 'health', label: 'Health', icon: IconNavHealth },
     { id: 'profile', label: 'Profile', icon: IconNavProfile },
   ]
   return (
@@ -1001,6 +1008,119 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro }: {
   )
 }
 
+// ─── Screen: Health check ───────────────────────────────────────────────────
+
+function healthScoreColor(score: number): string {
+  if (score >= 70) return GREEN
+  if (score >= 40) return '#FFC24B'
+  return '#FF3B30'
+}
+
+function HealthCheckScreen() {
+  const [photo, setPhoto] = useState<string | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<AnalyzePlantHealthResult | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(file: File) {
+    try {
+      const compressed = await readAndCompressPhotoFile(file)
+      setPhoto(compressed)
+      setResult(null)
+      setError(null)
+      setAnalyzing(true)
+      const outcome = await withMinDelay(analyzePlantHealthImage(compressed), 700)
+      if (outcome.ok) {
+        setResult(outcome.data)
+      } else {
+        setError(outcome.error)
+      }
+    } catch (err) {
+      console.error('[myJungle] health check failed:', err)
+      setError('Could not analyze this photo. Please try again.')
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
+  function reset() {
+    setPhoto(null)
+    setResult(null)
+    setError(null)
+  }
+
+  return (
+    <div className="scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.target.value = '' }} />
+      <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.target.value = '' }} />
+      <h1 className="font-heading" style={{ fontSize: 24, color: '#fff' }}>Health check</h1>
+      <p className="font-body" style={{ fontSize: 14, color: '#8E8E93', marginTop: 4, marginBottom: 20 }}>
+        Snap a photo of a plant and AI will spot pests, disease, or watering issues.
+      </p>
+
+      {!photo && (
+        <div className="dash-picker w-full flex flex-col items-center justify-center gap-4" style={{ height: 260 }}>
+          <div style={{ color: GREEN }}><IconNavHealth size={30} /></div>
+          <div className="flex gap-3 w-full px-6">
+            <button type="button" onClick={() => cameraInputRef.current?.click()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>Take photo</button>
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              className="font-heading flex-1"
+              style={{ height: 48, fontSize: 13, textTransform: 'uppercase', borderRadius: 9999, background: 'transparent', border: '1.5px solid #fff', color: '#fff' }}
+            >
+              From gallery
+            </button>
+          </div>
+        </div>
+      )}
+
+      {photo && (
+        <img src={photo} alt="" className="w-full rounded-[1.5rem] object-cover mb-4" style={{ height: 260 }} />
+      )}
+
+      {analyzing && (
+        <div className="flex flex-col items-center gap-2 mt-4">
+          <AiThinkingLoader size={120} />
+          <p className="font-body text-center" style={{ fontSize: 14, color: '#8E8E93' }}>Diagnosing plant health…</p>
+        </div>
+      )}
+
+      {error && !analyzing && (
+        <p className="font-body text-center mt-4" style={{ fontSize: 13, color: '#FF3B30' }}>{error}</p>
+      )}
+
+      {result && !analyzing && (
+        <div className="card-white p-5 flex flex-col gap-4 mt-4">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Health score</span>
+              <span className="font-body font-semibold" style={{ fontSize: 13, color: healthScoreColor(result.healthScore) }}>{result.healthScore}%</span>
+            </div>
+            <div style={{ height: 8, borderRadius: 9999, background: '#eee', overflow: 'hidden' }}>
+              <div style={{ width: `${result.healthScore}%`, height: '100%', background: healthScoreColor(result.healthScore), borderRadius: 9999 }} />
+            </div>
+          </div>
+          <div>
+            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Diagnosis</span>
+            <div className="font-heading" style={{ fontSize: 20, marginTop: 4 }}>{result.diagnosis}</div>
+          </div>
+          <div>
+            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>What to do</span>
+            <p className="font-body" style={{ fontSize: 14, marginTop: 4, lineHeight: 1.5 }}>{result.treatmentNotes}</p>
+          </div>
+        </div>
+      )}
+
+      {photo && !analyzing && (
+        <button type="button" onClick={reset} className="btn-ghost-dark w-full mt-4" style={{ height: 52 }}>Check another photo</button>
+      )}
+    </div>
+  )
+}
+
 // ─── Screen: Profile ────────────────────────────────────────────────────────
 
 function ProfileScreen({ plants, settings, user, onSave, onExport, onReset, onShowPro }: {
@@ -1414,6 +1534,8 @@ export default function App() {
       tabContent = <HomeScreen plants={plants} todayIdx={todayIdx} onOpenPlant={(p) => { setSelectedPlant(p); setScreen('plantDetail') }} />
     } else if (tab === 'days') {
       tabContent = <DaysScreen plants={plants} todayIdx={todayIdx} onToggleWatered={handleWaterToggle} />
+    } else if (tab === 'health') {
+      tabContent = <HealthCheckScreen />
     } else {
       tabContent = (
         <ProfileScreen
@@ -1430,7 +1552,11 @@ export default function App() {
     content = (
       <div className="app-shell fixed inset-0">
         {tabContent}
-        <TabBar active={tab} onChange={setTab} onAdd={openAddFlow} />
+        <TabBar
+          active={tab}
+          onChange={(t) => { if (t === 'health' && !user.isPro) { setScreen('proUnlock') } else { setTab(t) } }}
+          onAdd={openAddFlow}
+        />
       </div>
     )
   }

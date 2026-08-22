@@ -1,0 +1,77 @@
+import { parseImageDataUrl, toUserFriendlyAnalysisError } from '@/lib/geminiImage'
+import { compressImageForGemini, isInlinePhoto } from '@/lib/imageCompress'
+import { parseAiJson } from '@/lib/aiJson'
+import type { AppLanguage } from '@/i18n/languages'
+
+export interface AnalyzePlantHealthResult {
+  healthScore: number
+  diagnosis: string
+  treatmentNotes: string
+}
+
+const FRIENDLY_FALLBACK = 'Could not analyze this plant photo. Please try again with a clearer image.'
+
+function getErrorMessageFromBody(body: unknown, fallback: string): string {
+  if (body && typeof body === 'object') {
+    const record = body as { error?: unknown }
+    if (typeof record.error === 'string' && record.error.trim()) {
+      return toUserFriendlyAnalysisError(record.error, fallback)
+    }
+  }
+  return fallback
+}
+
+export async function analyzePlantHealthImage(
+  imageSource: string,
+  language: AppLanguage = 'en',
+): Promise<{ ok: true; data: AnalyzePlantHealthResult } | { ok: false; error: string }> {
+  try {
+    const preparedSource = isInlinePhoto(imageSource)
+      ? await compressImageForGemini(imageSource)
+      : imageSource
+    const { imageBase64 } = parseImageDataUrl(preparedSource)
+    if (!imageBase64) {
+      return { ok: false, error: 'No image provided. Please take or choose a photo first.' }
+    }
+
+    let response: Response
+    try {
+      response = await fetch('/api/analyze-plant-health', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64, mimeType: 'image/jpeg', language }),
+      })
+    } catch (error) {
+      console.error('[myJungle] analyze-plant-health network error:', error)
+      return { ok: false, error: 'Could not reach the plant health service. Check your connection and try again.' }
+    }
+
+    const responseText = await response.text()
+    const data = parseAiJson(responseText)
+
+    if (!response.ok) {
+      console.error(`[myJungle] analyze-plant-health failed (${response.status}):`, responseText)
+      return { ok: false, error: getErrorMessageFromBody(data, FRIENDLY_FALLBACK) }
+    }
+
+    if (!data || typeof data !== 'object') {
+      return { ok: false, error: FRIENDLY_FALLBACK }
+    }
+
+    const record = data as Record<string, unknown>
+    const healthScore = Math.max(0, Math.min(100, Math.round(Number(record.healthScore ?? 50))))
+    const diagnosis = typeof record.diagnosis === 'string' && record.diagnosis.trim() ? record.diagnosis.trim() : 'Needs review'
+    const treatmentNotes =
+      typeof record.treatmentNotes === 'string' && record.treatmentNotes.trim()
+        ? record.treatmentNotes.trim()
+        : 'Check soil moisture, light exposure, and leaf condition.'
+
+    return { ok: true, data: { healthScore, diagnosis, treatmentNotes } }
+  } catch (error) {
+    console.error('[myJungle] analyze-plant-health unexpected error:', error)
+    return {
+      ok: false,
+      error: error instanceof Error ? toUserFriendlyAnalysisError(error.message, FRIENDLY_FALLBACK) : FRIENDLY_FALLBACK,
+    }
+  }
+}
