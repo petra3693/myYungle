@@ -328,6 +328,7 @@
     background: var(--color-card);
     border-radius: 9999px;
     padding: 8px 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
   }
   .tab-bar__item {
     display: flex;
@@ -339,9 +340,18 @@
     padding: 6px 0;
     border-radius: 9999px;
     cursor: pointer;
-    color: var(--color-ink-dim);
+    color: var(--color-ink);
   }
-  .tab-bar__item.is-active { color: var(--color-green); }
+  .tab-bar__item.is-active { color: var(--color-ink); }
+  .tab-bar__icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9999px;
+  }
+  .tab-bar__item.is-active .tab-bar__icon-badge { background: var(--color-green); }
   .tab-bar__label {
     font-family: var(--font-body);
     font-weight: 600;
