@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
+import { LocalNotifications } from '@capacitor/local-notifications'
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor'
 import Spline from '@splinetool/react-spline'
 import PlantPhoto from '@/components/PlantPhoto'
 import { analyzePlantImage, mapLightNeedToForm, mapWaterNeedToForm } from '@/lib/analyzePlant'
 import { analyzePlantHealthImage, type AnalyzePlantHealthResult } from '@/lib/analyzePlantHealth'
+import { analyzePlantGrowthImage, type AnalyzePlantGrowthResult } from '@/lib/analyzePlantGrowth'
 import {
   cycleAnchorForFrequency,
   getDateForDayIndex,
@@ -22,6 +24,7 @@ import type { AppSettings, DayCode, HistoryEntry, LightNeed, Plant, PlantHealthL
 
 const GREEN = '#00FF66'
 const DAYS: DayCode[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+const FULL_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const APP_VERSION = '1.0.0'
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -33,7 +36,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   hapticFeedback: true,
   timezoneAutoSync: true,
   timezone: 'UTC',
-  darkMode: true,
   isPro: false,
 }
 
@@ -44,12 +46,14 @@ type Screen =
   | 'onboardingResult'
   | 'main'
   | 'plantDetail'
-  | 'customSchedule'
   | 'manualAdd'
   | 'proUnlock'
   | 'bulkAdd'
   | 'bulkResult'
   | 'healthFlow'
+  | 'legal'
+  | 'editPlant'
+  | 'growthFlow'
 
 type Tab = 'home' | 'days' | 'health' | 'profile'
 
@@ -443,14 +447,37 @@ interface DraftPlant {
 
 const PLANT_CATEGORIES = ['Houseplant', 'Succulent', 'Herb', 'Flowering', 'Tree', 'Other']
 
+/**
+ * Batching engine: instead of scattering each plant's AI-suggested day across
+ * the week, every 1x/week plant shares one common day and every 2x/week plant
+ * shares the same day plus one fixed second day. Keeps watering consolidated
+ * onto as few days as possible.
+ */
+const BATCH_PRIMARY_DAY = 0 // Monday
+const BATCH_SECONDARY_DAY = 3 // Thursday
+
+function batchedWateringDays(waterNeed: WaterNeed): number[] {
+  return waterNeed === 'Heavy' ? [BATCH_PRIMARY_DAY, BATCH_SECONDARY_DAY] : [BATCH_PRIMARY_DAY]
+}
+
 const FALLBACK_DRAFT_BASE = {
   name: 'Unknown plant', category: 'Houseplant', waterNeed: 'Moderate' as WaterNeed, lightNeed: 'Medium' as LightNeed,
-  humidityNeed: 'normal' as const, temperatureRangeC: '18-27°C', careNote: '', wateringDays: [0, 3],
+  humidityNeed: 'normal' as const, temperatureRangeC: '18-27°C', careNote: '', wateringDays: [BATCH_PRIMARY_DAY],
   isToxicToPets: null, toxicityNotes: '', confidence: 40,
 }
 
 function withMinDelay<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.all([promise, new Promise((r) => setTimeout(r, ms))]).then(([value]) => value)
+}
+
+/** Ask the OS for notification permission — triggered once, when the user adds their first plant. */
+async function requestNotificationPermission(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await LocalNotifications.requestPermissions()
+  } catch (error) {
+    console.error('[myJungle] notification permission request failed:', error)
+  }
 }
 
 async function identifyPhoto(dataUrl: string): Promise<DraftPlant> {
@@ -459,19 +486,17 @@ async function identifyPhoto(dataUrl: string): Promise<DraftPlant> {
     if (!result.ok) {
       return { photo: dataUrl, ...FALLBACK_DRAFT_BASE }
     }
-    const days = result.data.recommendedDays
-      .map((d) => DAYS.findIndex((code) => code.toLowerCase() === d.slice(0, 3).toLowerCase()))
-      .filter((i) => i >= 0)
+    const waterNeed = mapWaterNeedToForm(result.data.waterNeed)
     return {
       photo: dataUrl,
       name: result.data.name,
       category: 'Houseplant',
-      waterNeed: mapWaterNeedToForm(result.data.waterNeed),
+      waterNeed,
       lightNeed: mapLightNeedToForm(result.data.lightNeed),
       humidityNeed: result.data.humidityNeed,
       temperatureRangeC: result.data.temperatureRangeC,
       careNote: result.data.careNotes.slice(0, 300),
-      wateringDays: days.length > 0 ? days : [0, 3],
+      wateringDays: batchedWateringDays(waterNeed),
       isToxicToPets: result.data.isToxicToPets,
       toxicityNotes: result.data.toxicityNotes ?? '',
       confidence: confidenceLabel(result.data.confidence),
@@ -602,7 +627,6 @@ function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayI
           </div>
           <h1 className="font-heading" style={{ fontSize: 22, color: '#fff' }}>MyJungle</h1>
         </div>
-        <div className="icon-circle text-white"><IconDotsHorizontal /></div>
       </div>
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="stat-tile"><span className="stat-tile__value">{plants.length}</span><span className="stat-tile__label">Total plants</span></div>
@@ -651,7 +675,7 @@ function DaysScreen({ plants, todayIdx, onToggleWatered }: { plants: Plant[]; to
     plants.forEach((p) => p.wateringDays.forEach((d) => set.add(d)))
     return set
   }, [plants])
-  const todayName = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][selected]
+  const todayName = FULL_DAY_NAMES[selected]
   const duePlants = plants.filter((p) => isPlantDueOnDay(p, selected, getDateForDayIndex(selected)))
 
   return (
@@ -662,7 +686,10 @@ function DaysScreen({ plants, todayIdx, onToggleWatered }: { plants: Plant[]; to
       </p>
       <div className="flex justify-between gap-2 mb-6">
         {DAYS.map((d, i) => (
-          <DayPill key={d} label={d[0]} active={i === selected} onClick={() => setSelected(i)} />
+          <div key={d} className="flex flex-col items-center gap-1.5">
+            <DayPill label={d[0]} active={i === selected} onClick={() => setSelected(i)} />
+            <span style={{ width: 5, height: 5, borderRadius: 9999, background: groupedDays.has(i) ? GREEN : 'transparent' }} />
+          </div>
         ))}
       </div>
       <h2 className="font-heading mb-3" style={{ fontSize: 16, color: '#fff' }}>
@@ -689,11 +716,12 @@ function DaysScreen({ plants, todayIdx, onToggleWatered }: { plants: Plant[]; to
 // ─── Screen: Plant detail ─────────────────────────────────────────────────────
 
 function PlantDetailScreen({
-  plant, user, todayIdx, onBack, onDelete, onWater, onOpenSchedule, onShowLimitOrPro, onRunHealthCheck,
+  plant, user, todayIdx, onBack, onDelete, onWater, onShowLimitOrPro, onRunHealthCheck, onEdit, onLogGrowth,
 }: {
   plant: Plant; user: UserState; todayIdx: number; onBack: () => void; onDelete: () => void; onWater: () => void
-  onOpenSchedule: () => void; onShowLimitOrPro: () => void; onRunHealthCheck: () => void
+  onShowLimitOrPro: () => void; onRunHealthCheck: () => void; onEdit: () => void; onLogGrowth: () => void
 }) {
+  const [showActions, setShowActions] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const [expandedLog, setExpandedLog] = useState<string | null>(null)
   const hasAccess = canAccessProFeatures(user)
@@ -705,7 +733,7 @@ function PlantDetailScreen({
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
         <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
         <span className="font-heading truncate px-2" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>{plant.name}</span>
-        <IconCircleBtn onClick={() => setShowDelete(true)} label="More options"><IconDotsHorizontal /></IconCircleBtn>
+        <IconCircleBtn onClick={() => setShowActions(true)} label="More options"><IconDotsHorizontal /></IconCircleBtn>
       </div>
       <div className="scroll-y flex-1 px-5 pb-6">
         <div className="rounded-[1.5rem] overflow-hidden mb-4" style={{ height: 240 }}>
@@ -723,9 +751,6 @@ function PlantDetailScreen({
               <span className="btn-outline-pro shrink-0" style={{ fontSize: 10, padding: '3px 10px' }}>PRO</span>
             )}
           </div>
-          <button type="button" onClick={onOpenSchedule} className="font-body text-left" style={{ fontSize: 14, color: '#111', opacity: 0.7 }}>
-            {plant.room} · {plant.scheduleDays.join(', ')} — tap to edit schedule
-          </button>
           {plant.isToxicToPets === true && (
             <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: '#f3ecec' }}>
               <IconAlert size={18} />
@@ -850,11 +875,75 @@ function PlantDetailScreen({
             </div>
           )}
 
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Grow history</span>
+            </div>
+            {plant.history.length === 0 ? (
+              <p className="font-body mt-2" style={{ fontSize: 13, color: '#8E8E93' }}>No growth check-ins yet.</p>
+            ) : (
+              <div className="flex flex-col gap-2 mt-2">
+                {plant.history.map((entry) => (
+                  <div key={entry.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#f5f5f5' }}>
+                    <PlantPhoto photo={entry.photo} alt="" className="rounded-xl object-cover shrink-0 w-12 h-12" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-heading shrink-0" style={{ fontSize: 11, background: '#111', color: GREEN, borderRadius: 8, padding: '3px 7px' }}>
+                          {new Date(entry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase()}
+                        </span>
+                        {entry.heightCm !== undefined && entry.heightCm > 0 && (
+                          <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>{entry.heightCm} cm</span>
+                        )}
+                        {entry.estimatedAge && (
+                          <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>· {entry.estimatedAge}</span>
+                        )}
+                      </div>
+                      <div className="font-body truncate mt-0.5" style={{ fontSize: 12, color: '#555' }}>{entry.note}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={onLogGrowth}
+              className="font-heading w-full mt-3"
+              style={{ height: 48, borderRadius: 9999, background: 'transparent', border: '1.5px solid #111', color: '#111', textTransform: 'uppercase', fontSize: 13 }}
+            >
+              Log growth
+            </button>
+          </div>
+
           <button type="button" onClick={onWater} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>
             {plant.isWateredToday ? 'Watered ✓' : 'Water now'}
           </button>
         </div>
       </div>
+      {showActions && (
+        <>
+          <div className="sheet-backdrop is-open" onClick={() => setShowActions(false)} />
+          <div className="fixed left-0 right-0 bottom-0 z-[70]">
+            <div className="sheet-panel is-open p-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => { setShowActions(false); onEdit() }}
+                className="font-heading text-left px-4 py-4"
+                style={{ fontSize: 16 }}
+              >
+                Edit plant
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowActions(false); setShowDelete(true) }}
+                className="font-heading text-left px-4 py-4"
+                style={{ fontSize: 16, color: '#FF3B30' }}
+              >
+                Delete plant
+              </button>
+            </div>
+          </div>
+        </>
+      )}
       {showDelete && (
         <ConfirmSheet
           title="Delete plant?"
@@ -899,35 +988,93 @@ function ConfirmSheet({ title, body, confirmLabel, danger, onCancel, onConfirm }
   )
 }
 
-// ─── Screen: Custom schedule ───────────────────────────────────────────────────
+// ─── Screen: Edit plant ─────────────────────────────────────────────────────
 
-function CustomScheduleScreen({ plant, onBack, onSave }: { plant: Plant; onBack: () => void; onSave: (days: number[]) => void }) {
-  const [days, setDays] = useState<number[]>(plant.wateringDays)
-  function toggle(i: number) {
-    setDays((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i].sort((a, b) => a - b)))
+function EditPlantScreen({ plant, onBack, onSave }: {
+  plant: Plant; onBack: () => void
+  onSave: (updates: Pick<Plant, 'name' | 'category' | 'wateringDays' | 'scheduleDays' | 'isCustomSchedule'>) => void
+}) {
+  const [name, setName] = useState(plant.name)
+  const [category, setCategory] = useState(plant.category ?? 'Houseplant')
+  const [day1, setDay1] = useState(plant.wateringDays[0] ?? BATCH_PRIMARY_DAY)
+  const [needsSecondDay, setNeedsSecondDay] = useState(plant.wateringDays.length >= 2)
+  const [day2, setDay2] = useState(plant.wateringDays[1] ?? BATCH_SECONDARY_DAY)
+
+  function handleSave() {
+    const days = needsSecondDay ? [day1, day2].filter((d, i, arr) => arr.indexOf(d) === i).sort((a, b) => a - b) : [day1]
+    onSave({
+      name: name.trim() || plant.name,
+      category,
+      wateringDays: days,
+      scheduleDays: days.map((i) => DAYS[i]),
+      isCustomSchedule: true,
+    })
   }
+
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
         <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
-        <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Custom schedule</span>
+        <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Edit plant</span>
         <div style={{ width: 44 }} />
       </div>
-      <div className="px-5 pt-4">
-        <h2 className="font-heading" style={{ fontSize: 22, color: '#fff' }}>Set custom watering days</h2>
-        <p className="font-body" style={{ fontSize: 14, color: '#8E8E93', marginTop: 8, lineHeight: 1.5 }}>
-          Select the days of the week you want to manually water this plant. The AI auto-care cycle will respect this window.
-        </p>
-        <div className="flex justify-between gap-2 mt-6">
-          {DAYS.map((d, i) => (
-            <DayPill key={d} label={d[0]} active={days.includes(i)} onClick={() => toggle(i)} />
-          ))}
+      <div className="scroll-y flex-1 px-5 pt-2 flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>Plant name</span>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="font-heading px-4"
+            style={{ height: 52, fontSize: 16, color: '#fff', background: 'var(--color-surface)', borderRadius: 14, border: 'none' }}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>Category</span>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="font-body px-4"
+            style={{ height: 52, fontSize: 15, color: '#fff', background: 'var(--color-surface)', borderRadius: 14, border: 'none' }}
+          >
+            {PLANT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>{needsSecondDay ? 'Watering day 1' : 'Watering day'}</span>
+          <select
+            value={day1}
+            onChange={(e) => setDay1(Number(e.target.value))}
+            className="font-body px-4"
+            style={{ height: 52, fontSize: 15, color: '#fff', background: 'var(--color-surface)', borderRadius: 14, border: 'none' }}
+          >
+            {FULL_DAY_NAMES.map((n, i) => <option key={i} value={i}>{n}</option>)}
+          </select>
+        </label>
+
+        {needsSecondDay && (
+          <label className="flex flex-col gap-1.5">
+            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>Watering day 2</span>
+            <select
+              value={day2}
+              onChange={(e) => setDay2(Number(e.target.value))}
+              className="font-body px-4"
+              style={{ height: 52, fontSize: 15, color: '#fff', background: 'var(--color-surface)', borderRadius: 14, border: 'none' }}
+            >
+              {FULL_DAY_NAMES.map((n, i) => <option key={i} value={i}>{n}</option>)}
+            </select>
+          </label>
+        )}
+
+        <div className="flex items-center justify-between rounded-2xl px-4 py-3" style={{ background: 'var(--color-surface)' }}>
+          <span className="font-body" style={{ fontSize: 14, color: '#fff' }}>Water twice a week</span>
+          <Toggle on={needsSecondDay} onChange={setNeedsSecondDay} />
         </div>
       </div>
-      <div className="flex-1" />
-      <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3">
-        <button type="button" onClick={() => onSave(days)} disabled={days.length === 0} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>Save</button>
-        <button type="button" onClick={onBack} className="font-body text-center" style={{ fontSize: 13, color: '#8E8E93' }}>Revert to automatic</button>
+      <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-3 shrink-0">
+        <button type="button" onClick={handleSave} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>Save changes</button>
       </div>
     </div>
   )
@@ -1385,13 +1532,161 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
   )
 }
 
+function GrowthCheckScreen({ plant, onBack, onSave }: {
+  plant: Plant; onBack: () => void; onSave: (entry: HistoryEntry) => void
+}) {
+  const [photo, setPhoto] = useState<string | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<AnalyzePlantGrowthResult | null>(null)
+  const [saved, setSaved] = useState(false)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(file: File) {
+    try {
+      const compressed = await readAndCompressPhotoFile(file)
+      setPhoto(compressed)
+      setResult(null)
+      setError(null)
+      setSaved(false)
+      setAnalyzing(true)
+      const outcome = await withMinDelay(analyzePlantGrowthImage(compressed), 700)
+      if (outcome.ok) {
+        setResult(outcome.data)
+      } else {
+        setError(outcome.error)
+      }
+    } catch (err) {
+      console.error('[myJungle] growth check failed:', err)
+      setError('Could not analyze this photo. Please try again.')
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
+  function handleSave() {
+    if (!photo || !result) return
+    onSave({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      date: new Date().toISOString(),
+      note: result.summary,
+      photo,
+      heightCm: result.heightCm,
+      estimatedAge: result.estimatedAge,
+      condition: result.condition,
+      analyzedByAI: true,
+    })
+    setSaved(true)
+  }
+
+  function reset() {
+    setPhoto(null)
+    setResult(null)
+    setError(null)
+    setSaved(false)
+  }
+
+  return (
+    <div className="app-shell fixed inset-0 flex flex-col">
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.target.value = '' }} />
+      <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.target.value = '' }} />
+      <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
+        <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
+        <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Log growth</span>
+        <div style={{ width: 44 }} />
+      </div>
+      <div className="scroll-y flex-1 px-5 pb-6">
+        {!photo && (
+          <div className="dash-picker w-full flex flex-col items-center justify-center gap-4" style={{ height: 260 }}>
+            <IconCamera size={30} />
+            <div className="flex gap-3 w-full px-6">
+              <button type="button" onClick={() => cameraInputRef.current?.click()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>Take photo</button>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="font-heading flex-1"
+                style={{ height: 48, fontSize: 13, textTransform: 'uppercase', borderRadius: 9999, background: 'transparent', border: '1.5px solid #fff', color: '#fff' }}
+              >
+                From gallery
+              </button>
+            </div>
+          </div>
+        )}
+
+        {photo && !result && (
+          <img src={photo} alt="" className="w-full rounded-[1.5rem] object-cover" style={{ height: 260 }} />
+        )}
+
+        {analyzing && (
+          <div className="flex flex-col items-center gap-2 mt-4">
+            <AiThinkingLoader size={140} />
+            <p className="font-body text-center" style={{ fontSize: 14, color: '#8E8E93' }}>Assessing growth stage…</p>
+          </div>
+        )}
+
+        {error && !analyzing && (
+          <>
+            <p className="font-body text-center mt-4" style={{ fontSize: 13, color: '#FF3B30' }}>{error}</p>
+            <button type="button" onClick={reset} className="font-heading w-full mt-4" style={{ height: 52, borderRadius: 9999, background: '#1c1c1e', color: '#fff' }}>Try again</button>
+          </>
+        )}
+
+        {photo && result && !analyzing && (
+          <>
+            <img src={photo} alt="" className="w-full rounded-[1.5rem] object-cover mb-4" style={{ height: 220 }} />
+            <div className="mb-4">
+              <div className="font-heading" style={{ fontSize: 22, color: '#fff' }}>{plant.name}</div>
+              <div className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>
+                Checked: {new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+            </div>
+            <div className="card-white p-5 flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+                  <span className="font-heading" style={{ fontSize: 18 }}>{result.heightCm} cm</span>
+                  <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Estimated height</span>
+                </div>
+                <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+                  <span className="font-heading" style={{ fontSize: 18 }}>{result.estimatedAge}</span>
+                  <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Estimated age</span>
+                </div>
+              </div>
+              <div className="rounded-2xl p-4 mt-1" style={{ background: '#f5f5f5' }}>
+                <span className="font-heading" style={{ fontSize: 16 }}>{result.condition}</span>
+                <p className="font-body mt-1" style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>{result.summary}</p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+      {photo && result && !analyzing && (
+        <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-3 flex flex-col gap-3 shrink-0">
+          {saved ? (
+            <button type="button" onClick={onBack} className="btn-fill w-full" style={{ height: 52 }}>Done</button>
+          ) : (
+            <button type="button" onClick={handleSave} className="btn-fill w-full" style={{ height: 52 }}>Save to grow history</button>
+          )}
+          <button
+            type="button"
+            onClick={reset}
+            className="font-heading w-full"
+            style={{ height: 52, borderRadius: 9999, background: 'transparent', border: `1.5px solid ${GREEN}`, color: GREEN, textTransform: 'uppercase' }}
+          >
+            Scan again
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Screen: Profile ────────────────────────────────────────────────────────
 
-function ProfileScreen({ plants, settings, user, onSave, onExport, onReset, onShowPro }: {
-  plants: Plant[]; settings: AppSettings; user: UserState; onSave: (s: AppSettings) => void
-  onExport: () => void; onReset: () => void; onShowPro: () => void
+function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, onOpenLegal }: {
+  settings: AppSettings; user: UserState; onSave: (s: AppSettings) => void
+  onExport: () => void; onReset: () => void; onShowPro: () => void; onOpenLegal: (doc: LegalDoc) => void
 }) {
-  const waterings = plants.reduce((sum, p) => sum + plantHistory(p).length, 0)
   const [showNotifSettings, setShowNotifSettings] = useState(false)
 
   return (
@@ -1403,12 +1698,7 @@ function ProfileScreen({ plants, settings, user, onSave, onExport, onReset, onSh
           <span>Unlock Pro</span>
         </button>
       )}
-      <div className="grid grid-cols-3 gap-3 mt-5 mb-6">
-        <div className="stat-tile"><span className="stat-tile__value">{plants.length}</span><span className="stat-tile__label">plants</span></div>
-        <div className="stat-tile"><span className="stat-tile__value">{waterings}</span><span className="stat-tile__label">waterings</span></div>
-        <div className="stat-tile"><span className="stat-tile__value">{plants.length > 0 ? 100 : 0}%</span><span className="stat-tile__label">health</span></div>
-      </div>
-      <span className="font-body block" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Settings &amp; configuration</span>
+      <span className="font-body block" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, marginTop: 20 }}>Settings &amp; configuration</span>
       <div className="card-white overflow-hidden">
         <button type="button" onClick={() => setShowNotifSettings((v) => !v)} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
           <span className="font-heading" style={{ fontSize: 16 }}>Notification preferences</span>
@@ -1436,10 +1726,6 @@ function ProfileScreen({ plants, settings, user, onSave, onExport, onReset, onSh
           <span className="font-heading" style={{ fontSize: 16 }}>Watering reminders</span>
           <Toggle on={settings.pushNotifications} onChange={(v) => onSave({ ...settings, pushNotifications: v })} />
         </div>
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
-          <span className="font-heading" style={{ fontSize: 16 }}>Dark mode</span>
-          <Toggle on={settings.darkMode} onChange={(v) => onSave({ ...settings, darkMode: v })} />
-        </div>
         <button type="button" onClick={onExport} className="flex items-center gap-3 w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
           <IconDownload size={18} />
           <span className="font-heading" style={{ fontSize: 16 }}>Export my data</span>
@@ -1449,9 +1735,76 @@ function ProfileScreen({ plants, settings, user, onSave, onExport, onReset, onSh
           <span className="font-heading" style={{ fontSize: 16, color: '#FF3B30' }}>Reset all data</span>
         </button>
       </div>
+
+      <span className="font-body block" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, marginTop: 20 }}>Legal</span>
+      <div className="card-white overflow-hidden">
+        <button type="button" onClick={() => onOpenLegal('terms')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <span className="font-heading" style={{ fontSize: 16 }}>Terms of Use</span>
+          <div style={{ color: '#8E8E93' }}><IconChevronRight size={16} /></div>
+        </button>
+        <button type="button" onClick={() => onOpenLegal('privacy')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <span className="font-heading" style={{ fontSize: 16 }}>Privacy Policy</span>
+          <div style={{ color: '#8E8E93' }}><IconChevronRight size={16} /></div>
+        </button>
+        <button type="button" onClick={() => onOpenLegal('impressum')} className="flex items-center justify-between w-full px-5 py-4">
+          <span className="font-heading" style={{ fontSize: 16 }}>Impressum</span>
+          <div style={{ color: '#8E8E93' }}><IconChevronRight size={16} /></div>
+        </button>
+      </div>
+
       <p className="font-body text-center mt-6" style={{ fontSize: 12, color: '#5a5a5c' }}>
         Plant parent since {new Date().getFullYear()} · my Jungle v{APP_VERSION}
       </p>
+    </div>
+  )
+}
+
+type LegalDoc = 'terms' | 'privacy' | 'impressum'
+
+const LEGAL_CONTENT: Record<LegalDoc, { title: string; body: string }> = {
+  terms: {
+    title: 'Terms of Use',
+    body:
+      '[Placeholder — replace before publishing]\n\n' +
+      'By using myJungle, you agree to use the app for its intended purpose of tracking and caring for your houseplants. ' +
+      'AI-generated plant identification, health, and care guidance is provided for informational purposes only and may not always be accurate — always use your own judgment for plant and pet safety. ' +
+      'The Pro unlock is a one-time, non-subscription purchase. ' +
+      'We may update these terms from time to time; continued use of the app after changes constitutes acceptance.',
+  },
+  privacy: {
+    title: 'Privacy Policy',
+    body:
+      '[Placeholder — replace before publishing]\n\n' +
+      'myJungle stores your plants, photos, and settings locally on your device. ' +
+      'Photos you capture are sent to our AI provider (Google Gemini) solely to identify plants and diagnose health issues, and are not stored by us beyond what your device retains. ' +
+      'We do not sell your personal data. ' +
+      'Contact us at [your-support-email@example.com] with any privacy questions or data deletion requests.',
+  },
+  impressum: {
+    title: 'Impressum',
+    body:
+      '[Placeholder — replace before publishing with your real legal details]\n\n' +
+      'Company name: [Your Company / Sole Trader Name]\n' +
+      'Address: [Street, City, Postal Code, Country]\n' +
+      'Contact: [email@example.com]\n' +
+      'Registration number (if applicable): [—]\n' +
+      'VAT ID (if applicable): [—]\n\n' +
+      'Responsible for content: [Your Name]',
+  },
+}
+
+function LegalScreen({ doc, onBack }: { doc: LegalDoc; onBack: () => void }) {
+  const content = LEGAL_CONTENT[doc]
+  return (
+    <div className="app-shell fixed inset-0 flex flex-col">
+      <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
+        <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
+        <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>{content.title}</span>
+        <div style={{ width: 44 }} />
+      </div>
+      <div className="scroll-y flex-1 px-5 pb-6">
+        <p className="font-body" style={{ fontSize: 14, color: '#ccc', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{content.body}</p>
+      </div>
     </div>
   )
 }
@@ -1562,6 +1915,8 @@ export default function App() {
   const [pendingDrafts, setPendingDrafts] = useState<DraftPlant[]>([])
   const [aiThinkingLabel, setAiThinkingLabel] = useState<string | null>(null)
   const [healthFlowConfig, setHealthFlowConfig] = useState<{ mode: 'new' | 'existing'; presetPlant: Plant | null } | null>(null)
+  const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null)
+  const [growthFlowPlant, setGrowthFlowPlant] = useState<Plant | null>(null)
   const user = useUserState(settings)
   const todayIdx = getTodayDayIndex()
 
@@ -1712,6 +2067,7 @@ export default function App() {
           setPlants((prev) => [...prev, ...pendingDrafts.map(draftToPlant)])
           setPendingDrafts([])
           setSettings((s) => ({ ...s, hasCompletedOnboarding: true }))
+          if (settings.pushNotifications) void requestNotificationPermission()
           setScreen('main')
           setTab('home')
         }}
@@ -1727,22 +2083,10 @@ export default function App() {
         onBack={() => { setScreen('main'); setSelectedPlant(null) }}
         onDelete={() => handleDeletePlant(live.id)}
         onWater={() => handleWaterToggle(live.id)}
-        onOpenSchedule={() => setScreen('customSchedule')}
         onShowLimitOrPro={() => setScreen('proUnlock')}
         onRunHealthCheck={() => { setHealthFlowConfig({ mode: 'existing', presetPlant: live }); setScreen('healthFlow') }}
-      />
-    )
-  } else if (screen === 'customSchedule' && selectedPlant) {
-    const live = plants.find((p) => p.id === selectedPlant.id) || selectedPlant
-    content = (
-      <CustomScheduleScreen
-        plant={live}
-        onBack={() => setScreen('plantDetail')}
-        onSave={(days) => {
-          setPlants((prev) => prev.map((p) => (p.id === live.id ? { ...p, wateringDays: days, scheduleDays: days.map((i) => DAYS[i]), isCustomSchedule: true } : p)))
-          setSelectedPlant((prev) => (prev ? { ...prev, wateringDays: days } : prev))
-          setScreen('plantDetail')
-        }}
+        onEdit={() => setScreen('editPlant')}
+        onLogGrowth={() => { setGrowthFlowPlant(live); setScreen('growthFlow') }}
       />
     )
   } else if (screen === 'manualAdd') {
@@ -1809,6 +2153,31 @@ export default function App() {
         onDone={() => { setHealthFlowConfig(null); setScreen('main'); setTab('health') }}
       />
     )
+  } else if (screen === 'legal' && legalDoc) {
+    content = <LegalScreen doc={legalDoc} onBack={() => { setLegalDoc(null); setScreen('main'); setTab('profile') }} />
+  } else if (screen === 'editPlant' && selectedPlant) {
+    const live = plants.find((p) => p.id === selectedPlant.id) || selectedPlant
+    content = (
+      <EditPlantScreen
+        plant={live}
+        onBack={() => setScreen('plantDetail')}
+        onSave={(updates) => {
+          setPlants((prev) => prev.map((p) => (p.id === live.id ? { ...p, ...updates } : p)))
+          setScreen('plantDetail')
+        }}
+      />
+    )
+  } else if (screen === 'growthFlow' && growthFlowPlant) {
+    const live = plants.find((p) => p.id === growthFlowPlant.id) || growthFlowPlant
+    content = (
+      <GrowthCheckScreen
+        plant={live}
+        onBack={() => { setGrowthFlowPlant(null); setScreen('plantDetail') }}
+        onSave={(entry) => {
+          setPlants((prev) => prev.map((p) => (p.id === live.id ? { ...p, history: [entry, ...plantHistory(p)] } : p)))
+        }}
+      />
+    )
   } else {
     let tabContent: React.ReactNode
     if (tab === 'home') {
@@ -1828,13 +2197,13 @@ export default function App() {
     } else {
       tabContent = (
         <ProfileScreen
-          plants={plants}
           settings={settings}
           user={user}
           onSave={setSettings}
           onExport={handleExport}
           onReset={handleReset}
           onShowPro={() => setScreen('proUnlock')}
+          onOpenLegal={(doc) => { setLegalDoc(doc); setScreen('legal') }}
         />
       )
     }

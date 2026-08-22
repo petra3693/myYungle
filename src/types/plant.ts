@@ -71,6 +71,9 @@ export interface HistoryEntry {
   note: string
   photo: string
   heightCm?: number
+  estimatedAge?: string
+  condition?: string
+  analyzedByAI?: boolean
 }
 
 export interface PlantHealthLog {
@@ -127,6 +130,5 @@ export interface AppSettings {
   hapticFeedback: boolean
   timezoneAutoSync: boolean
   timezone: string
-  darkMode: boolean
   isPro: boolean
 }

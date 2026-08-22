@@ -67,7 +67,8 @@ function analyzePlantApiDevPlugin(env: Record<string, string>): Plugin {
       const url = req.url?.split('?')[0]
       const isPlantRoute = url === '/api/analyze-plant'
       const isHealthRoute = url === '/api/analyze-plant-health'
-      if (!isPlantRoute && !isHealthRoute) return next()
+      const isGrowthRoute = url === '/api/analyze-plant-growth'
+      if (!isPlantRoute && !isHealthRoute && !isGrowthRoute) return next()
 
       if (req.method !== 'POST') {
         res.statusCode = 405
@@ -112,9 +113,12 @@ function analyzePlantApiDevPlugin(env: Record<string, string>): Plugin {
 
         const { handleAnalyzePlantRequest } = await import('./src/server/analyzePlantHandler.ts')
         const { handleAnalyzePlantHealthRequest } = await import('./src/server/analyzePlantHealthHandler.ts')
+        const { handleAnalyzePlantGrowthRequest } = await import('./src/server/analyzePlantGrowthHandler.ts')
         const result = isHealthRoute
           ? await handleAnalyzePlantHealthRequest(body)
-          : await handleAnalyzePlantRequest(body)
+          : isGrowthRoute
+            ? await handleAnalyzePlantGrowthRequest(body)
+            : await handleAnalyzePlantRequest(body)
         res.statusCode = result.status
         res.setHeader('Content-Type', 'application/json')
         res.end(JSON.stringify(result.body))
@@ -122,7 +126,7 @@ function analyzePlantApiDevPlugin(env: Record<string, string>): Plugin {
         console.error('[myJungle] analyze-plant dev route error:', error)
         res.statusCode = 500
         res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify({ error: isHealthRoute ? 'Failed to analyze plant health' : 'Failed to analyze plant image' }))
+        res.end(JSON.stringify({ error: isHealthRoute ? 'Failed to analyze plant health' : isGrowthRoute ? 'Failed to analyze plant growth' : 'Failed to analyze plant image' }))
       }
     })
   }
