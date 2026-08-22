@@ -37,8 +37,8 @@
   --color-surface-2: #2c2c2e;
   --color-card: #ffffff;
   --color-card-muted: #ececE6;
-  --color-green: #00ff66;
-  --color-green-dim: #0e3d22;
+  --color-green: #b7ff00;
+  --color-green-dim: #263300;
   --color-text: #ffffff;
   --color-text-dim: #8e8e93;
   --color-ink: #111111;
@@ -93,7 +93,7 @@
     background: var(--color-card);
     border-radius: 1.75rem;
     color: var(--color-ink);
-    border: var(--border-thick);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
 
   .surface-dark {
@@ -114,7 +114,7 @@
     border-radius: 9999px;
     background: var(--color-green);
     color: #000000;
-    border: var(--border-thick);
+    border: none;
     cursor: pointer;
     transition: transform 0.12s ease, opacity 0.12s ease;
   }
@@ -173,7 +173,7 @@
     height: 44px;
     border-radius: 9999px;
     background: var(--color-surface);
-    border: var(--border-thin);
+    border: none;
     flex-shrink: 0;
     cursor: pointer;
   }
@@ -189,7 +189,7 @@
     font-family: var(--font-heading);
     font-weight: 700;
     cursor: pointer;
-    border: var(--border-thin);
+    border: none;
     transition: background 0.15s ease, color 0.15s ease;
   }
   .day-pill.is-active {
@@ -204,7 +204,7 @@
     height: 30px;
     border-radius: 9999px;
     background: var(--color-surface-2);
-    border: var(--border-thin);
+    border: none;
     flex-shrink: 0;
     cursor: pointer;
     transition: background 0.15s ease;
@@ -225,13 +225,13 @@
   /* ── Stat tiles ── */
   .stat-tile {
     background: var(--color-surface);
-    border-radius: 1.25rem;
-    padding: 1rem 0.9rem;
+    border-radius: 1.5rem;
+    padding: 1.1rem 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
     min-width: 0;
-    border: var(--border-thick);
+    border: none;
   }
   .stat-tile__value {
     font-family: var(--font-heading);
@@ -284,13 +284,14 @@
     border-radius: 1.5rem;
     padding: 0.6rem 0.9rem;
     cursor: pointer;
-    border: var(--border-thick);
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
   .check-circle {
     width: 26px;
     height: 26px;
     border-radius: 9999px;
-    border: 2px solid #000000;
+    border: 1.5px solid #d4d4d4;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -334,7 +335,7 @@
 
   /* ── Upload / dashed picker ── */
   .dash-picker {
-    border: 3px dashed #000000;
+    border: 2px dashed rgba(255, 255, 255, 0.3);
     border-radius: 1.5rem;
     background: var(--color-surface);
     display: flex;
@@ -376,8 +377,8 @@
     cursor: pointer;
     color: #000000;
     background: var(--color-card);
-    border: var(--border-thick);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
     flex-shrink: 0;
   }
   .tab-bar__item.is-active {

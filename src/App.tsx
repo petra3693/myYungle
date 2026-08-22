@@ -18,11 +18,12 @@ import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, t
 import { clearAllPhotos, deletePlantPhotos } from '@/lib/photoStore'
 import { MAX_FREE_PLANTS, canAccessProFeatures, canAddMorePlants } from '@/lib/proAccess'
 import { useUserState } from '@/hooks/useUserState'
+import { LANGUAGE_OPTIONS, LANGUAGE_STORAGE_KEY, normalizeAppLanguage, type AppLanguage } from '@/i18n/languages'
 import type { AppSettings, DayCode, HistoryEntry, LightNeed, Plant, PlantHealthLog, UserState, WaterNeed, WateringFrequency } from '@/types/plant'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const GREEN = '#00FF66'
+const GREEN = '#B7FF00'
 const DAYS: DayCode[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 const FULL_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const APP_VERSION = '1.0.0'
@@ -118,6 +119,27 @@ function saveSettings(s: AppSettings) {
   }
 }
 
+const LANGUAGE_NAMES: Record<AppLanguage, string> = {
+  en: 'English', de: 'German', hu: 'Hungarian', es: 'Spanish', fr: 'French',
+  it: 'Italian', pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', ja: 'Japanese', zh: 'Chinese',
+}
+
+function loadLanguage(): AppLanguage {
+  try {
+    return normalizeAppLanguage(localStorage.getItem(LANGUAGE_STORAGE_KEY))
+  } catch {
+    return 'en'
+  }
+}
+
+function saveLanguage(l: AppLanguage) {
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, l)
+  } catch (error) {
+    console.error('[myJungle] Failed to save language:', error)
+  }
+}
+
 function plantHistory(plant: Plant): HistoryEntry[] {
   return Array.isArray(plant.history) ? plant.history : []
 }
@@ -195,6 +217,7 @@ const IconDroplets = (p: { size?: number }) => <Icon {...p}><path d="M7 16a4 4 0
 const IconCalendarSmall = (p: { size?: number }) => <Icon {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18" /></Icon>
 const IconDotsHorizontal = (p: { size?: number }) => <Icon {...p}><circle cx="5" cy="12" r="1.5" fill="currentColor" /><circle cx="12" cy="12" r="1.5" fill="currentColor" /><circle cx="19" cy="12" r="1.5" fill="currentColor" /></Icon>
 const IconChevronRight = (p: { size?: number }) => <Icon {...p}><path d="M9 5l7 7-7 7" /></Icon>
+const IconGlobe = (p: { size?: number }) => <Icon {...p}><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z" /></Icon>
 
 // ─── Small building blocks ───────────────────────────────────────────────────
 
@@ -297,7 +320,7 @@ const ONBOARDING_STEPS = [
   { icon: IconLeaf, text: 'AI spots it when a plant gets sick', pro: true },
 ]
 
-function OnboardingWelcome({ onNext }: { onNext: () => void }) {
+function OnboardingWelcome({ onNext, language, onPickLanguage }: { onNext: () => void; language: AppLanguage; onPickLanguage: () => void }) {
   return (
     <div className="app-shell-light fixed inset-0 flex flex-col px-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
       <div style={{ height: 40 }} />
@@ -306,7 +329,7 @@ function OnboardingWelcome({ onNext }: { onNext: () => void }) {
       </h1>
       <div className="flex flex-col gap-4 mt-8 flex-1">
         {ONBOARDING_STEPS.map((step, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-full px-5" style={{ background: '#000', border: 'var(--border-thick)', height: 64 }}>
+          <div key={i} className="flex items-center gap-3 rounded-full px-5" style={{ background: '#000', height: 64 }}>
             <div style={{ color: GREEN }}>
               <step.icon size={20} />
             </div>
@@ -319,6 +342,16 @@ function OnboardingWelcome({ onNext }: { onNext: () => void }) {
           </div>
         ))}
       </div>
+      <button
+        type="button"
+        onClick={onPickLanguage}
+        className="flex items-center gap-3 rounded-full px-5 mb-4"
+        style={{ background: '#f0f0ec', height: 56 }}
+      >
+        <IconGlobe size={18} />
+        <span className="font-body flex-1 text-left" style={{ fontSize: 15, color: '#111' }}>{LANGUAGE_NAMES[language]}</span>
+        <IconChevronDown size={18} />
+      </button>
       <button type="button" onClick={onNext} className="btn-fill btn-forward w-full" style={{ height: 56, fontSize: 16 }}>
         Get started
         <span className="btn-forward__arrow"><IconChevronRight size={20} /></span>
@@ -364,23 +397,21 @@ function BatchCaptureScreen({
 
   const slotsCells = Math.max(6, photos.length + (atLimit ? 0 : 1))
 
+  const lockedCells = freeSlots !== null && !atLimit ? 1 : 0
+
   return (
     <div className="app-shell-light fixed inset-0 flex flex-col">
       <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { void handleFiles(e.target.files); e.target.value = '' }} />
-      <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-4 shrink-0">
+      <div className="flex items-center px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-4 shrink-0">
         {onBack ? <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn> : <div style={{ width: 44 }} />}
-        <span className="font-body" style={{ fontSize: 14, color: '#666' }}>
-          {freeSlots !== null ? `${Math.max(0, limit - photos.length)} free slot${limit - photos.length === 1 ? '' : 's'} left` : `${photos.length} photos — no upper limit`}
-        </span>
       </div>
       <div className="px-5 shrink-0">
-        <h1 className="font-heading" style={{ fontSize: 24, color: '#000' }}>{title}</h1>
-        <p className="font-body" style={{ fontSize: 14, color: '#666', marginTop: 4 }}>{subtitle}</p>
+        <p className="font-body" style={{ fontSize: 14, color: '#666' }}>{subtitle}</p>
       </div>
       <div className="scroll-y flex-1 px-5 pt-4 pb-4">
         <div className="grid grid-cols-2 gap-3">
           {photos.map((p) => (
-            <div key={p.id} className="relative rounded-[1.5rem] overflow-hidden" style={{ aspectRatio: '1/1', border: 'var(--border-thick)' }}>
+            <div key={p.id} className="relative rounded-[1.5rem] overflow-hidden" style={{ aspectRatio: '1/1' }}>
               <img src={p.dataUrl} alt="" className="w-full h-full object-cover" />
               <button
                 type="button"
@@ -398,19 +429,35 @@ function BatchCaptureScreen({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="rounded-[1.5rem] flex flex-col items-center justify-center gap-2"
-              style={{ aspectRatio: '1/1', background: '#ececE6', border: 'var(--border-thick)' }}
+              style={{ aspectRatio: '1/1', background: '#f0f0ec' }}
               disabled={busy}
             >
-              <IconCamera size={26} />
+              <div className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, border: '1.5px solid #bbb' }}>
+                <IconCamera size={18} />
+              </div>
               <span className="font-body" style={{ fontSize: 13, color: '#000' }}>{busy ? 'Adding…' : 'Add photo'}</span>
             </button>
           )}
-          {Array.from({ length: Math.max(0, slotsCells - photos.length - (atLimit ? 0 : 1)) }).map((_, i) => (
-            <div key={`empty-${i}`} className="rounded-[1.5rem]" style={{ aspectRatio: '1/1', background: '#ececE6', border: 'var(--border-thick)', opacity: 0.5 }} />
+          {Array.from({ length: Math.max(0, slotsCells - photos.length - (atLimit ? 0 : 1) - lockedCells) }).map((_, i) => (
+            <div key={`empty-${i}`} className="rounded-[1.5rem]" style={{ aspectRatio: '1/1', background: '#f0f0ec' }} />
           ))}
+          {lockedCells > 0 && (
+            <div className="rounded-[1.5rem] flex items-center justify-center" style={{ aspectRatio: '1/1', background: '#f0f0ec' }}>
+              <div style={{ color: '#999' }}><IconLock size={22} /></div>
+            </div>
+          )}
         </div>
       </div>
       <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
+        {freeSlots !== null && (
+          <p className="font-body text-center" style={{ fontSize: 13, color: '#8E8E93', marginBottom: 6 }}>
+            {photos.length}/{freeSlots} captured (free)
+          </p>
+        )}
+        <div className="flex items-center justify-center gap-2" style={{ marginBottom: 12 }}>
+          <div style={{ color: GREEN }}><IconCheck size={14} /></div>
+          <span className="font-body" style={{ fontSize: 12, color: '#666' }}>Health &amp; growth based on scan — Pro unlocks it</span>
+        </div>
         <button
           type="button"
           disabled={photos.length === 0}
@@ -478,9 +525,9 @@ async function requestNotificationPermission(): Promise<void> {
   }
 }
 
-async function identifyPhoto(dataUrl: string): Promise<DraftPlant> {
+async function identifyPhoto(dataUrl: string, language: AppLanguage = 'en'): Promise<DraftPlant> {
   try {
-    const result = await analyzePlantImage(dataUrl, [])
+    const result = await analyzePlantImage(dataUrl, [], language)
     if (!result.ok) {
       return { photo: dataUrl, ...FALLBACK_DRAFT_BASE }
     }
@@ -526,7 +573,7 @@ function AnalysisResultScreen({ drafts, onDone }: { drafts: DraftPlant[]; onDone
       <div className="scroll-y flex-1 px-5 flex flex-col gap-3 pb-4">
         {drafts.map((d, i) => (
           <div key={i} className="card-white flex items-center gap-3 p-3">
-            <img src={d.photo} alt="" className="rounded-2xl object-cover shrink-0" style={{ width: 56, height: 56 }} />
+            <img src={d.photo} alt="" className="rounded-full object-cover shrink-0" style={{ width: 56, height: 56 }} />
             <span className="font-heading flex-1 min-w-0 truncate" style={{ fontSize: 18 }}>{d.name}</span>
             <span className="font-heading" style={{ fontSize: 18, color: '#8E8E93' }}>{d.confidence}%</span>
           </div>
@@ -614,60 +661,47 @@ function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayI
   const thirsty = plants.filter((p) => isPlantDueToday(p, todayIdx) && !p.isWateredToday).length
   const healthScores = plants.map((p) => computeHealthStatus(p, todayIdx).score)
   const avgHealth = healthScores.length > 0 ? Math.round(healthScores.reduce((a, b) => a + b, 0) / healthScores.length) : 0
-  const alerts = healthScores.filter((s) => s < 70).length
   return (
     <div className="app-shell-light scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
       <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2">
-          <div style={{ color: '#000' }}>
-            <svg width="20" height="24" viewBox="0 0 85 116" fill="currentColor">
-              <path d="M42.5 2.9C45.9 16.9 53.7 29.9 63.9 38.2l1.1 0.9C77.4 48.9 83 59.4 83 71.9c0 11-4.4 21.6-12.1 29.4C63.2 109 52.6 113.4 42.5 113.4S21.8 109 14 101.3C6.3 93.5 1.9 82.9 1.9 71.9c0-11.6 5.7-22.7 17.2-32.2l1.1-0.9C29.5 29.9 39.1 16.9 42.5 2.9z" />
-            </svg>
-          </div>
-          <h1 className="font-heading" style={{ fontSize: 22, color: '#000' }}>MyJungle</h1>
+        <h1 className="font-heading" style={{ fontSize: 22, color: '#000' }}>my Jungle</h1>
+        <div className="icon-circle" style={{ background: '#000' }} aria-hidden>
+          <div style={{ color: '#fff' }}><IconBell size={18} /></div>
         </div>
       </div>
+      <div className="stat-tile mb-3" style={{ background: GREEN, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span className="stat-tile__value" style={{ color: '#000' }}>{plants.length}</span>
+        <span className="stat-tile__label" style={{ color: '#000', opacity: 0.6 }}>Total plants</span>
+      </div>
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="stat-tile" style={{ background: GREEN, borderColor: '#000' }}>
-          <span className="stat-tile__value" style={{ color: '#000' }}>{plants.length}</span>
-          <span className="stat-tile__label" style={{ color: '#000', opacity: 0.6 }}>Total plants</span>
-        </div>
-        <div className="stat-tile" style={{ background: '#fff', borderColor: '#000' }}>
+        <div className="stat-tile" style={{ background: '#f0f0ec' }}>
           <span className="stat-tile__value" style={{ color: '#000' }}>{thirsty}</span>
           <span className="stat-tile__label" style={{ color: '#666' }}>Thirsty plants</span>
         </div>
-        <div className="stat-tile" style={{ background: '#000', borderColor: '#000' }}>
+        <div className="stat-tile" style={{ background: '#000' }}>
           <span className="stat-tile__value" style={{ color: GREEN }}>{avgHealth}%</span>
           <span className="stat-tile__label" style={{ color: '#8E8E93' }}>Avg. health</span>
         </div>
-        <div className="stat-tile" style={{ background: '#fff', borderColor: '#000' }}>
-          <span className="stat-tile__value" style={{ color: '#000' }}>{alerts}</span>
-          <span className="stat-tile__label" style={{ color: '#666' }}>Alerts active</span>
-        </div>
       </div>
-      <h2 className="font-heading mb-3" style={{ fontSize: 16, color: '#000', textTransform: 'uppercase' }}>Your plants</h2>
       {plants.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
           <div style={{ color: '#c7c7cc' }}><IconLeaf size={40} /></div>
           <p className="font-body" style={{ fontSize: 14, color: '#666' }}>No plants yet. Tap + to add your jungle.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {plants.map((p) => {
             const status = nextWaterStatus(p, todayIdx)
-            const health = computeHealthStatus(p, todayIdx)
             return (
-              <button key={p.id} type="button" onClick={() => onOpenPlant(p)} className="check-row text-left">
-                <PlantPhoto photo={p.photo} alt={p.name} className="rounded-2xl object-cover shrink-0 w-14 h-14" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-heading truncate" style={{ fontSize: 16, color: '#111' }}>{p.name}</div>
-                  {p.category && <div className="font-body truncate" style={{ fontSize: 12, color: '#8E8E93' }}>{p.category}</div>}
+              <button key={p.id} type="button" onClick={() => onOpenPlant(p)} className="plant-tile text-left">
+                <PlantPhoto photo={p.photo} alt={p.name} className="w-full h-full object-cover block" />
+                <div className="plant-tile__label">
+                  <div className="font-heading truncate" style={{ fontSize: 15, color: '#111' }}>{p.name}</div>
                   <div className="flex items-center gap-1.5 mt-1">
                     <span style={{ width: 6, height: 6, borderRadius: 9999, background: status.dotColor, flexShrink: 0 }} />
-                    <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>{status.label} · Health: {health.score}%</span>
+                    <span className="font-body truncate" style={{ fontSize: 11, color: '#8E8E93' }}>{status.label}</span>
                   </div>
                 </div>
-                <div style={{ color: '#8E8E93' }}><IconChevronRight size={18} /></div>
               </button>
             )
           })}
@@ -691,8 +725,8 @@ function DaysScreen({ plants, todayIdx, onToggleWatered }: { plants: Plant[]; to
 
   return (
     <div className="scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
-      <h1 className="font-heading" style={{ fontSize: 24, color: '#fff' }}>Watering days</h1>
-      <p className="font-body" style={{ fontSize: 14, color: '#8E8E93', marginTop: 4, marginBottom: 20 }}>
+      <h1 className="font-heading text-center" style={{ fontSize: 20, color: '#fff', textTransform: 'uppercase' }}>Watering days</h1>
+      <p className="font-body" style={{ fontSize: 14, color: '#8E8E93', marginTop: 8, marginBottom: 20 }}>
         The system grouped your {plants.length} plant{plants.length === 1 ? '' : 's'} into {groupedDays.size} day{groupedDays.size === 1 ? '' : 's'}.
       </p>
       <div className="flex justify-between gap-2 mb-6">
@@ -712,7 +746,7 @@ function DaysScreen({ plants, todayIdx, onToggleWatered }: { plants: Plant[]; to
         )}
         {duePlants.map((p) => (
           <button key={p.id} type="button" onClick={() => onToggleWatered(p.id)} className="check-row text-left">
-            <PlantPhoto photo={p.photo} alt="" className="rounded-2xl object-cover shrink-0 w-12 h-12" />
+            <PlantPhoto photo={p.photo} alt="" className="rounded-full object-cover shrink-0 w-12 h-12" />
             <span className="font-heading flex-1 min-w-0 truncate" style={{ fontSize: 17, color: '#111' }}>{p.name}</span>
             <div className={`check-circle ${p.isWateredToday ? 'is-checked' : ''}`}>
               {p.isWateredToday && <IconCheck size={14} />}
@@ -740,17 +774,19 @@ function PlantDetailScreen({
   const health = computeHealthStatus(plant, todayIdx)
 
   return (
-    <div className="app-shell-light fixed inset-0 flex flex-col">
+    <div className="app-shell fixed inset-0 flex flex-col">
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
         <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
-        <span className="font-heading truncate px-2" style={{ fontSize: 16, color: '#000', textTransform: 'uppercase' }}>{plant.name}</span>
+        <span className="font-heading truncate px-2" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Plant detail</span>
         <IconCircleBtn onClick={() => setShowActions(true)} label="More options"><IconDotsHorizontal /></IconCircleBtn>
       </div>
-      <div className="scroll-y flex-1 px-5 pb-6">
-        <div className="rounded-[1.5rem] overflow-hidden mb-4" style={{ height: 240, border: 'var(--border-thick)' }}>
-          <PlantPhoto photo={plant.photo} alt={plant.name} className="w-full h-full object-cover" />
+      <div className="scroll-y flex-1 pb-6">
+        <div className="px-5" style={{ height: 220 }}>
+          <div className="rounded-[1.5rem] overflow-hidden w-full h-full">
+            <PlantPhoto photo={plant.photo} alt={plant.name} className="w-full h-full object-cover" />
+          </div>
         </div>
-        <div className="card-white p-5 flex flex-col gap-4">
+        <div className="card-white mx-5 p-5 flex flex-col gap-4 mt-4">
           <div className="flex items-start justify-between gap-2">
             <div>
               <div className="font-heading" style={{ fontSize: 26 }}>{plant.name}</div>
@@ -786,22 +822,22 @@ function PlantDetailScreen({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5', border: '2px solid #000' }}>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
               <div style={{ color: '#000' }}><IconDroplet size={16} /></div>
               <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{timesPerWeek}x/week</span>
               <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Watering</span>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5', border: '2px solid #000' }}>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
               <div style={{ color: '#000' }}><IconSun size={16} /></div>
               <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{plant.lightNeed === 'High' ? 'Direct' : plant.lightNeed === 'Low' ? 'Shade' : 'Indirect'}</span>
               <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Light need</span>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5', border: '2px solid #000' }}>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
               <div style={{ color: '#000' }}><IconThermometer size={16} /></div>
               <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{plant.temperatureRangeC ?? '18-27°C'}</span>
               <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Temperature</span>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5', border: '2px solid #000' }}>
+            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
               <div style={{ color: '#000' }}><IconDroplets size={16} /></div>
               <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{plant.humidityNeed === 'high' ? 'High (60%+)' : plant.humidityNeed === 'low' ? 'Low' : 'Normal'}</span>
               <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Humidity</span>
@@ -811,7 +847,7 @@ function PlantDetailScreen({
           <div>
             <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Watering schedule</span>
             <div className="flex items-center gap-2 mt-2">
-              <span className="font-heading" style={{ fontSize: 11, background: '#000', color: GREEN, borderRadius: 8, padding: '4px 8px' }}>
+              <span className="font-heading" style={{ fontSize: 11, background: GREEN, color: '#000', borderRadius: 8, padding: '4px 8px' }}>
                 {plant.isWateredToday ? 'DONE' : isPlantDueToday(plant, todayIdx) ? 'TODAY' : (plant.scheduleDays[0] ?? '—')}
               </span>
               <div style={{ flex: 1, height: 1, background: '#eee' }} />
@@ -848,7 +884,7 @@ function PlantDetailScreen({
                           onClick={() => setExpandedLog(isOpen ? null : log.id)}
                           className="flex items-center gap-3 w-full p-3 text-left"
                         >
-                          <span className="font-heading shrink-0" style={{ fontSize: 11, background: '#111', color: GREEN, borderRadius: 8, padding: '4px 8px' }}>
+                          <span className="font-heading shrink-0" style={{ fontSize: 11, background: GREEN, color: '#000', borderRadius: 8, padding: '4px 8px' }}>
                             {new Date(log.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase()}
                           </span>
                           <span style={{ width: 6, height: 6, borderRadius: 9999, background: healthScoreColor(log.healthScore), flexShrink: 0 }} />
@@ -899,7 +935,7 @@ function PlantDetailScreen({
                     <PlantPhoto photo={entry.photo} alt="" className="rounded-xl object-cover shrink-0 w-12 h-12" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-heading shrink-0" style={{ fontSize: 11, background: '#111', color: GREEN, borderRadius: 8, padding: '3px 7px' }}>
+                        <span className="font-heading shrink-0" style={{ fontSize: 11, background: GREEN, color: '#000', borderRadius: 8, padding: '3px 7px' }}>
                           {new Date(entry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase()}
                         </span>
                         {entry.heightCm !== undefined && entry.heightCm > 0 && (
@@ -993,6 +1029,34 @@ function ConfirmSheet({ title, body, confirmLabel, danger, onCancel, onConfirm }
               {confirmLabel}
             </button>
           </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function LanguagePickerSheet({ current, onSelect, onClose }: { current: AppLanguage; onSelect: (l: AppLanguage) => void; onClose: () => void }) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
+  function close(action?: () => void) { setOpen(false); setTimeout(() => action?.(), 180) }
+  return (
+    <>
+      <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onClose)} />
+      <div className="fixed left-0 right-0 bottom-0 z-[70]">
+        <div className={`sheet-panel ${open ? 'is-open' : ''} p-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-1`} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          <span className="font-body block px-3 pt-2 pb-1" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Language</span>
+          {LANGUAGE_OPTIONS.map((opt) => (
+            <button
+              key={opt.code}
+              type="button"
+              onClick={() => close(() => onSelect(opt.code))}
+              className="font-heading text-left px-4 py-3 flex items-center justify-between"
+              style={{ fontSize: 16 }}
+            >
+              {LANGUAGE_NAMES[opt.code]}
+              {opt.code === current && <IconCheck size={18} />}
+            </button>
+          ))}
         </div>
       </div>
     </>
@@ -1093,8 +1157,8 @@ function EditPlantScreen({ plant, onBack, onSave }: {
 
 // ─── Screen: Manual add (single, AI-assisted) ──────────────────────────────────
 
-function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro }: {
-  onBack: () => void; onAdd: (draft: DraftPlant) => void; remainingFreeSlots: number; isPro: boolean
+function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language }: {
+  onBack: () => void; onAdd: (draft: DraftPlant) => void; remainingFreeSlots: number; isPro: boolean; language: AppLanguage
 }) {
   const [photo, setPhoto] = useState<string | null>(null)
   const [draft, setDraft] = useState<DraftPlant | null>(null)
@@ -1109,7 +1173,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro }: {
       setPhoto(compressed)
       setDraft(null)
       setAnalyzing(true)
-      const result = await withMinDelay(identifyPhoto(compressed), 700)
+      const result = await withMinDelay(identifyPhoto(compressed, language), 700)
       setDraft(result)
     } catch (error) {
       console.error('[myJungle] manual add analyze failed:', error)
@@ -1172,7 +1236,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro }: {
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   className="font-heading px-4"
-                  style={{ height: 48, fontSize: 16, color: '#111', background: '#f5f5f5', borderRadius: 14, border: '2px solid #000' }}
+                  style={{ height: 48, fontSize: 16, color: '#111', background: '#f5f5f5', borderRadius: 14 }}
                 />
               </label>
 
@@ -1182,7 +1246,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro }: {
                   value={draft.category}
                   onChange={(e) => setDraft({ ...draft, category: e.target.value })}
                   className="font-body px-4"
-                  style={{ height: 48, fontSize: 15, color: '#111', background: '#f5f5f5', borderRadius: 14, border: '2px solid #000' }}
+                  style={{ height: 48, fontSize: 15, color: '#111', background: '#f5f5f5', borderRadius: 14 }}
                 >
                   {PLANT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -1359,9 +1423,9 @@ function HealthHubScreen({ plants, isPro, onScanNew, onCheckExisting, onOpenPlan
   )
 }
 
-function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, onDone }: {
+function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, onDone, language }: {
   plants: Plant[]; mode: 'new' | 'existing'; presetPlant: Plant | null
-  onBack: () => void; onSaveLog: (plantId: string, log: PlantHealthLog) => void; onDone: () => void
+  onBack: () => void; onSaveLog: (plantId: string, log: PlantHealthLog) => void; onDone: () => void; language: AppLanguage
 }) {
   const [step, setStep] = useState<'picker' | 'capture'>(mode === 'existing' && !presetPlant ? 'picker' : 'capture')
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(presetPlant)
@@ -1383,7 +1447,7 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
       setError(null)
       setSaved(false)
       setAnalyzing(true)
-      const outcome = await withMinDelay(analyzePlantHealthImage(compressed), 700)
+      const outcome = await withMinDelay(analyzePlantHealthImage(compressed, language), 700)
       if (outcome.ok) {
         setResult(outcome.data)
         setScannedAt(new Date().toISOString())
@@ -1543,8 +1607,8 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
   )
 }
 
-function GrowthCheckScreen({ plant, onBack, onSave }: {
-  plant: Plant; onBack: () => void; onSave: (entry: HistoryEntry) => void
+function GrowthCheckScreen({ plant, onBack, onSave, language }: {
+  plant: Plant; onBack: () => void; onSave: (entry: HistoryEntry) => void; language: AppLanguage
 }) {
   const [photo, setPhoto] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
@@ -1562,7 +1626,7 @@ function GrowthCheckScreen({ plant, onBack, onSave }: {
       setError(null)
       setSaved(false)
       setAnalyzing(true)
-      const outcome = await withMinDelay(analyzePlantGrowthImage(compressed), 700)
+      const outcome = await withMinDelay(analyzePlantGrowthImage(compressed, language), 700)
       if (outcome.ok) {
         setResult(outcome.data)
       } else {
@@ -1694,9 +1758,10 @@ function GrowthCheckScreen({ plant, onBack, onSave }: {
 
 // ─── Screen: Profile ────────────────────────────────────────────────────────
 
-function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, onOpenLegal }: {
+function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, onOpenLegal, language, onPickLanguage }: {
   settings: AppSettings; user: UserState; onSave: (s: AppSettings) => void
   onExport: () => void; onReset: () => void; onShowPro: () => void; onOpenLegal: (doc: LegalDoc) => void
+  language: AppLanguage; onPickLanguage: () => void
 }) {
   const [showNotifSettings, setShowNotifSettings] = useState(false)
 
@@ -1710,36 +1775,43 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
         </button>
       )}
       <span className="font-body block" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, marginTop: 20 }}>Settings &amp; configuration</span>
-      <div className="card-white overflow-hidden" style={{ background: '#000', color: '#fff' }}>
-        <button type="button" onClick={() => setShowNotifSettings((v) => !v)} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #333' }}>
-          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Notification preferences</span>
-          <span style={{ color: '#fff', transform: showNotifSettings ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}><IconChevronLeft size={16} /></span>
+      <div className="card-white overflow-hidden">
+        <button type="button" onClick={() => setShowNotifSettings((v) => !v)} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Notification preferences</span>
+          <span style={{ color: '#111', transform: showNotifSettings ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}><IconChevronRight size={16} /></span>
         </button>
         {showNotifSettings && (
-          <div className="px-5 py-4 flex flex-col gap-4" style={{ borderBottom: '1px solid #333' }}>
+          <div className="px-5 py-4 flex flex-col gap-4" style={{ borderBottom: '1px solid #eee' }}>
             <div className="flex items-center justify-between">
-              <span className="font-body" style={{ fontSize: 14, color: '#fff' }}>Reminder time</span>
+              <span className="font-body" style={{ fontSize: 14, color: '#111' }}>Reminder time</span>
               <input
                 type="time"
                 value={settings.reminderTime}
                 onChange={(e) => onSave({ ...settings, reminderTime: e.target.value })}
                 className="font-body"
-                style={{ fontSize: 14, border: '2px solid #fff', borderRadius: 8, padding: '4px 8px', background: '#000', color: '#fff' }}
+                style={{ fontSize: 14, border: 'none', borderRadius: 8, padding: '4px 8px', background: '#f0f0ec', color: '#111' }}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-body" style={{ fontSize: 14, color: '#fff' }}>Sound alerts</span>
+              <span className="font-body" style={{ fontSize: 14, color: '#111' }}>Sound alerts</span>
               <Toggle on={settings.soundAlerts} onChange={(v) => onSave({ ...settings, soundAlerts: v })} />
             </div>
           </div>
         )}
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #333' }}>
-          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Watering reminders</span>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Watering reminders</span>
           <Toggle on={settings.pushNotifications} onChange={(v) => onSave({ ...settings, pushNotifications: v })} />
         </div>
-        <button type="button" onClick={onExport} className="flex items-center gap-3 w-full px-5 py-4" style={{ borderBottom: '1px solid #333' }}>
-          <div style={{ color: '#fff' }}><IconDownload size={18} /></div>
-          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Export my data</span>
+        <button type="button" onClick={onPickLanguage} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Language</span>
+          <span className="flex items-center gap-1.5">
+            <span className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>{LANGUAGE_NAMES[language]}</span>
+            <div style={{ color: '#111' }}><IconChevronRight size={16} /></div>
+          </span>
+        </button>
+        <button type="button" onClick={onExport} className="flex items-center gap-3 w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <div style={{ color: '#111' }}><IconDownload size={18} /></div>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Export my data</span>
         </button>
         <button type="button" onClick={onReset} className="flex items-center gap-3 w-full px-5 py-4" style={{ color: '#FF3B30' }}>
           <IconTrash size={18} />
@@ -1748,18 +1820,18 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
       </div>
 
       <span className="font-body block" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, marginTop: 20 }}>Legal</span>
-      <div className="card-white overflow-hidden" style={{ background: '#000', color: '#fff' }}>
-        <button type="button" onClick={() => onOpenLegal('terms')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #333' }}>
-          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Terms of Use</span>
-          <div style={{ color: '#fff' }}><IconChevronRight size={16} /></div>
+      <div className="card-white overflow-hidden">
+        <button type="button" onClick={() => onOpenLegal('terms')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Terms of Use</span>
+          <div style={{ color: '#111' }}><IconChevronRight size={16} /></div>
         </button>
-        <button type="button" onClick={() => onOpenLegal('privacy')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #333' }}>
-          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Privacy Policy</span>
-          <div style={{ color: '#fff' }}><IconChevronRight size={16} /></div>
+        <button type="button" onClick={() => onOpenLegal('privacy')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Privacy Policy</span>
+          <div style={{ color: '#111' }}><IconChevronRight size={16} /></div>
         </button>
         <button type="button" onClick={() => onOpenLegal('impressum')} className="flex items-center justify-between w-full px-5 py-4">
-          <span className="font-heading" style={{ fontSize: 16, color: '#fff' }}>Impressum</span>
-          <div style={{ color: '#fff' }}><IconChevronRight size={16} /></div>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Impressum</span>
+          <div style={{ color: '#111' }}><IconChevronRight size={16} /></div>
         </button>
       </div>
 
@@ -1873,17 +1945,17 @@ function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock:
         <div style={{ width: 44 }} />
       </div>
       <div className="scroll-y flex-1 px-6 pb-6 flex flex-col items-center">
-        <div className="flex items-center justify-center rounded-full mb-6 mt-2" style={{ width: 88, height: 88, background: GREEN, border: 'var(--border-thick)' }}>
+        <div className="flex items-center justify-center rounded-full mb-6 mt-2" style={{ width: 88, height: 88, background: GREEN }}>
           <IconLock size={32} />
         </div>
 
         <div className="card-white w-full p-5">
-          <div className="grid grid-cols-2 rounded-2xl overflow-hidden" style={{ background: '#f5f5f5', border: '2px solid #000' }}>
+          <div className="grid grid-cols-2 rounded-2xl overflow-hidden" style={{ background: '#f5f5f5' }}>
             <div className="p-4 flex flex-col gap-1 items-start text-left">
               <span className="font-body" style={{ fontSize: 11, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Free plan</span>
               <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{MAX_FREE_PLANTS} plants limit</span>
             </div>
-            <div className="p-4 flex flex-col gap-1 items-start text-left" style={{ borderLeft: '2px solid #000' }}>
+            <div className="p-4 flex flex-col gap-1 items-start text-left" style={{ borderLeft: '1px solid #ddd' }}>
               <span className="font-body" style={{ fontSize: 11, color: '#0a8f3f', textTransform: 'uppercase', letterSpacing: 0.5 }}>Pro membership</span>
               <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>Unlimited plants</span>
             </div>
@@ -1926,6 +1998,8 @@ export default function App() {
   const [healthFlowConfig, setHealthFlowConfig] = useState<{ mode: 'new' | 'existing'; presetPlant: Plant | null } | null>(null)
   const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null)
   const [growthFlowPlant, setGrowthFlowPlant] = useState<Plant | null>(null)
+  const [language, setLanguage] = useState<AppLanguage>(loadLanguage)
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false)
   const user = useUserState(settings)
   const todayIdx = getTodayDayIndex()
 
@@ -2050,7 +2124,13 @@ export default function App() {
   if (screen === 'splash') {
     content = <SplashScreen onNext={() => setScreen(settings.hasCompletedOnboarding ? 'main' : 'onboardingWelcome')} />
   } else if (screen === 'onboardingWelcome') {
-    content = <OnboardingWelcome onNext={() => setScreen('onboardingCapture')} />
+    content = (
+      <OnboardingWelcome
+        onNext={() => setScreen('onboardingCapture')}
+        language={language}
+        onPickLanguage={() => setShowLanguagePicker(true)}
+      />
+    )
   } else if (screen === 'onboardingCapture') {
     content = (
       <BatchCaptureScreen
@@ -2060,7 +2140,7 @@ export default function App() {
         doneLabel="Start AI analysis"
         onDone={(photos) => {
           setAiThinkingLabel(`Identifying ${photos.length} plant${photos.length === 1 ? '' : 's'}…`)
-          void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl))), 900).then((drafts) => {
+          void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl, language))), 900).then((drafts) => {
             setPendingDrafts(drafts)
             setAiThinkingLabel(null)
             setScreen('onboardingResult')
@@ -2102,6 +2182,7 @@ export default function App() {
     content = (
       <ManualAddScreen
         isPro={user.isPro}
+        language={language}
         remainingFreeSlots={Math.max(0, MAX_FREE_PLANTS - plants.length)}
         onBack={() => { setScreen('main'); setTab('home') }}
         onAdd={(draft) => {
@@ -2131,7 +2212,7 @@ export default function App() {
         onBack={() => { setScreen('main'); setTab('home') }}
         onDone={(photos) => {
           setAiThinkingLabel(`Identifying ${photos.length} plant${photos.length === 1 ? '' : 's'}…`)
-          void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl))), 900).then((drafts) => {
+          void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl, language))), 900).then((drafts) => {
             setPendingDrafts(drafts)
             setAiThinkingLabel(null)
             setScreen('bulkResult')
@@ -2157,6 +2238,7 @@ export default function App() {
         plants={plants}
         mode={healthFlowConfig.mode}
         presetPlant={healthFlowConfig.presetPlant}
+        language={language}
         onBack={() => { setHealthFlowConfig(null); setScreen('main'); setTab('health') }}
         onSaveLog={handleSaveHealthLog}
         onDone={() => { setHealthFlowConfig(null); setScreen('main'); setTab('health') }}
@@ -2181,6 +2263,7 @@ export default function App() {
     content = (
       <GrowthCheckScreen
         plant={live}
+        language={language}
         onBack={() => { setGrowthFlowPlant(null); setScreen('plantDetail') }}
         onSave={(entry) => {
           setPlants((prev) => prev.map((p) => (p.id === live.id ? { ...p, history: [entry, ...plantHistory(p)] } : p)))
@@ -2213,6 +2296,8 @@ export default function App() {
           onReset={handleReset}
           onShowPro={() => setScreen('proUnlock')}
           onOpenLegal={(doc) => { setLegalDoc(doc); setScreen('legal') }}
+          language={language}
+          onPickLanguage={() => setShowLanguagePicker(true)}
         />
       )
     }
@@ -2240,6 +2325,13 @@ export default function App() {
         <LimitReachedSheet
           onCancel={() => setShowLimitSheet(false)}
           onUnlock={() => { setShowLimitSheet(false); setScreen('proUnlock') }}
+        />
+      )}
+      {showLanguagePicker && (
+        <LanguagePickerSheet
+          current={language}
+          onClose={() => setShowLanguagePicker(false)}
+          onSelect={(l) => { setLanguage(l); saveLanguage(l); setShowLanguagePicker(false) }}
         />
       )}
     </div>
