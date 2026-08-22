@@ -191,7 +191,7 @@ function DayPill({ label, active, onClick, disabled }: { label: string; active: 
   )
 }
 
-const AI_THINKING_SCENE_URL = 'https://prod.spline.design/8qdv7wvWdhiLUVHw/scene.splinecode'
+const AI_THINKING_SCENE_URL = 'https://prod.spline.design/YnWkqNtTsc5YXUDA/scene.splinecode'
 
 function AiThinkingLoader({ size = 160 }: { size?: number }) {
   return (
