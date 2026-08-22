@@ -67,11 +67,12 @@ export function isPlantDueOnDay(
   const freq = plant.wateringFrequency ?? 'weekly'
   if (freq === 'weekly') return true
 
-  const refDayIdx = getTodayDayIndex(referenceDate)
-  if (refDayIdx !== dayIdx) return false
-
-  const anchor = plant.wateringCycleAnchor ?? referenceDate.toISOString()
-  const weeks = weeksSinceAnchor(anchor, referenceDate)
+  // Evaluate the cycle against the *inspected* day's own date, not just "today" —
+  // otherwise browsing forward in the week (dayIdx !== today) always came back
+  // false for biweekly/monthly plants, silently hiding them from the Days screen.
+  const inspectedDate = getDateForDayIndex(dayIdx, referenceDate)
+  const anchor = plant.wateringCycleAnchor ?? inspectedDate.toISOString()
+  const weeks = weeksSinceAnchor(anchor, inspectedDate)
 
   if (freq === 'biweekly') return weeks % 2 === 0
   return weeks % 4 === 0

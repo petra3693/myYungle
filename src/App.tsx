@@ -962,7 +962,7 @@ function PlantDetailScreen({
   const [showDelete, setShowDelete] = useState(false)
   const [expandedLog, setExpandedLog] = useState<string | null>(null)
   const hasAccess = canAccessProFeatures(user)
-  const timesPerWeek = plant.wateringFrequency === 'monthly' ? 1 : plant.wateringDays.length * (plant.wateringFrequency === 'biweekly' ? 0.5 : 1)
+  const wateringFrequencyLabel = frequencyLabel(plant.wateringFrequency, plant.wateringDays.length)
   const health = computeHealthStatus(plant, todayIdx)
 
   return (
@@ -1036,7 +1036,7 @@ function PlantDetailScreen({
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
               <div style={{ color: '#000' }}><IconDroplet size={16} /></div>
-              <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{timesPerWeek}x/week</span>
+              <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{wateringFrequencyLabel}</span>
               <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Watering</span>
             </div>
             <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
