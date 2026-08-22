@@ -325,7 +325,7 @@
     display: flex;
     align-items: stretch;
     justify-content: space-around;
-    background: var(--color-bg-true);
+    background: var(--color-card);
     border-radius: 9999px;
     padding: 8px 10px;
   }
@@ -339,7 +339,7 @@
     padding: 6px 0;
     border-radius: 9999px;
     cursor: pointer;
-    color: var(--color-text-dim);
+    color: var(--color-ink-dim);
   }
   .tab-bar__item.is-active { color: var(--color-green); }
   .tab-bar__label {
