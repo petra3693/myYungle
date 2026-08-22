@@ -31,13 +31,9 @@ const FULL_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 const APP_VERSION = '1.0.0'
 
 const DEFAULT_SETTINGS: AppSettings = {
-  globalWaterSchedule: [],
   hasCompletedOnboarding: false,
   pushNotifications: true,
   reminderTime: '09:00',
-  soundAlerts: true,
-  hapticFeedback: true,
-  timezoneAutoSync: true,
   timezone: 'UTC',
   isPro: false,
   primaryWateringDay: 0,
@@ -86,7 +82,6 @@ function normalizePlant(raw: Plant & Record<string, unknown>): Plant {
     lastWateredAt: raw.lastWateredAt ?? null,
     previousWateredAt: raw.previousWateredAt ?? null,
     history: Array.isArray(raw.history) ? raw.history : [],
-    checkIns: Array.isArray(raw.checkIns) ? raw.checkIns : [],
     healthLogs: Array.isArray(raw.healthLogs) ? raw.healthLogs : [],
     isWateredToday: raw.isWateredToday ?? false,
     isToxicToPets: raw.isToxicToPets === true ? true : raw.isToxicToPets === false ? false : null,
@@ -2005,10 +2000,6 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
                 style={{ fontSize: 14, border: 'none', borderRadius: 8, padding: '4px 8px', background: '#f0f0ec', color: '#111' }}
               />
             </div>
-            <div className="flex items-center justify-between">
-              <span className="font-body" style={{ fontSize: 14, color: '#111' }}>Sound alerts</span>
-              <Toggle on={settings.soundAlerts} onChange={(v) => onSave({ ...settings, soundAlerts: v })} />
-            </div>
           </div>
         )}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
@@ -2155,6 +2146,9 @@ const PRO_BENEFITS = [
 
 function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock: () => void }) {
   const [purchasing, setPurchasing] = useState(false)
+  const [restoring, setRestoring] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+
   async function handleUnlock() {
     setPurchasing(true)
     try {
@@ -2164,6 +2158,31 @@ function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock:
       setPurchasing(false)
     }
   }
+
+  function showToast(message: string) {
+    setToast(message)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  async function handleRestore() {
+    setRestoring(true)
+    try {
+      const { customerInfo } = await Purchases.restorePurchases()
+      const restored = Object.keys(customerInfo.entitlements.active).length > 0
+      if (restored) {
+        showToast('Purchase restored!')
+        onUnlock()
+      } else {
+        showToast('Nothing to restore.')
+      }
+    } catch (error) {
+      console.error('[myJungle] restore purchases failed:', error)
+      showToast('Could not restore purchases. Please try again.')
+    } finally {
+      setRestoring(false)
+    }
+  }
+
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-2 shrink-0">
@@ -2204,8 +2223,17 @@ function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock:
         <button type="button" onClick={() => void handleUnlock()} disabled={purchasing} className="btn-fill w-full mt-4" style={{ height: 56, fontSize: 16 }}>
           {purchasing ? 'Processing…' : 'Unlock forever'}
         </button>
-        <button type="button" onClick={() => void handleUnlock()} className="font-body underline mt-3" style={{ fontSize: 12, color: '#8E8E93' }}>Restore purchase</button>
+        <button type="button" onClick={() => void handleRestore()} disabled={restoring} className="font-body underline mt-3" style={{ fontSize: 12, color: '#8E8E93' }}>
+          {restoring ? 'Restoring…' : 'Restore purchase'}
+        </button>
       </div>
+      {toast && (
+        <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(24px + env(safe-area-inset-bottom,0px))' }}>
+          <div className="rounded-2xl px-4 py-3 text-center" style={{ background: '#fff' }}>
+            <span className="font-body" style={{ fontSize: 13, color: '#111' }}>{toast}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2318,7 +2346,6 @@ export default function App() {
       lastWateredAt: null,
       previousWateredAt: null,
       history: [],
-      checkIns: [],
       healthLogs: [],
       isWateredToday: false,
       isToxicToPets: d.isToxicToPets,

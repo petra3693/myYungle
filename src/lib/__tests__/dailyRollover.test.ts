@@ -19,7 +19,6 @@ function makePlant(overrides: Partial<Plant> = {}): Plant {
     lastWateredAt: null,
     previousWateredAt: null,
     history: [],
-    checkIns: [],
     healthLogs: [],
     isWateredToday: false,
     isToxicToPets: null,
