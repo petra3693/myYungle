@@ -1,8 +1,8 @@
 import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai'
 import { z } from 'zod'
-import { asJsonObject, parseAiJson } from '../lib/aiJson'
-import { languagePromptInstruction, normalizeAppLanguage, SUPPORTED_LANGUAGES } from '../i18n/languages'
-import { friendlyGeminiError, isImagePayloadError, toGeminiInlineDataPart } from './geminiImagePart'
+import { asJsonObject, parseAiJson } from '../lib/aiJson.js'
+import { languagePromptInstruction, normalizeAppLanguage, SUPPORTED_LANGUAGES } from '../i18n/languages.js'
+import { friendlyGeminiError, isImagePayloadError, toGeminiInlineDataPart } from './geminiImagePart.js'
 
 function clampHealthScore(score: number): number {
   return Math.max(0, Math.min(100, Math.round(score)))

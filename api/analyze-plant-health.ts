@@ -3,7 +3,7 @@ import {
   parseRequestBody,
   type VercelRequest,
   type VercelResponse,
-} from './_shared'
+} from './_shared.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -15,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       throw new Error('Missing GEMINI_API_KEY')
     }
 
-    const { handleAnalyzePlantHealthRequest } = await import('../src/server/analyzePlantHealthHandler')
+    const { handleAnalyzePlantHealthRequest } = await import('../src/server/analyzePlantHealthHandler.js')
     const result = await handleAnalyzePlantHealthRequest(parseRequestBody(req.body))
     return res.status(result.status).json(result.body)
   } catch (err) {
