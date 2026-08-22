@@ -375,7 +375,7 @@ function OnboardingWelcome({ onNext, language, onPickLanguage }: { onNext: () =>
 interface CapturedPhoto { id: string; dataUrl: string }
 
 function BatchCaptureScreen({
-  title, subtitle, freeSlots, onBack, onDone, doneLabel,
+  title, subtitle, freeSlots, onBack, onDone, doneLabel, onSkip,
 }: {
   title: string
   subtitle: string
@@ -383,6 +383,8 @@ function BatchCaptureScreen({
   onBack?: () => void
   onDone: (photos: CapturedPhoto[]) => void
   doneLabel: string
+  /** Only passed for onboarding's own capture step — bulk-add has no "skip", there's nothing to skip past. */
+  onSkip?: () => void
 }) {
   const [photos, setPhotos] = useState<CapturedPhoto[]>([])
   const [busy, setBusy] = useState(false)
@@ -407,8 +409,6 @@ function BatchCaptureScreen({
 
   const slotsCells = Math.max(6, photos.length + (atLimit ? 0 : 1))
 
-  const lockedCells = freeSlots !== null && !atLimit ? 1 : 0
-
   return (
     <div className="app-shell-light fixed inset-0 flex flex-col">
       <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { void handleFiles(e.target.files); e.target.value = '' }} />
@@ -417,6 +417,11 @@ function BatchCaptureScreen({
       </div>
       <div className="px-5 shrink-0">
         <p className="font-body" style={{ fontSize: 14, color: '#666' }}>{subtitle}</p>
+        {freeSlots !== null && (
+          <p className="font-body" style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+            {freeSlots} free plants — Pro removes the limit
+          </p>
+        )}
       </div>
       <div className="scroll-y flex-1 px-5 pt-4 pb-4">
         <div className="grid grid-cols-2 gap-3">
@@ -448,14 +453,9 @@ function BatchCaptureScreen({
               <span className="font-body" style={{ fontSize: 13, color: '#000' }}>{busy ? 'Adding…' : 'Add photo'}</span>
             </button>
           )}
-          {Array.from({ length: Math.max(0, slotsCells - photos.length - (atLimit ? 0 : 1) - lockedCells) }).map((_, i) => (
+          {Array.from({ length: Math.max(0, slotsCells - photos.length - (atLimit ? 0 : 1)) }).map((_, i) => (
             <div key={`empty-${i}`} className="rounded-[1.5rem]" style={{ aspectRatio: '1/1', background: '#f0f0ec' }} />
           ))}
-          {lockedCells > 0 && (
-            <div className="rounded-[1.5rem] flex items-center justify-center" style={{ aspectRatio: '1/1', background: '#f0f0ec' }}>
-              <div style={{ color: '#999' }}><IconLock size={22} /></div>
-            </div>
-          )}
         </div>
       </div>
       <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
@@ -478,6 +478,11 @@ function BatchCaptureScreen({
           {doneLabel}
           <span className="btn-forward__arrow"><IconChevronRight size={20} /></span>
         </button>
+        {onSkip && (
+          <button type="button" onClick={onSkip} className="font-body w-full text-center mt-3" style={{ fontSize: 13, color: '#8E8E93', textDecoration: 'underline' }}>
+            Skip for now
+          </button>
+        )}
       </div>
     </div>
   )
@@ -2384,6 +2389,11 @@ export default function App() {
             setAiThinkingLabel(null)
             setScreen('onboardingResult')
           })
+        }}
+        onSkip={() => {
+          setSettings((s) => ({ ...s, hasCompletedOnboarding: true }))
+          setScreen('main')
+          setTab('home')
         }}
       />
     )
