@@ -825,8 +825,8 @@ function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayI
           <span className="stat-tile__label" style={{ color: '#666' }}>Thirsty plants</span>
         </div>
         <div className="stat-tile" style={{ background: '#000' }}>
-          <span className="stat-tile__value" style={{ color: GREEN }}>{avgHealth}%</span>
-          <span className="stat-tile__label" style={{ color: '#8E8E93' }}>Avg. health</span>
+          <span className="stat-tile__value" style={{ color: GREEN }}>{plants.length === 0 ? '—' : `${avgHealth}%`}</span>
+          <span className="stat-tile__label" style={{ color: '#8E8E93' }}>Watering rhythm</span>
         </div>
       </div>
       {plants.length === 0 ? (
@@ -958,13 +958,33 @@ function PlantDetailScreen({
           )}
 
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Health status</span>
-              <span className="font-body font-semibold" style={{ fontSize: 13, color: GREEN }}>{health.score}% {health.label}</span>
-            </div>
-            <div style={{ height: 8, borderRadius: 9999, background: '#eee', overflow: 'hidden' }}>
-              <div style={{ width: `${health.score}%`, height: '100%', background: GREEN, borderRadius: 9999 }} />
-            </div>
+            {plant.healthLogs[0] ? (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Health score (AI)</span>
+                  <span className="font-body font-semibold" style={{ fontSize: 13, color: healthScoreColor(plant.healthLogs[0].healthScore) }}>
+                    {plant.healthLogs[0].healthScore}% {plant.healthLogs[0].diagnosis}
+                  </span>
+                </div>
+                <div style={{ height: 8, borderRadius: 9999, background: '#eee', overflow: 'hidden' }}>
+                  <div style={{ width: `${plant.healthLogs[0].healthScore}%`, height: '100%', background: healthScoreColor(plant.healthLogs[0].healthScore), borderRadius: 9999 }} />
+                </div>
+                <div className="flex items-center justify-between mt-3">
+                  <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Watering rhythm</span>
+                  <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>{health.score}% {health.label}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Watering rhythm</span>
+                  <span className="font-body font-semibold" style={{ fontSize: 13, color: GREEN }}>{health.score}% {health.label}</span>
+                </div>
+                <div style={{ height: 8, borderRadius: 9999, background: '#eee', overflow: 'hidden' }}>
+                  <div style={{ width: `${health.score}%`, height: '100%', background: GREEN, borderRadius: 9999 }} />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
