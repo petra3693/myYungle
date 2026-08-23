@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
-import { Purchases, LOG_LEVEL, type CustomerInfo, type PurchasesOffering } from '@revenuecat/purchases-capacitor'
+import { Purchases, LOG_LEVEL, type CustomerInfo, type PurchasesOffering, type PurchasesError } from '@revenuecat/purchases-capacitor'
 import Spline from '@splinetool/react-spline'
 import PlantPhoto from '@/components/PlantPhoto'
 import { analyzePlantImage, mapLightNeedToForm, mapWaterNeedToForm } from '@/lib/analyzePlant'
@@ -20,7 +20,6 @@ import { batchedWateringDays, frequencyForWaterNeed, frequencyLabel, secondaryWa
 import { clearAllPhotos, deletePlantPhotos } from '@/lib/photoStore'
 import {
   FREE_PLANT_LIMIT,
-  TRIAL_DAYS,
   ENTITLEMENT_PRO,
   PRODUCT_ANNUAL,
   PRODUCT_MONTHLY,
@@ -31,6 +30,9 @@ import {
   isFoundingMember,
   canShowLifetimeOffer,
   canShowHabitUpsellCard,
+  getTrialDays,
+  paywallCopyForSource,
+  computeAnnualDiscountLabel,
   type PaywallSource,
 } from '@/lib/monetization'
 import { logEvent } from '@/lib/analytics'
@@ -59,6 +61,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   subscriptionManagementUrl: null,
   habitUpsellShown: false,
   lifetimeOfferLastShownAt: null,
+  subscriptionPeriodType: null,
   primaryWateringDay: 0,
 }
 
@@ -71,6 +74,7 @@ type Screen =
   | 'plantDetail'
   | 'manualAdd'
   | 'proUnlock'
+  | 'lifetimeOffer'
   | 'bulkAdd'
   | 'bulkResult'
   | 'healthFlow'
@@ -871,7 +875,10 @@ function nextWaterStatus(plant: Plant, todayIdx: number): { label: string; dotCo
   return { label: 'No schedule', dotColor: '#8E8E93' }
 }
 
-function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayIdx: number; onOpenPlant: (p: Plant) => void }) {
+function HomeScreen({ plants, todayIdx, onOpenPlant, showHabitCard, onDismissHabitCard, onShowHabitPro }: {
+  plants: Plant[]; todayIdx: number; onOpenPlant: (p: Plant) => void
+  showHabitCard: boolean; onDismissHabitCard: () => void; onShowHabitPro: () => void
+}) {
   const thirsty = plants.filter((p) => isPlantDueToday(p, todayIdx) && !p.isWateredToday).length
   const healthScores = plants.map((p) => computeHealthStatus(p, todayIdx).score)
   const avgHealth = healthScores.length > 0 ? Math.round(healthScores.reduce((a, b) => a + b, 0) / healthScores.length) : 0
@@ -897,6 +904,32 @@ function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayI
           <span className="stat-pill__label">Watering rhythm</span>
         </div>
       </div>
+      {showHabitCard && (
+        <button
+          type="button"
+          onClick={onShowHabitPro}
+          className="card-white p-4 flex items-center gap-3 w-full text-left mb-6 relative"
+        >
+          <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 44, height: 44, background: '#111', color: GREEN }}>
+            <IconLeaf size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-heading" style={{ fontSize: 15 }}>You've built a watering habit</div>
+            <div className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>See what Pro's AI health scans can do for your jungle.</div>
+          </div>
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Dismiss"
+            onClick={(e) => { e.stopPropagation(); onDismissHabitCard() }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onDismissHabitCard() } }}
+            className="flex items-center justify-center rounded-full shrink-0"
+            style={{ width: 24, height: 24, color: '#8E8E93' }}
+          >
+            <IconX size={14} />
+          </div>
+        </button>
+      )}
       {plants.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
           <div style={{ color: '#c7c7cc' }}><IconLeaf size={40} /></div>
@@ -1224,10 +1257,11 @@ function PlantDetailScreen({
             )}
             <button
               type="button"
-              onClick={onLogGrowth}
-              className="font-heading w-full mt-3"
+              onClick={hasAccess ? onLogGrowth : onShowLimitOrPro}
+              className="font-heading w-full mt-3 flex items-center justify-center gap-2"
               style={{ height: 48, borderRadius: 9999, background: 'transparent', border: '1.5px solid #111', color: '#111', textTransform: 'uppercase', fontSize: 13 }}
             >
+              {!hasAccess && <IconLock size={14} />}
               Log growth
             </button>
           </div>
@@ -2044,7 +2078,34 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
   return (
     <div className="scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
       <h1 className="font-heading text-center" style={{ fontSize: 22, color: '#fff', textTransform: 'uppercase' }}>Settings</h1>
-      {!user.isPro && (
+      {user.isFoundingMember ? (
+        <div className="flex items-center justify-center gap-2 mt-5" style={{ height: 52, borderRadius: 9999, background: 'var(--color-surface)' }}>
+          <div style={{ color: GREEN }}><IconSparkles size={16} /></div>
+          <span className="font-heading" style={{ fontSize: 14, color: '#fff', textTransform: 'uppercase' }}>Founding member</span>
+        </div>
+      ) : user.subscriptionPlan === 'lifetime' ? (
+        <div className="flex items-center justify-center gap-2 mt-5" style={{ height: 52, borderRadius: 9999, background: 'var(--color-surface)' }}>
+          <div style={{ color: GREEN }}><IconSparkles size={16} /></div>
+          <span className="font-heading" style={{ fontSize: 14, color: '#fff', textTransform: 'uppercase' }}>Pro — lifetime</span>
+        </div>
+      ) : user.isPro ? (
+        <button
+          type="button"
+          onClick={() => { if (user.subscriptionManagementUrl) window.open(user.subscriptionManagementUrl, '_blank') }}
+          className="btn-outline-pro w-full flex items-center justify-between gap-2 mt-5 px-5"
+          style={{ height: 52 }}
+        >
+          <span className="flex items-center gap-2">
+            <IconSparkles size={16} />
+            <span>Manage subscription</span>
+          </span>
+          {user.subscriptionExpiresAt && (
+            <span className="font-body" style={{ fontSize: 12, opacity: 0.8 }}>
+              {user.subscriptionWillRenew ? 'Renews' : 'Ends'} {new Date(user.subscriptionExpiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </span>
+          )}
+        </button>
+      ) : (
         <button type="button" onClick={onShowPro} className="btn-outline-pro w-full flex items-center justify-center gap-2 mt-5" style={{ height: 52 }}>
           <IconSparkles size={16} />
           <span>Unlock Pro</span>
@@ -2202,42 +2263,84 @@ function LimitReachedSheet({ onUnlock, onCancel }: { onUnlock: () => void; onCan
   )
 }
 
+// Health scan is the headline paid value — keep it first (§2 of the monetization spec).
 const PRO_BENEFITS = [
+  'AI health & disease diagnosis',
   'Unlimited plants',
-  'AI identification',
-  'Personalized care tips',
-  'Health & growth tracking',
-  'Priority support',
+  'Bulk add — any number of photos at once',
+  'Growth timeline & photo journal',
+  'Data export',
 ]
 
-function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock: () => void }) {
+type OfferingsStatus = 'loading' | 'ready' | 'unavailable'
+type SelectablePlan = 'monthly' | 'annual'
+
+function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchased, onOpenLegal }: {
+  source: PaywallSource | null
+  offering: PurchasesOffering | null
+  offeringsStatus: OfferingsStatus
+  onClose: () => void
+  onPurchased: (customerInfo: CustomerInfo, plan: SelectablePlan) => void
+  onOpenLegal: (doc: LegalDoc) => void
+}) {
+  const [selected, setSelected] = useState<SelectablePlan>('annual')
   const [purchasing, setPurchasing] = useState(false)
   const [restoring, setRestoring] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const copy = paywallCopyForSource(source)
+  const monthlyPkg = offering?.monthly ?? null
+  const annualPkg = offering?.annual ?? null
+  const selectedPkg = selected === 'annual' ? annualPkg : monthlyPkg
+  const ready = offeringsStatus === 'ready' && selectedPkg !== null
+  const hasTrial = selected === 'annual' && !!annualPkg?.product.introPrice
+  const discountLabel = annualPkg && monthlyPkg ? computeAnnualDiscountLabel(monthlyPkg.product.price, annualPkg.product.price) : null
 
-  async function handleUnlock() {
-    setPurchasing(true)
-    try {
-      await new Promise((r) => setTimeout(r, 400))
-      onUnlock()
-    } finally {
-      setPurchasing(false)
-    }
-  }
+  useEffect(() => {
+    logEvent('paywall_shown', { source: source ?? undefined, plan_shown: ['monthly', 'annual'] })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function showToast(message: string) {
     setToast(message)
     setTimeout(() => setToast(null), 3000)
   }
 
+  function selectPlan(plan: SelectablePlan) {
+    setSelected(plan)
+    logEvent('plan_selected', { source: source ?? undefined, plan_selected: plan })
+  }
+
+  async function handlePurchase() {
+    if (!selectedPkg) return
+    setPurchasing(true)
+    logEvent('purchase_started', { source: source ?? undefined, plan_selected: selected, is_trial: hasTrial })
+    try {
+      const { customerInfo } = await Purchases.purchasePackage({ aPackage: selectedPkg })
+      logEvent('purchase_completed', { source: source ?? undefined, plan_selected: selected, is_trial: hasTrial })
+      if (hasTrial) logEvent('trial_started', { source: source ?? undefined, plan_selected: selected })
+      onPurchased(customerInfo, selected)
+    } catch (error) {
+      const cancelled = (error as PurchasesError)?.userCancelled === true
+      if (!cancelled) {
+        logEvent('purchase_failed', { source: source ?? undefined, plan_selected: selected, is_trial: hasTrial })
+        console.error('[myJungle] purchase failed:', error)
+        showToast('Purchase failed. Please try again.')
+      }
+    } finally {
+      setPurchasing(false)
+    }
+  }
+
   async function handleRestore() {
     setRestoring(true)
+    logEvent('restore_attempted', { source: source ?? undefined })
     try {
       const { customerInfo } = await Purchases.restorePurchases()
       const restored = Object.keys(customerInfo.entitlements.active).length > 0
       if (restored) {
+        logEvent('restore_succeeded', { source: source ?? undefined })
         showToast('Purchase restored!')
-        onUnlock()
+        onPurchased(customerInfo, selected)
       } else {
         showToast('Nothing to restore.')
       }
@@ -2251,53 +2354,191 @@ function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock:
 
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
-      <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-2 shrink-0">
-        <IconCircleBtn onClick={onClose} label="Close"><IconX /></IconCircleBtn>
-        <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Upgrade</span>
-        <div style={{ width: 44 }} />
+      <div className="px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-6 shrink-0">
+        <IconCircleBtn onClick={onClose} label="Back"><IconChevronLeft /></IconCircleBtn>
+        <span className="badge-pro-solid inline-block mt-4" style={{ fontSize: 12, padding: '4px 14px', textTransform: 'uppercase' }}>Pro</span>
+        <h1 className="font-heading mt-3" style={{ fontSize: 40, color: '#fff', textTransform: 'uppercase', lineHeight: 0.98 }}>{copy.headline}</h1>
+        <p className="font-body mt-3" style={{ fontSize: 15, color: 'rgba(255,255,255,0.6)', lineHeight: 1.35 }}>{copy.subtitle}</p>
       </div>
-      <div className="flex items-center justify-center shrink-0" style={{ height: 190 }}>
-        <div className="flex items-center justify-center rounded-full" style={{ width: 140, height: 140, background: 'var(--color-surface)' }}>
-          <div style={{ color: GREEN }}><IconLock size={48} /></div>
-        </div>
-      </div>
-      <div className="sheet-body scroll-y flex-1 px-6 pt-6 pb-24 flex flex-col items-center">
-        <div className="grid grid-cols-2 rounded-2xl w-full" style={{ background: '#f0f0ec' }}>
-          <div className="p-4 flex flex-col gap-1 items-start text-left">
-            <span className="caption-eyebrow">Free plan</span>
-            <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{FREE_PLANT_LIMIT} plants limit</span>
+      <div className="sheet-body scroll-y flex-1 px-5 pt-6" style={{ borderRadius: '1.75rem 1.75rem 0 0' }}>
+        <span className="caption-eyebrow">Choose a plan</span>
+
+        <div className="flex flex-col gap-3 mt-3">
+          <div className="rounded-2xl px-5 flex items-center justify-between" style={{ height: 76, background: '#fff', border: '1.5px solid #e5e5e0' }}>
+            <div>
+              <div className="font-heading" style={{ fontSize: 17, color: '#111' }}>Free</div>
+              <div className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>Up to {FREE_PLANT_LIMIT} plants</div>
+            </div>
+            <span className="font-heading" style={{ fontSize: 17, color: '#111' }}>Included</span>
           </div>
-          <div className="p-4 flex flex-col gap-1 items-start text-left" style={{ borderLeft: '1px solid #ddd' }}>
-            <span className="caption-eyebrow" style={{ color: '#0a8f3f' }}>Pro membership</span>
-            <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>Unlimited plants</span>
-          </div>
+
+          <button
+            type="button"
+            onClick={() => selectPlan('monthly')}
+            className="rounded-2xl px-5 flex items-center justify-between text-left"
+            style={{
+              height: 76,
+              background: selected === 'monthly' ? '#000' : '#fff',
+              border: selected === 'monthly' ? `2px solid ${GREEN}` : '1.5px solid #e5e5e0',
+            }}
+          >
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-heading" style={{ fontSize: 17, color: selected === 'monthly' ? '#fff' : '#111' }}>Monthly</span>
+              </div>
+              <div className="font-body" style={{ fontSize: 13, color: selected === 'monthly' ? 'rgba(255,255,255,0.6)' : '#8E8E93' }}>Unlimited plants + AI</div>
+            </div>
+            <span className="font-heading" style={{ fontSize: 18, color: selected === 'monthly' ? GREEN : '#111' }}>
+              {monthlyPkg ? `${monthlyPkg.product.priceString}/mo` : '—'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => selectPlan('annual')}
+            className="rounded-2xl px-5 flex items-center justify-between text-left"
+            style={{
+              height: 76,
+              background: selected === 'annual' ? '#000' : '#fff',
+              border: selected === 'annual' ? `2px solid ${GREEN}` : '1.5px solid #e5e5e0',
+            }}
+          >
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-heading" style={{ fontSize: 17, color: selected === 'annual' ? '#fff' : '#111' }}>Annual</span>
+                <span className="badge-pro-solid" style={{ fontSize: 10, padding: '3px 9px', textTransform: 'uppercase' }}>Popular</span>
+              </div>
+              <div className="font-body" style={{ fontSize: 13, color: selected === 'annual' ? 'rgba(255,255,255,0.6)' : '#8E8E93' }}>
+                {discountLabel ?? 'Best value'}
+              </div>
+            </div>
+            <span className="font-heading" style={{ fontSize: 18, color: selected === 'annual' ? GREEN : '#111' }}>
+              {annualPkg ? `${annualPkg.product.priceString}/yr` : '—'}
+            </span>
+          </button>
         </div>
 
-        <span className="caption-eyebrow block w-full mt-5">Features unlocked</span>
+        <div style={{ width: '100%', height: 1, background: '#eee', margin: '24px 0 20px' }} />
+
+        <span className="caption-eyebrow">Features unlocked</span>
         <div className="flex flex-col gap-3 mt-3 items-start w-full">
           {PRO_BENEFITS.map((b) => (
             <div key={b} className="flex items-center gap-3">
-              <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 24, height: 24, border: '1.5px solid #000' }}>
-                <IconCheck size={14} />
+              <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 20, height: 20, border: '1.5px solid #000' }}>
+                <IconCheck size={12} />
               </div>
-              <span className="font-body font-bold" style={{ fontSize: 15, color: '#111' }}>{b}</span>
+              <span className="font-body" style={{ fontSize: 15, color: '#111' }}>{b}</span>
             </div>
           ))}
         </div>
 
-        <div style={{ width: '100%', height: 1, background: '#eee', margin: '24px 0 0' }} />
-
-        <span className="font-heading mt-6" style={{ fontSize: 40, color: '#000' }}>$6.99</span>
-        <span className="caption-eyebrow">One-time purchase</span>
-        <button type="button" onClick={() => void handleUnlock()} disabled={purchasing} className="btn-fill w-full mt-4" style={{ height: 56, fontSize: 16 }}>
-          {purchasing ? 'Processing…' : 'Unlock Pro'}
+        <button
+          type="button"
+          onClick={() => void handlePurchase()}
+          disabled={!ready || purchasing}
+          className="btn-fill w-full mt-6"
+          style={{ height: 64, fontSize: 17 }}
+        >
+          {purchasing ? 'Processing…' : !ready ? 'Pricing unavailable' : hasTrial ? `Start ${getTrialDays()}-day free trial` : 'Subscribe'}
         </button>
-        <button type="button" onClick={() => void handleRestore()} disabled={restoring} className="font-body underline mt-3 mb-6" style={{ fontSize: 12, color: '#8E8E93' }}>
-          {restoring ? 'Restoring…' : 'Restore purchase'}
+        <p className="font-body text-center mt-3" style={{ fontSize: 11, color: '#8E8E93', lineHeight: 1.4 }}>
+          {hasTrial
+            ? `Free for ${getTrialDays()} days, then ${annualPkg?.product.priceString ?? 'the plan price'}/year. Cancel anytime before the trial ends.`
+            : selected === 'annual'
+              ? `Renews yearly at ${annualPkg?.product.priceString ?? 'the plan price'}. Cancel anytime.`
+              : `Renews monthly at ${monthlyPkg?.product.priceString ?? 'the plan price'}. Cancel anytime.`}
+        </p>
+
+        <div className="flex items-center justify-center gap-3 mt-4 mb-6">
+          <button type="button" onClick={() => void handleRestore()} disabled={restoring} className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>
+            {restoring ? 'Restoring…' : 'Restore purchase'}
+          </button>
+          <span style={{ color: '#ccc' }}>·</span>
+          <button type="button" onClick={() => onOpenLegal('terms')} className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Terms</button>
+          <span style={{ color: '#ccc' }}>·</span>
+          <button type="button" onClick={() => onOpenLegal('privacy')} className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Privacy</button>
+        </div>
+      </div>
+      {toast && (
+        <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(24px + env(safe-area-inset-bottom,0px))' }}>
+          <div className="rounded-2xl px-4 py-3 text-center" style={{ background: '#000' }}>
+            <span className="font-body" style={{ fontSize: 13, color: '#fff' }}>{toast}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LifetimeOfferScreen({ offering, onDismiss, onPurchased }: {
+  offering: PurchasesOffering | null
+  onDismiss: () => void
+  onPurchased: (customerInfo: CustomerInfo) => void
+}) {
+  const [purchasing, setPurchasing] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const lifetimePkg = offering?.lifetime ?? null
+
+  useEffect(() => {
+    logEvent('lifetime_offer_shown', {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function showToast(message: string) {
+    setToast(message)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  async function handlePurchase() {
+    if (!lifetimePkg) return
+    setPurchasing(true)
+    try {
+      const { customerInfo } = await Purchases.purchasePackage({ aPackage: lifetimePkg })
+      logEvent('lifetime_purchased', {})
+      onPurchased(customerInfo)
+    } catch (error) {
+      const cancelled = (error as PurchasesError)?.userCancelled === true
+      if (!cancelled) {
+        console.error('[myJungle] lifetime purchase failed:', error)
+        showToast('Purchase failed. Please try again.')
+      }
+    } finally {
+      setPurchasing(false)
+    }
+  }
+
+  return (
+    <div className="app-shell fixed inset-0 flex flex-col">
+      <div className="px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-6 shrink-0">
+        <span className="badge-pro-solid inline-block" style={{ fontSize: 12, padding: '4px 14px', textTransform: 'uppercase' }}>One-time offer</span>
+        <h1 className="font-heading mt-3" style={{ fontSize: 34, color: '#fff', textTransform: 'uppercase', lineHeight: 1 }}>Not into subscriptions?</h1>
+        <p className="font-body mt-3" style={{ fontSize: 15, color: 'rgba(255,255,255,0.6)', lineHeight: 1.35 }}>Own myJungle Pro forever with a single purchase.</p>
+      </div>
+      <div className="sheet-body scroll-y flex-1 px-5 pt-6 flex flex-col items-center">
+        <span className="font-heading" style={{ fontSize: 40, color: '#000' }}>{lifetimePkg?.product.priceString ?? '—'}</span>
+        <span className="caption-eyebrow">One-time purchase, forever</span>
+
+        <span className="caption-eyebrow block w-full mt-6">Features unlocked</span>
+        <div className="flex flex-col gap-3 mt-3 items-start w-full">
+          {PRO_BENEFITS.map((b) => (
+            <div key={b} className="flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 20, height: 20, border: '1.5px solid #000' }}>
+                <IconCheck size={12} />
+              </div>
+              <span className="font-body" style={{ fontSize: 15, color: '#111' }}>{b}</span>
+            </div>
+          ))}
+        </div>
+
+        <button type="button" onClick={() => void handlePurchase()} disabled={!lifetimePkg || purchasing} className="btn-fill w-full mt-6" style={{ height: 64, fontSize: 17 }}>
+          {purchasing ? 'Processing…' : 'Get lifetime access'}
+        </button>
+        <button type="button" onClick={onDismiss} className="font-body mt-4 mb-6" style={{ fontSize: 13, color: '#8E8E93' }}>
+          No thanks
         </button>
       </div>
       {toast && (
-        <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(96px + env(safe-area-inset-bottom,0px))' }}>
+        <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(24px + env(safe-area-inset-bottom,0px))' }}>
           <div className="rounded-2xl px-4 py-3 text-center" style={{ background: '#000' }}>
             <span className="font-body" style={{ fontSize: 13, color: '#fff' }}>{toast}</span>
           </div>
@@ -2324,8 +2565,32 @@ export default function App() {
   const [growthFlowPlant, setGrowthFlowPlant] = useState<Plant | null>(null)
   const [language, setLanguage] = useState<AppLanguage>(loadLanguage)
   const [showLanguagePicker, setShowLanguagePicker] = useState(false)
+  const [paywallSource, setPaywallSource] = useState<PaywallSource | null>(null)
+  const [offering, setOffering] = useState<PurchasesOffering | null>(null)
+  const [offeringsStatus, setOfferingsStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading')
   const user = useUserState(settings)
   const todayIdx = getTodayDayIndex()
+  const wateringCount = useMemo(() => plants.reduce((n, p) => n + plantHistory(p).filter((h) => h.note === 'Watered.').length, 0), [plants])
+  const showHabitCard = !user.isPro && canShowHabitUpsellCard({
+    alreadyShown: settings.habitUpsellShown,
+    onboardingCompletedAt: settings.onboardingCompletedAt,
+    wateringCount,
+  })
+
+  function openPaywall(sourceId: PaywallSource) {
+    setPaywallSource(sourceId)
+    setScreen('proUnlock')
+  }
+
+  function handleClosePaywall() {
+    logEvent('paywall_dismissed', { source: paywallSource ?? undefined })
+    if (canShowLifetimeOffer(settings.lifetimeOfferLastShownAt)) {
+      setSettings((s) => ({ ...s, lifetimeOfferLastShownAt: new Date().toISOString() }))
+      setScreen('lifetimeOffer')
+    } else {
+      setScreen('main')
+    }
+  }
 
   /**
    * Reconciles local settings against RevenueCat's CustomerInfo. Founding-member
@@ -2349,6 +2614,14 @@ export default function App() {
             : entitlement?.productIdentifier === PRODUCT_MONTHLY
               ? 'monthly' as const
               : null
+      const periodType = entitlement?.periodType ?? null
+      // Trial conversion/cancellation only has a visible "moment" as a periodType
+      // transition across boots — there's no client-side event for it otherwise.
+      if (s.subscriptionPeriodType === 'TRIAL' && entitlement?.isActive && periodType === 'NORMAL') {
+        logEvent('trial_converted', { plan_selected: plan ?? undefined })
+      } else if (s.subscriptionPeriodType === 'TRIAL' && entitlement?.isActive !== true) {
+        logEvent('trial_cancelled', {})
+      }
       return {
         ...s,
         isFoundingMember: founding,
@@ -2357,6 +2630,7 @@ export default function App() {
         subscriptionExpiresAt: entitlement?.expirationDate ?? null,
         subscriptionWillRenew: entitlement?.willRenew ?? false,
         subscriptionManagementUrl: customerInfo.managementURL ?? null,
+        subscriptionPeriodType: periodType,
       }
     })
   }
@@ -2365,14 +2639,25 @@ export default function App() {
     async function configurePurchases() {
       await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG })
       const platform = Capacitor.getPlatform()
-      if (platform === 'ios' || platform === 'android') {
-        await Purchases.configure({ apiKey: 'test_XsjuRyhMrzEQuaHZEwejrcVDtfL' })
-        try {
-          const { customerInfo } = await Purchases.getCustomerInfo()
-          reconcileCustomerInfo(customerInfo)
-        } catch (error) {
-          console.error('[myJungle] failed to sync entitlements on boot:', error)
-        }
+      if (platform !== 'ios' && platform !== 'android') {
+        // Native-only SDK — web/dev preview never has real offerings to show.
+        setOfferingsStatus('unavailable')
+        return
+      }
+      await Purchases.configure({ apiKey: 'test_XsjuRyhMrzEQuaHZEwejrcVDtfL' })
+      try {
+        const { customerInfo } = await Purchases.getCustomerInfo()
+        reconcileCustomerInfo(customerInfo)
+      } catch (error) {
+        console.error('[myJungle] failed to sync entitlements on boot:', error)
+      }
+      try {
+        const offerings = await Purchases.getOfferings()
+        setOffering(offerings.current)
+        setOfferingsStatus('ready')
+      } catch (error) {
+        console.error('[myJungle] failed to fetch offerings:', error)
+        setOfferingsStatus('unavailable')
       }
     }
     void configurePurchases()
@@ -2544,6 +2829,7 @@ export default function App() {
         onChangePrimaryDay={(day) => setSettings((s) => ({ ...s, primaryWateringDay: day }))}
         onDone={(finalDrafts) => {
           setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
+          logEvent('plant_added', { count: plants.length + finalDrafts.length })
           setPendingDrafts([])
           setSettings((s) => ({ ...s, hasCompletedOnboarding: true, onboardingCompletedAt: s.onboardingCompletedAt ?? todayISO() }))
           if (settings.pushNotifications) void requestNotificationPermission()
@@ -2563,14 +2849,14 @@ export default function App() {
           onBack={() => { setScreen('main'); setSelectedPlant(null) }}
           onDelete={() => handleDeletePlant(live.id)}
           onWater={() => handleWaterToggle(live.id)}
-          onShowLimitOrPro={() => setScreen('proUnlock')}
+          onShowLimitOrPro={() => openPaywall('health_scan')}
           onRunHealthCheck={() => { setHealthFlowConfig({ mode: 'existing', presetPlant: live }); setScreen('healthFlow') }}
           onEdit={() => setScreen('editPlant')}
           onLogGrowth={() => { setGrowthFlowPlant(live); setScreen('growthFlow') }}
         />
         <TabBar
           active={tab}
-          onChange={(t) => { setSelectedPlant(null); setScreen('main'); if (t === 'health' && !user.isPro) { setScreen('proUnlock') } else { setTab(t) } }}
+          onChange={(t) => { setSelectedPlant(null); setScreen('main'); setTab(t) }}
           onAdd={openAddFlow}
         />
       </div>
@@ -2586,6 +2872,7 @@ export default function App() {
           onBack={() => { setScreen('main'); setTab('home') }}
           onAdd={(draft) => {
             setPlants((prev) => [...prev, draftToPlant(draft)])
+            logEvent('plant_added', { count: plants.length + 1 })
             setScreen('main')
             setTab('home')
           }}
@@ -2593,27 +2880,32 @@ export default function App() {
         <TabBar
           active={null}
           addActive
-          onChange={(t) => { setScreen('main'); if (t === 'health' && !user.isPro) { setScreen('proUnlock') } else { setTab(t) } }}
+          onChange={(t) => { setScreen('main'); setTab(t) }}
           onAdd={openAddFlow}
         />
       </div>
     )
   } else if (screen === 'proUnlock') {
     content = (
-      <div className="app-shell fixed inset-0">
-        <ProUnlockScreen
-          onClose={() => { setScreen('main'); setTab('profile') }}
-          onUnlock={() => {
-            setSettings((s) => ({ ...s, isPro: true }))
-            setScreen('bulkAdd')
-          }}
-        />
-        <TabBar
-          active={tab}
-          onChange={(t) => { setScreen('main'); setTab(t) }}
-          onAdd={openAddFlow}
-        />
-      </div>
+      <ProUnlockScreen
+        source={paywallSource}
+        offering={offering}
+        offeringsStatus={offeringsStatus}
+        onClose={handleClosePaywall}
+        onOpenLegal={(doc) => { setLegalDoc(doc); setScreen('legal') }}
+        onPurchased={(customerInfo) => {
+          reconcileCustomerInfo(customerInfo)
+          setScreen(paywallSource === 'plant_limit' ? 'bulkAdd' : 'main')
+        }}
+      />
+    )
+  } else if (screen === 'lifetimeOffer') {
+    content = (
+      <LifetimeOfferScreen
+        offering={offering}
+        onDismiss={() => setScreen('main')}
+        onPurchased={(customerInfo) => { reconcileCustomerInfo(customerInfo); setScreen('main') }}
+      />
     )
   } else if (screen === 'bulkAdd') {
     content = (
@@ -2643,6 +2935,7 @@ export default function App() {
         onChangePrimaryDay={(day) => setSettings((s) => ({ ...s, primaryWateringDay: day }))}
         onDone={(finalDrafts) => {
           setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
+          logEvent('plant_added', { count: plants.length + finalDrafts.length })
           setPendingDrafts([])
           setScreen('main')
           setTab('home')
@@ -2691,7 +2984,16 @@ export default function App() {
   } else {
     let tabContent: React.ReactNode
     if (tab === 'home') {
-      tabContent = <HomeScreen plants={plants} todayIdx={todayIdx} onOpenPlant={(p) => { setSelectedPlant(p); setScreen('plantDetail') }} />
+      tabContent = (
+        <HomeScreen
+          plants={plants}
+          todayIdx={todayIdx}
+          onOpenPlant={(p) => { setSelectedPlant(p); setScreen('plantDetail') }}
+          showHabitCard={showHabitCard}
+          onDismissHabitCard={() => setSettings((s) => ({ ...s, habitUpsellShown: true }))}
+          onShowHabitPro={() => { setSettings((s) => ({ ...s, habitUpsellShown: true })); openPaywall('habit_card') }}
+        />
+      )
     } else if (tab === 'days') {
       tabContent = <DaysScreen plants={plants} todayIdx={todayIdx} onToggleWatered={handleWaterToggle} onBack={() => setTab('home')} />
     } else if (tab === 'health') {
@@ -2699,10 +3001,10 @@ export default function App() {
         <HealthHubScreen
           plants={plants}
           isPro={user.isPro}
-          onScanNew={() => { setHealthFlowConfig({ mode: 'new', presetPlant: null }); setScreen('healthFlow') }}
-          onCheckExisting={() => { setHealthFlowConfig({ mode: 'existing', presetPlant: null }); setScreen('healthFlow') }}
+          onScanNew={() => { logEvent('health_scan_attempted', { is_pro: user.isPro }); setHealthFlowConfig({ mode: 'new', presetPlant: null }); setScreen('healthFlow') }}
+          onCheckExisting={() => { logEvent('health_scan_attempted', { is_pro: user.isPro }); setHealthFlowConfig({ mode: 'existing', presetPlant: null }); setScreen('healthFlow') }}
           onOpenPlant={(p) => { setSelectedPlant(p); setScreen('plantDetail') }}
-          onShowPro={() => setScreen('proUnlock')}
+          onShowPro={() => openPaywall('health_scan')}
         />
       )
     } else {
@@ -2713,7 +3015,7 @@ export default function App() {
           onSave={setSettings}
           onExport={handleExport}
           onReset={handleReset}
-          onShowPro={() => setScreen('proUnlock')}
+          onShowPro={() => openPaywall('settings')}
           onOpenLegal={(doc) => { setLegalDoc(doc); setScreen('legal') }}
           language={language}
           onPickLanguage={() => setShowLanguagePicker(true)}
@@ -2753,7 +3055,7 @@ export default function App() {
       {showLimitSheet && (
         <LimitReachedSheet
           onCancel={() => setShowLimitSheet(false)}
-          onUnlock={() => { setShowLimitSheet(false); setScreen('proUnlock') }}
+          onUnlock={() => { setShowLimitSheet(false); openPaywall('plant_limit') }}
         />
       )}
       {showLanguagePicker && (

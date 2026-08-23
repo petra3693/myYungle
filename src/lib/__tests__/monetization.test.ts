@@ -6,6 +6,7 @@ import {
   canShowLifetimeOffer,
   canShowHabitUpsellCard,
   userStateFromSettings,
+  computeAnnualDiscountLabel,
   PRODUCT_LEGACY_ONETIME,
   FREE_PLANT_LIMIT,
 } from '@/lib/monetization'
@@ -132,5 +133,24 @@ describe('canShowHabitUpsellCard', () => {
       wateringCount: 10,
       now,
     })).toBe(false)
+  })
+})
+
+describe('computeAnnualDiscountLabel — §6 discount sub-label is computed, never hardcoded', () => {
+  it('computes "2 months free" when annual costs 10x monthly', () => {
+    expect(computeAnnualDiscountLabel(5.99, 59.90)).toBe('2 months free')
+  })
+
+  it('computes "1 month free" when annual costs 11x monthly', () => {
+    expect(computeAnnualDiscountLabel(5.99, 65.89)).toBe('1 month free')
+  })
+
+  it('returns null when annual is not actually a discount over 12 months of monthly', () => {
+    expect(computeAnnualDiscountLabel(5.99, 71.88)).toBe(null)
+  })
+
+  it('returns null with missing or zero prices', () => {
+    expect(computeAnnualDiscountLabel(0, 59.90)).toBe(null)
+    expect(computeAnnualDiscountLabel(5.99, 0)).toBe(null)
   })
 })

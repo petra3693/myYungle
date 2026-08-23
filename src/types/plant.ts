@@ -85,6 +85,8 @@ export interface AppSettings {
   habitUpsellShown: boolean
   /** ISO timestamp of the last lifetime win-back offer, so it shows at most once per 30 days. */
   lifetimeOfferLastShownAt: string | null
+  /** Last-seen RevenueCat entitlement period type ("NORMAL"/"INTRO"/"TRIAL"/"PREPAID") — bookkeeping only, to detect trial conversion/cancellation across boots. */
+  subscriptionPeriodType: string | null
   /** Day index (0 = Monday .. 6 = Sunday) new AI-batched plants are consolidated onto. */
   primaryWateringDay: number
 }

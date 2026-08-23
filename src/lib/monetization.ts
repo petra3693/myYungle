@@ -102,3 +102,53 @@ export function canShowHabitUpsellCard(input: { alreadyShown: boolean; onboardin
   const days = (now.getTime() - new Date(input.onboardingCompletedAt).getTime()) / 86400000
   return days >= HABIT_UPSELL_MIN_DAYS
 }
+
+// ─── Trial length (§8) ──────────────────────────────────────────────────────
+// Ships at 7 days. A 14-day A/B variant can be flipped on without a release by
+// writing an override to localStorage — no experiment framework needed yet.
+
+const TRIAL_DAYS_OVERRIDE_KEY = 'mj_trial_days_override'
+
+export function getTrialDays(): number {
+  try {
+    const raw = localStorage.getItem(TRIAL_DAYS_OVERRIDE_KEY)
+    const parsed = raw ? parseInt(raw, 10) : NaN
+    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 30) return parsed
+  } catch {
+    // Fall through to the default below.
+  }
+  return TRIAL_DAYS
+}
+
+// ─── Paywall copy per trigger (§6) ──────────────────────────────────────────
+// The headline replaces the static mockup headline; only health_scan and
+// plant_limit have doc-specified copy, everything else falls back to the
+// mockup's own "unlimited growth" framing.
+
+export interface PaywallCopy {
+  headline: string
+  subtitle: string
+}
+
+export function paywallCopyForSource(source: PaywallSource | null): PaywallCopy {
+  switch (source) {
+    case 'health_scan':
+      return { headline: "FIND OUT WHAT'S WRONG WITH YOUR PLANT", subtitle: 'AI health scans and disease diagnosis, unlocked.' }
+    case 'plant_limit':
+      return { headline: 'ROOM FOR EVERY PLANT', subtitle: 'Add unlimited plants to your jungle.' }
+    default:
+      return { headline: 'UNLIMITED GROWTH', subtitle: 'Unlock the full care experience, no limits.' }
+  }
+}
+
+// ─── Computed annual discount label (§6) ───────────────────────────────────
+// "2 months free" etc., derived from real monthly/annual prices — never
+// hardcoded. Returns null when a label can't be sensibly computed.
+
+export function computeAnnualDiscountLabel(monthlyPrice: number, annualPrice: number): string | null {
+  if (!(monthlyPrice > 0) || !(annualPrice > 0)) return null
+  const equivalentMonths = annualPrice / monthlyPrice
+  const monthsFree = Math.round(12 - equivalentMonths)
+  if (monthsFree < 1) return null
+  return `${monthsFree} month${monthsFree > 1 ? 's' : ''} free`
+}
