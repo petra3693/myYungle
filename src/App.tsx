@@ -285,10 +285,28 @@ function DayPill({ label, active, onClick, disabled }: { label: string; active: 
 
 const AI_THINKING_SCENE_URL = 'https://prod.spline.design/uTHVwstWqr3EZSQv/scene.splinecode'
 
+// The Spline scene's camera frames its subject at a fixed pixel scale, so a
+// canvas smaller than this crops the edges. Render it at full native size and
+// scale the whole thing down with CSS to fit whatever `size` is requested —
+// that keeps the full, uncropped animation visible at any display size.
+const AI_THINKING_NATIVE_SIZE = 640
+
 function AiThinkingLoader({ size = 160 }: { size?: number }) {
+  const scale = size / AI_THINKING_NATIVE_SIZE
   return (
-    <div style={{ width: size, height: size }}>
-      <Spline scene={AI_THINKING_SCENE_URL} style={{ width: '100%', height: '100%' }} />
+    <div style={{ width: size, height: size, position: 'relative' }}>
+      <div
+        style={{
+          width: AI_THINKING_NATIVE_SIZE,
+          height: AI_THINKING_NATIVE_SIZE,
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: `translate(-50%, -50%) scale(${scale})`,
+        }}
+      >
+        <Spline scene={AI_THINKING_SCENE_URL} style={{ width: '100%', height: '100%' }} />
+      </div>
     </div>
   )
 }
