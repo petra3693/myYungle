@@ -54,17 +54,37 @@ export interface Plant {
   confidence?: number
 }
 
-/** Freemium gating: a single one-time Pro unlock (no subscription, no per-plant slots). */
+export type SubscriptionPlan = 'annual' | 'monthly' | 'lifetime' | 'legacy' | null
+
+/** Freemium gating: annual/monthly subscription, a lifetime win-back, or a grandfathered legacy unlock. */
 export interface UserState {
   isPro: boolean
+  /** Bought the old one-time unlock, or was Pro before the subscription migration — Pro forever, no paywall. */
+  isFoundingMember: boolean
+  subscriptionPlan: SubscriptionPlan
+  subscriptionExpiresAt: string | null
+  subscriptionWillRenew: boolean
+  /** Deep link to the platform's native subscription-management page, from RevenueCat's CustomerInfo. */
+  subscriptionManagementUrl: string | null
 }
 
 export interface AppSettings {
   hasCompletedOnboarding: boolean
+  /** When onboarding finished — drives the day-7 habit-upsell card timing. */
+  onboardingCompletedAt: string | null
   pushNotifications: boolean
   reminderTime: string
   timezone: string
   isPro: boolean
+  isFoundingMember: boolean
+  subscriptionPlan: SubscriptionPlan
+  subscriptionExpiresAt: string | null
+  subscriptionWillRenew: boolean
+  subscriptionManagementUrl: string | null
+  /** The Home habit-upsell card is shown at most once, ever. */
+  habitUpsellShown: boolean
+  /** ISO timestamp of the last lifetime win-back offer, so it shows at most once per 30 days. */
+  lifetimeOfferLastShownAt: string | null
   /** Day index (0 = Monday .. 6 = Sunday) new AI-batched plants are consolidated onto. */
   primaryWateringDay: number
 }

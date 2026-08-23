@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
-import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor'
+import { Purchases, LOG_LEVEL, type CustomerInfo, type PurchasesOffering } from '@revenuecat/purchases-capacitor'
 import Spline from '@splinetool/react-spline'
 import PlantPhoto from '@/components/PlantPhoto'
 import { analyzePlantImage, mapLightNeedToForm, mapWaterNeedToForm } from '@/lib/analyzePlant'
@@ -18,7 +18,22 @@ import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, t
 import { LAST_ACTIVE_DATE_KEY, localDateString, rolloverWateredState } from '@/lib/dailyRollover'
 import { batchedWateringDays, frequencyForWaterNeed, frequencyLabel, secondaryWateringDay } from '@/lib/wateringBatch'
 import { clearAllPhotos, deletePlantPhotos } from '@/lib/photoStore'
-import { MAX_FREE_PLANTS, canAccessProFeatures, canAddMorePlants } from '@/lib/proAccess'
+import {
+  FREE_PLANT_LIMIT,
+  TRIAL_DAYS,
+  ENTITLEMENT_PRO,
+  PRODUCT_ANNUAL,
+  PRODUCT_MONTHLY,
+  PRODUCT_LIFETIME,
+  PRODUCT_LEGACY_ONETIME,
+  canAccessProFeatures,
+  canAddMorePlants,
+  isFoundingMember,
+  canShowLifetimeOffer,
+  canShowHabitUpsellCard,
+  type PaywallSource,
+} from '@/lib/monetization'
+import { logEvent } from '@/lib/analytics'
 import { useUserState } from '@/hooks/useUserState'
 import { LANGUAGE_OPTIONS, LANGUAGE_STORAGE_KEY, normalizeAppLanguage, type AppLanguage } from '@/i18n/languages'
 import type { AppSettings, DayCode, HistoryEntry, LightNeed, Plant, PlantHealthLog, UserState, WaterNeed, WateringFrequency } from '@/types/plant'
@@ -32,10 +47,18 @@ const APP_VERSION = '1.0.0'
 
 const DEFAULT_SETTINGS: AppSettings = {
   hasCompletedOnboarding: false,
+  onboardingCompletedAt: null,
   pushNotifications: true,
   reminderTime: '09:00',
   timezone: 'UTC',
   isPro: false,
+  isFoundingMember: false,
+  subscriptionPlan: null,
+  subscriptionExpiresAt: null,
+  subscriptionWillRenew: false,
+  subscriptionManagementUrl: null,
+  habitUpsellShown: false,
+  lifetimeOfferLastShownAt: null,
   primaryWateringDay: 0,
 }
 
@@ -1431,7 +1454,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
   }
 
   const wateringFrequencyLabel = draft ? frequencyLabel(draft.wateringFrequency, draft.wateringDays.length) : ''
-  const usedSlots = Math.max(0, MAX_FREE_PLANTS - remainingFreeSlots)
+  const usedSlots = Math.max(0, FREE_PLANT_LIMIT - remainingFreeSlots)
 
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
@@ -1440,7 +1463,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
         <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
         <span className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>
-          {isPro ? 'Unlimited plants' : `${remainingFreeSlots} of ${MAX_FREE_PLANTS} free slots left`}
+          {isPro ? 'Unlimited plants' : `${remainingFreeSlots} of ${FREE_PLANT_LIMIT} free slots left`}
         </span>
       </div>
       <div className="px-5 pb-4 shrink-0" style={{ height: 220 }}>
@@ -1531,7 +1554,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
 
               {!isPro && (
                 <p className="font-body text-center mt-4" style={{ fontSize: 12, color: '#8E8E93' }}>
-                  {usedSlots}/{MAX_FREE_PLANTS} free slots used
+                  {usedSlots}/{FREE_PLANT_LIMIT} free slots used
                 </p>
               )}
             </>
@@ -2167,7 +2190,7 @@ function LimitReachedSheet({ onUnlock, onCancel }: { onUnlock: () => void; onCan
           <div className="flex items-center justify-center rounded-full" style={{ width: 64, height: 64, background: '#f3ecec' }}>
             <IconAlert size={28} />
           </div>
-          <h2 className="font-heading" style={{ fontSize: 24, lineHeight: 1.2 }}>You have reached your {MAX_FREE_PLANTS} free plants</h2>
+          <h2 className="font-heading" style={{ fontSize: 24, lineHeight: 1.2 }}>You have reached your {FREE_PLANT_LIMIT} free plants</h2>
           <p className="font-body" style={{ fontSize: 14, color: '#666', lineHeight: 1.5 }}>
             Pro lets you add unlimited plants, plus health &amp; growth tracking and priority support.
           </p>
@@ -2242,7 +2265,7 @@ function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock:
         <div className="grid grid-cols-2 rounded-2xl w-full" style={{ background: '#f0f0ec' }}>
           <div className="p-4 flex flex-col gap-1 items-start text-left">
             <span className="caption-eyebrow">Free plan</span>
-            <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{MAX_FREE_PLANTS} plants limit</span>
+            <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{FREE_PLANT_LIMIT} plants limit</span>
           </div>
           <div className="p-4 flex flex-col gap-1 items-start text-left" style={{ borderLeft: '1px solid #ddd' }}>
             <span className="caption-eyebrow" style={{ color: '#0a8f3f' }}>Pro membership</span>
@@ -2304,15 +2327,56 @@ export default function App() {
   const user = useUserState(settings)
   const todayIdx = getTodayDayIndex()
 
+  /**
+   * Reconciles local settings against RevenueCat's CustomerInfo. Founding-member
+   * status (§0) is sticky once set — a later RevenueCat response can never remove
+   * it — so a temporary outage can never lock a legacy buyer out of Pro.
+   */
+  function reconcileCustomerInfo(customerInfo: CustomerInfo) {
+    setSettings((s) => {
+      const founding = isFoundingMember({
+        purchasedProductIdentifiers: customerInfo.allPurchasedProductIdentifiers,
+        previousIsPro: s.isPro,
+        alreadyFlaggedFoundingMember: s.isFoundingMember,
+      })
+      const entitlement = customerInfo.entitlements.active[ENTITLEMENT_PRO]
+      const plan = founding
+        ? 'legacy' as const
+        : entitlement?.productIdentifier === PRODUCT_LIFETIME
+          ? 'lifetime' as const
+          : entitlement?.productIdentifier === PRODUCT_ANNUAL
+            ? 'annual' as const
+            : entitlement?.productIdentifier === PRODUCT_MONTHLY
+              ? 'monthly' as const
+              : null
+      return {
+        ...s,
+        isFoundingMember: founding,
+        isPro: founding || entitlement?.isActive === true,
+        subscriptionPlan: plan,
+        subscriptionExpiresAt: entitlement?.expirationDate ?? null,
+        subscriptionWillRenew: entitlement?.willRenew ?? false,
+        subscriptionManagementUrl: customerInfo.managementURL ?? null,
+      }
+    })
+  }
+
   useEffect(() => {
     async function configurePurchases() {
       await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG })
       const platform = Capacitor.getPlatform()
       if (platform === 'ios' || platform === 'android') {
         await Purchases.configure({ apiKey: 'test_XsjuRyhMrzEQuaHZEwejrcVDtfL' })
+        try {
+          const { customerInfo } = await Purchases.getCustomerInfo()
+          reconcileCustomerInfo(customerInfo)
+        } catch (error) {
+          console.error('[myJungle] failed to sync entitlements on boot:', error)
+        }
       }
     }
     void configurePurchases()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -2452,8 +2516,8 @@ export default function App() {
     content = (
       <BatchCaptureScreen
         title="Bring in your jungle!"
-        subtitle={`Photograph all your plants at once — ${MAX_FREE_PLANTS} free slots.`}
-        freeSlots={MAX_FREE_PLANTS}
+        subtitle={`Photograph all your plants at once — ${FREE_PLANT_LIMIT} free slots.`}
+        freeSlots={FREE_PLANT_LIMIT}
         doneLabel="Start AI analysis"
         onDone={(photos) => {
           setAiThinkingLabel(`Identifying ${photos.length} plant${photos.length === 1 ? '' : 's'}…`)
@@ -2464,7 +2528,7 @@ export default function App() {
           })
         }}
         onSkip={() => {
-          setSettings((s) => ({ ...s, hasCompletedOnboarding: true }))
+          setSettings((s) => ({ ...s, hasCompletedOnboarding: true, onboardingCompletedAt: s.onboardingCompletedAt ?? todayISO() }))
           setScreen('main')
           setTab('home')
         }}
@@ -2481,7 +2545,7 @@ export default function App() {
         onDone={(finalDrafts) => {
           setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
           setPendingDrafts([])
-          setSettings((s) => ({ ...s, hasCompletedOnboarding: true }))
+          setSettings((s) => ({ ...s, hasCompletedOnboarding: true, onboardingCompletedAt: s.onboardingCompletedAt ?? todayISO() }))
           if (settings.pushNotifications) void requestNotificationPermission()
           setScreen('main')
           setTab('home')
@@ -2518,7 +2582,7 @@ export default function App() {
           isPro={user.isPro}
           language={language}
           primaryDay={settings.primaryWateringDay}
-          remainingFreeSlots={Math.max(0, MAX_FREE_PLANTS - plants.length)}
+          remainingFreeSlots={Math.max(0, FREE_PLANT_LIMIT - plants.length)}
           onBack={() => { setScreen('main'); setTab('home') }}
           onAdd={(draft) => {
             setPlants((prev) => [...prev, draftToPlant(draft)])
