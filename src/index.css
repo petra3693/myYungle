@@ -93,7 +93,24 @@
     background: var(--color-card);
     border-radius: 1.75rem;
     color: var(--color-ink);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  /* ── Dark-header screens: black top area -> white panel with a large top
+     radius that runs to the bottom edge (plant detail, manual add, settings,
+     pro unlock, AI thinking). ── */
+  .sheet-body {
+    background: var(--color-card);
+    border-radius: 1.75rem 1.75rem 0 0;
+    color: var(--color-ink);
+  }
+
+  /* ── Grey uppercase section captions (HEALTH STATUS, WATERING TIMELINE, ...) ── */
+  .caption-eyebrow {
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: var(--color-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .surface-dark {
@@ -155,6 +172,36 @@
     transition: transform 0.12s ease;
   }
   .btn-outline-pro:active { transform: scale(0.97); }
+
+  /* ── Outlined pill on white/light surfaces (e.g. "From gallery") ── */
+  .btn-outline-ink {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 9999px;
+    background: transparent;
+    border: 1.5px solid #000000;
+    color: #000000;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .btn-outline-ink:active { transform: scale(0.97); }
+
+  /* ── Small "PRO" badges: solid on black onboarding rows, dark on white sheets ── */
+  .badge-pro-solid {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    border-radius: 9999px;
+    background: var(--color-green);
+    color: #000000;
+  }
+  .badge-pro-dark {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    border-radius: 9999px;
+    background: #000000;
+    color: var(--color-green);
+  }
 
   .btn-ghost-dark {
     font-family: var(--font-heading);
@@ -247,20 +294,24 @@
     color: var(--color-text-dim);
   }
 
-  /* ── Plant grid card (Home) ── */
+  /* ── Plant grid card (Home): photo block, then a separate label block
+     stacked below it — not an overlay on the photo. ── */
   .plant-tile {
-    position: relative;
+    display: flex;
+    flex-direction: column;
     border-radius: 1.5rem;
     overflow: hidden;
-    aspect-ratio: 1 / 1.05;
-    background: var(--color-surface);
+    background: var(--color-card-muted);
     cursor: pointer;
+  }
+  .plant-tile__photo {
+    aspect-ratio: 1 / 1;
+    border-radius: 1.5rem;
+    overflow: hidden;
   }
   .plant-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .plant-tile__label {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    background: var(--color-card);
+    background: var(--color-card-muted);
     padding: 0.6rem 0.8rem;
   }
   .plant-tile__badge {
@@ -275,17 +326,65 @@
     border-radius: 9999px;
   }
 
-  /* ── Checklist row (Days) ── */
+  /* ── Home: hero total-plants pill (huge value, full round) ── */
+  .stat-hero {
+    background: var(--color-green);
+    border-radius: 9999px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 96px;
+  }
+  .stat-hero__value {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 56px;
+    color: #000000;
+    line-height: 1;
+  }
+  .stat-hero__label {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  /* ── Home: secondary stat pills, full round ── */
+  .stat-pill {
+    border-radius: 9999px;
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.3rem;
+    min-height: 96px;
+    min-width: 0;
+  }
+  .stat-pill__value {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 28px;
+    line-height: 1;
+  }
+  .stat-pill__label {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--color-text-dim);
+  }
+
+  /* ── Checklist row (Days) — flat fill, no elevation ── */
   .check-row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    background: var(--color-card);
-    border-radius: 1.5rem;
+    background: var(--color-card-muted);
+    border-radius: 9999px;
     padding: 0.6rem 0.9rem;
     cursor: pointer;
     border: none;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
   .check-circle {
     width: 26px;

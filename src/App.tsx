@@ -200,6 +200,8 @@ const IconChevronLeft = (p: { size?: number }) => <Icon {...p}><path d="M15 5l-7
 const IconChevronDown = (p: { size?: number }) => <Icon {...p}><path d="M5 9l7 7 7-7" /></Icon>
 const IconX = (p: { size?: number }) => <Icon {...p}><path d="M6 6l12 12M18 6L6 18" /></Icon>
 const IconCamera = (p: { size?: number }) => <Icon {...p}><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" /><circle cx="12" cy="14" r="3.5" /></Icon>
+const IconPlus = (p: { size?: number }) => <Icon {...p}><path d="M12 5v14M5 12h14" /></Icon>
+const IconMenu = (p: { size?: number }) => <Icon {...p}><path d="M4 7h16M4 12h16M4 17h16" /></Icon>
 const IconBell = (p: { size?: number }) => <Icon {...p}><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" /><path d="M10 19a2 2 0 0 0 4 0" /></Icon>
 const IconCheck = (p: { size?: number }) => <Icon {...p}><path d="M4 12l6 6L20 6" /></Icon>
 const IconAlert = (p: { size?: number }) => <Icon {...p}><path d="M10.3 3.9L2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0z" /><path d="M12 9v4M12 17h.01" /></Icon>
@@ -247,7 +249,7 @@ function DayPill({ label, active, onClick, disabled }: { label: string; active: 
       onClick={onClick}
       disabled={disabled}
       className={`day-pill ${active ? 'is-active' : ''}`}
-      style={{ width: 44, height: 44, fontSize: 15, opacity: disabled ? 0.35 : 1 }}
+      style={{ width: 46, height: 46, fontSize: 16, opacity: disabled ? 0.35 : 1 }}
     >
       {label}
     </button>
@@ -272,7 +274,7 @@ function AiThinkingScreen({ label }: { label: string }) {
           Plants<br />analysis
         </h1>
       </div>
-      <div className="flex-1 flex flex-col items-center justify-center gap-6" style={{ background: 'var(--color-bg-light)', borderRadius: '1.75rem 1.75rem 0 0' }}>
+      <div className="sheet-body flex-1 flex flex-col items-center justify-center gap-6">
         <AiThinkingLoader size={220} />
         <span className="font-body text-center px-10" style={{ fontSize: 16, color: '#666' }}>{label}</span>
       </div>
@@ -342,7 +344,7 @@ function OnboardingWelcome({ onNext, language, onPickLanguage }: { onNext: () =>
               {step.text}
             </span>
             {step.pro && (
-              <span className="btn-outline-pro shrink-0" style={{ fontSize: 10, padding: '3px 10px' }}>PRO</span>
+              <span className="badge-pro-solid shrink-0" style={{ fontSize: 10, padding: '3px 10px' }}>PRO</span>
             )}
           </div>
         ))}
@@ -434,23 +436,25 @@ function BatchCaptureScreen({
               </button>
             </div>
           ))}
-          {!atLimit && (
+          {Array.from({ length: Math.max(0, (freeSlots !== null ? limit : slotsCells) - photos.length) }).map((_, i) => (
             <button
+              key={`add-${i}`}
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="rounded-[1.5rem] flex flex-col items-center justify-center gap-2"
+              className="rounded-[1.5rem] flex items-center justify-center"
               style={{ aspectRatio: '1/1', background: '#f0f0ec' }}
               disabled={busy}
             >
               <div className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, border: '1.5px solid #bbb' }}>
-                <IconCamera size={18} />
+                <IconPlus size={20} />
               </div>
-              <span className="font-body" style={{ fontSize: 13, color: '#000' }}>{busy ? 'Adding…' : 'Add photo'}</span>
             </button>
-          )}
-          {Array.from({ length: Math.max(0, slotsCells - photos.length - (atLimit ? 0 : 1)) }).map((_, i) => (
-            <div key={`empty-${i}`} className="rounded-[1.5rem]" style={{ aspectRatio: '1/1', background: '#f0f0ec' }} />
           ))}
+          {freeSlots !== null && (
+            <div className="rounded-[1.5rem] flex items-center justify-center" style={{ aspectRatio: '1/1', background: '#f0f0ec' }}>
+              <div style={{ color: '#999' }}><IconLock size={22} /></div>
+            </div>
+          )}
         </div>
       </div>
       <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
@@ -654,7 +658,7 @@ function DayPickerSheet({ selected, onSelect, onClose }: { selected: number; onS
       <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onClose)} />
       <div className="fixed left-0 right-0 bottom-0 z-[70]">
         <div className={`sheet-panel ${open ? 'is-open' : ''} p-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-1`}>
-          <span className="font-body block px-4 pt-2 pb-1" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Watering day</span>
+          <span className="caption-eyebrow block px-4 pt-2 pb-1">Watering day</span>
           {FULL_DAY_NAMES.map((n, i) => (
             <button
               key={i}
@@ -716,7 +720,7 @@ function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: ini
     <div className="app-shell-light fixed inset-0 flex flex-col">
       <div className="px-5 pt-[calc(2rem+env(safe-area-inset-top,0px))] pb-4 shrink-0">
         <h1 className="font-heading flex items-center gap-2" style={{ fontSize: 26, color: '#000' }}>
-          {drafts.length} plant{drafts.length === 1 ? '' : 's'} added <IconCheck size={22} />
+          {drafts.length} plant{drafts.length === 1 ? '' : 's'} added <span style={{ color: GREEN }}><IconCheck size={22} /></span>
         </h1>
         <p className="font-body" style={{ fontSize: 14, color: '#666', marginTop: 6 }}>{subtitle}</p>
       </div>
@@ -726,8 +730,8 @@ function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: ini
             key={i}
             type="button"
             onClick={() => setEditingIndex(i)}
-            className="flex items-center gap-3 p-3 rounded-[1.5rem] text-left w-full"
-            style={{ background: d.identified ? '#f0f0ec' : '#fbeed9' }}
+            className="flex items-center gap-3 text-left w-full"
+            style={{ background: d.identified ? '#f0f0ec' : '#fbeed9', borderRadius: 9999, padding: '16px', minHeight: 88 }}
           >
             <img src={d.photo} alt="" className="rounded-full object-cover shrink-0" style={{ width: 56, height: 56 }} />
             <span className="font-heading flex-1 min-w-0 truncate" style={{ fontSize: 18, color: '#111' }}>{d.name}</span>
@@ -749,7 +753,7 @@ function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: ini
       </div>
       {dayLabel && (
         <div className="px-5 pb-3 shrink-0">
-          <div className="rounded-2xl px-4 py-3 flex items-center justify-center gap-2" style={{ background: '#000' }}>
+          <div className="rounded-full px-4 py-3 flex items-center justify-center gap-2" style={{ background: '#000' }}>
             <div style={{ color: GREEN }}><IconCalendarSmall size={16} /></div>
             <span className="font-heading" style={{ fontSize: 14, color: GREEN }}>Watering day: {dayLabel}</span>
           </div>
@@ -786,7 +790,7 @@ function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: ini
 
 // ─── Tab bar ──────────────────────────────────────────────────────────────────
 
-function TabBar({ active, onChange, onAdd }: { active: Tab; onChange: (t: Tab) => void; onAdd: () => void }) {
+function TabBar({ active, onChange, onAdd, addActive }: { active: Tab | null; onChange: (t: Tab) => void; onAdd: () => void; addActive?: boolean }) {
   const items: { id: Tab; label: string; icon: (p: { size?: number }) => React.ReactNode }[] = [
     { id: 'home', label: 'Home', icon: IconNavHome },
     { id: 'days', label: 'Days', icon: IconNavCalendar },
@@ -804,7 +808,7 @@ function TabBar({ active, onChange, onAdd }: { active: Tab; onChange: (t: Tab) =
             <span className="tab-bar__label">{t.label}</span>
           </button>
         ))}
-        <button type="button" onClick={onAdd} className="tab-bar__item" aria-label="Add plant">
+        <button type="button" onClick={onAdd} className={`tab-bar__item ${addActive ? 'is-active' : ''}`} aria-label="Add plant">
           <div className="tab-bar__icon-badge"><IconNavAdd size={20} /></div>
           <span className="tab-bar__label">Add</span>
         </button>
@@ -856,18 +860,18 @@ function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayI
           <div style={{ color: '#fff' }}><IconBell size={18} /></div>
         </div>
       </div>
-      <div className="stat-tile mb-3" style={{ background: GREEN, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span className="stat-tile__value" style={{ color: '#000' }}>{plants.length}</span>
-        <span className="stat-tile__label" style={{ color: '#000', opacity: 0.6 }}>Total plants</span>
+      <div className="stat-hero mb-3">
+        <span className="stat-hero__value">{plants.length}</span>
+        <span className="stat-hero__label">Total plants</span>
       </div>
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="stat-tile" style={{ background: '#f0f0ec' }}>
-          <span className="stat-tile__value" style={{ color: '#000' }}>{thirsty}</span>
-          <span className="stat-tile__label" style={{ color: '#666' }}>Thirsty plants</span>
+        <div className="stat-pill" style={{ background: '#f0f0ec' }}>
+          <span className="stat-pill__value" style={{ color: '#000' }}>{thirsty}</span>
+          <span className="stat-pill__label">Thirsty plants</span>
         </div>
-        <div className="stat-tile" style={{ background: '#000' }}>
-          <span className="stat-tile__value" style={{ color: GREEN }}>{plants.length === 0 ? '—' : `${avgHealth}%`}</span>
-          <span className="stat-tile__label" style={{ color: '#8E8E93' }}>Watering rhythm</span>
+        <div className="stat-pill" style={{ background: '#000' }}>
+          <span className="stat-pill__value" style={{ color: GREEN }}>{plants.length === 0 ? '—' : `${avgHealth}%`}</span>
+          <span className="stat-pill__label">Watering rhythm</span>
         </div>
       </div>
       {plants.length === 0 ? (
@@ -881,7 +885,9 @@ function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayI
             const status = nextWaterStatus(p, todayIdx)
             return (
               <button key={p.id} type="button" onClick={() => onOpenPlant(p)} className="plant-tile text-left">
-                <PlantPhoto photo={p.photo} alt={p.name} className="w-full h-full object-cover block" />
+                <div className="plant-tile__photo">
+                  <PlantPhoto photo={p.photo} alt={p.name} className="w-full h-full object-cover block" />
+                </div>
                 <div className="plant-tile__label">
                   <div className="font-heading truncate" style={{ fontSize: 15, color: '#111' }}>{p.name}</div>
                   <div className="flex items-center gap-1.5 mt-1">
@@ -900,7 +906,9 @@ function HomeScreen({ plants, todayIdx, onOpenPlant }: { plants: Plant[]; todayI
 
 // ─── Screen: Days ─────────────────────────────────────────────────────────────
 
-function DaysScreen({ plants, todayIdx, onToggleWatered }: { plants: Plant[]; todayIdx: number; onToggleWatered: (id: string) => void }) {
+function DaysScreen({ plants, todayIdx, onToggleWatered, onBack }: {
+  plants: Plant[]; todayIdx: number; onToggleWatered: (id: string) => void; onBack: () => void
+}) {
   const [selected, setSelected] = useState(todayIdx)
   const groupedDays = useMemo(() => {
     const set = new Set<number>()
@@ -909,24 +917,42 @@ function DaysScreen({ plants, todayIdx, onToggleWatered }: { plants: Plant[]; to
   }, [plants])
   const todayName = FULL_DAY_NAMES[selected]
   const duePlants = plants.filter((p) => isPlantDueOnDay(p, selected, getDateForDayIndex(selected)))
+  const doneCount = duePlants.filter((p) => p.isWateredToday).length
+  const allDone = duePlants.length > 0 && doneCount === duePlants.length
+
+  function handleMarkAll() {
+    duePlants.forEach((p) => {
+      if (allDone ? p.isWateredToday : !p.isWateredToday) onToggleWatered(p.id)
+    })
+  }
 
   return (
-    <div className="scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
-      <h1 className="font-heading text-center" style={{ fontSize: 20, color: '#fff', textTransform: 'uppercase' }}>Watering days</h1>
-      <p className="font-body" style={{ fontSize: 14, color: '#8E8E93', marginTop: 8, marginBottom: 20 }}>
+    <div className="app-shell-light scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
+      <div className="flex items-center justify-between mb-5">
+        <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft size={20} /></IconCircleBtn>
+        <div className="icon-circle" style={{ color: '#fff' }} aria-hidden>
+          <IconMenu size={20} />
+        </div>
+      </div>
+      <p className="font-body" style={{ fontSize: 15, color: '#666', marginBottom: 20 }}>
         The system grouped your {plants.length} plant{plants.length === 1 ? '' : 's'} into {groupedDays.size} day{groupedDays.size === 1 ? '' : 's'}.
       </p>
-      <div className="flex justify-between gap-2 mb-6">
+      <div className="flex justify-between mb-6">
         {DAYS.map((d, i) => (
           <div key={d} className="flex flex-col items-center gap-1.5">
             <DayPill label={d[0]} active={i === selected} onClick={() => setSelected(i)} />
-            <span style={{ width: 5, height: 5, borderRadius: 9999, background: groupedDays.has(i) ? GREEN : 'transparent' }} />
+            <span style={{ width: 5, height: 5, borderRadius: 9999, background: groupedDays.has(i) ? '#000' : 'transparent' }} />
           </div>
         ))}
       </div>
-      <h2 className="font-heading mb-3" style={{ fontSize: 16, color: '#fff' }}>
-        {selected === todayIdx ? `Today: ${todayName}` : todayName}. {duePlants.length} plant{duePlants.length === 1 ? '' : 's'}
-      </h2>
+      <div className="flex items-center justify-between mb-3">
+        <span className="font-heading" style={{ fontSize: 18, color: '#000' }}>
+          {selected === todayIdx ? `Today: ${todayName}` : todayName}
+        </span>
+        <span className="font-heading" style={{ fontSize: 18, color: '#000' }}>
+          {duePlants.length} plant{duePlants.length === 1 ? '' : 's'}
+        </span>
+      </div>
       <div className="flex flex-col gap-3">
         {duePlants.length === 0 && (
           <p className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>No plants scheduled for this day.</p>
@@ -934,13 +960,18 @@ function DaysScreen({ plants, todayIdx, onToggleWatered }: { plants: Plant[]; to
         {duePlants.map((p) => (
           <button key={p.id} type="button" onClick={() => onToggleWatered(p.id)} className="check-row text-left">
             <PlantPhoto photo={p.photo} alt="" className="rounded-full object-cover shrink-0 w-12 h-12" />
-            <span className="font-heading flex-1 min-w-0 truncate" style={{ fontSize: 17, color: '#111' }}>{p.name}</span>
+            <span className="font-heading flex-1 min-w-0 truncate" style={{ fontSize: 18, color: '#111' }}>{p.name}</span>
             <div className={`check-circle ${p.isWateredToday ? 'is-checked' : ''}`}>
               {p.isWateredToday && <IconCheck size={14} />}
             </div>
           </button>
         ))}
       </div>
+      {duePlants.length > 0 && (
+        <button type="button" onClick={handleMarkAll} className="btn-fill w-full mt-4" style={{ height: 56, fontSize: 15 }}>
+          {allDone ? 'Undo' : `Mark all watered (${doneCount}/${duePlants.length})`}
+        </button>
+      )}
     </div>
   )
 }
@@ -967,32 +998,32 @@ function PlantDetailScreen({
         <span className="font-heading truncate px-2" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Plant detail</span>
         <IconCircleBtn onClick={() => setShowActions(true)} label="More options"><IconDotsHorizontal /></IconCircleBtn>
       </div>
-      <div className="scroll-y flex-1 pb-6">
+      <div className="scroll-y flex-1 pb-28">
         <div className="px-5" style={{ height: 220 }}>
           <div className="rounded-[1.5rem] overflow-hidden w-full h-full">
             <PlantPhoto photo={plant.photo} alt={plant.name} className="w-full h-full object-cover" />
           </div>
         </div>
-        <div className="card-white mx-5 p-5 flex flex-col gap-4 mt-4">
+        <div className="sheet-body p-5 flex flex-col gap-4">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <div className="font-heading" style={{ fontSize: 26 }}>{plant.name}</div>
+              <div className="font-heading" style={{ fontSize: 30 }}>{plant.name}</div>
               {plant.category && (
                 <span className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>{plant.category}</span>
               )}
             </div>
             {hasAccess && (
-              <span className="btn-outline-pro shrink-0" style={{ fontSize: 10, padding: '3px 10px' }}>PRO</span>
+              <span className="badge-pro-dark shrink-0" style={{ fontSize: 10, padding: '3px 10px' }}>PRO</span>
             )}
           </div>
           {plant.isToxicToPets === true && (
-            <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: '#f3ecec' }}>
+            <div className="flex items-center gap-2 rounded-full px-4 py-3" style={{ background: '#f3ecec' }}>
               <IconAlert size={18} />
               <span className="font-body font-medium" style={{ fontSize: 13 }}>Toxic to pets</span>
             </div>
           )}
           {plant.isToxicToPets === false && (
-            <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: '#e8f9ee' }}>
+            <div className="flex items-center gap-2 rounded-full px-4 py-3" style={{ background: '#e8f9ee' }}>
               <IconPaw size={18} />
               <span className="font-body font-medium" style={{ fontSize: 13 }}>Pet safe</span>
             </div>
@@ -1002,12 +1033,12 @@ function PlantDetailScreen({
             {plant.healthLogs[0] ? (
               <>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Health score (AI)</span>
+                  <span className="caption-eyebrow">Health score (AI)</span>
                   <span className="font-body font-semibold" style={{ fontSize: 13, color: healthScoreColor(plant.healthLogs[0].healthScore) }}>
                     {plant.healthLogs[0].healthScore}% {plant.healthLogs[0].diagnosis}
                   </span>
                 </div>
-                <div style={{ height: 8, borderRadius: 9999, background: '#eee', overflow: 'hidden' }}>
+                <div style={{ height: 10, borderRadius: 9999, background: '#f0f0ec', overflow: 'hidden' }}>
                   <div style={{ width: `${plant.healthLogs[0].healthScore}%`, height: '100%', background: healthScoreColor(plant.healthLogs[0].healthScore), borderRadius: 9999 }} />
                 </div>
                 <div className="flex items-center justify-between mt-3">
@@ -1018,10 +1049,10 @@ function PlantDetailScreen({
             ) : (
               <>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Watering rhythm</span>
-                  <span className="font-body font-semibold" style={{ fontSize: 13, color: GREEN }}>{health.score}% {health.label}</span>
+                  <span className="caption-eyebrow">Watering rhythm</span>
+                  <span className="font-body font-bold" style={{ fontSize: 13, color: '#000' }}>{health.score}% {health.label}</span>
                 </div>
-                <div style={{ height: 8, borderRadius: 9999, background: '#eee', overflow: 'hidden' }}>
+                <div style={{ height: 10, borderRadius: 9999, background: '#f0f0ec', overflow: 'hidden' }}>
                   <div style={{ width: `${health.score}%`, height: '100%', background: GREEN, borderRadius: 9999 }} />
                 </div>
               </>
@@ -1029,36 +1060,46 @@ function PlantDetailScreen({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
-              <div style={{ color: '#000' }}><IconDroplet size={16} /></div>
-              <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{wateringFrequencyLabel}</span>
-              <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Watering</span>
+            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#f0f0ec' }}>
+              <div style={{ color: '#000' }}><IconDroplet size={18} /></div>
+              <div className="flex flex-col min-w-0">
+                <span className="font-heading" style={{ fontSize: 13, color: '#000', lineHeight: 1.2 }}>Water: {wateringFrequencyLabel}</span>
+                <span className="font-body truncate" style={{ fontSize: 11, color: '#8E8E93' }}>Soil hydration</span>
+              </div>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
-              <div style={{ color: '#000' }}><IconSun size={16} /></div>
-              <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{plant.lightNeed === 'High' ? 'Direct' : plant.lightNeed === 'Low' ? 'Shade' : 'Indirect'}</span>
-              <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Light need</span>
+            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#f0f0ec' }}>
+              <div style={{ color: '#000' }}><IconSun size={18} /></div>
+              <div className="flex flex-col min-w-0">
+                <span className="font-heading" style={{ fontSize: 13, color: '#000', lineHeight: 1.2 }}>Light: {plant.lightNeed === 'High' ? 'Direct' : plant.lightNeed === 'Low' ? 'Shade' : 'Indirect'}</span>
+                <span className="font-body truncate" style={{ fontSize: 11, color: '#8E8E93' }}>Bright filtered</span>
+              </div>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
-              <div style={{ color: '#000' }}><IconThermometer size={16} /></div>
-              <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{plant.temperatureRangeC ?? '18-27°C'}</span>
-              <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Temperature</span>
+            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#f0f0ec' }}>
+              <div style={{ color: '#000' }}><IconThermometer size={18} /></div>
+              <div className="flex flex-col min-w-0">
+                <span className="font-heading" style={{ fontSize: 13, color: '#000', lineHeight: 1.2 }}>Temp: {plant.temperatureRangeC ?? '18-27°C'}</span>
+                <span className="font-body truncate" style={{ fontSize: 11, color: '#8E8E93' }}>Keep stable</span>
+              </div>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
-              <div style={{ color: '#000' }}><IconDroplets size={16} /></div>
-              <span className="font-heading" style={{ fontSize: 15, color: '#000' }}>{plant.humidityNeed === 'high' ? 'High (60%+)' : plant.humidityNeed === 'low' ? 'Low' : 'Normal'}</span>
-              <span className="font-body" style={{ fontSize: 11, color: '#666' }}>Humidity</span>
+            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#f0f0ec' }}>
+              <div style={{ color: '#000' }}><IconDroplets size={18} /></div>
+              <div className="flex flex-col min-w-0">
+                <span className="font-heading" style={{ fontSize: 13, color: '#000', lineHeight: 1.2 }}>Humidity: {plant.humidityNeed === 'high' ? 'High' : plant.humidityNeed === 'low' ? 'Low' : 'Normal'}</span>
+                <span className="font-body truncate" style={{ fontSize: 11, color: '#8E8E93' }}>Mist regularly</span>
+              </div>
             </div>
           </div>
 
           <div>
-            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Watering schedule</span>
+            <span className="caption-eyebrow">Watering timeline</span>
             <div className="flex items-center gap-2 mt-2">
-              <span className="font-heading" style={{ fontSize: 11, background: GREEN, color: '#000', borderRadius: 8, padding: '4px 8px' }}>
-                {plant.isWateredToday ? 'DONE' : isPlantDueToday(plant, todayIdx) ? 'TODAY' : (plant.scheduleDays[0] ?? '—')}
+              <span className="font-heading" style={{ fontSize: 11, background: '#000', color: GREEN, borderRadius: 8, padding: '4px 8px', textTransform: 'uppercase' }}>
+                {plant.lastWateredAt ? new Date(plant.lastWateredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}
               </span>
               <div style={{ flex: 1, height: 1, background: '#eee' }} />
-              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>{nextWaterStatus(plant, todayIdx).label}</span>
+              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>
+                {plant.lastWateredAt ? `Last watered: ${daysAgoLabel(plant.lastWateredAt)}` : nextWaterStatus(plant, todayIdx).label}
+              </span>
             </div>
           </div>
 
@@ -1076,7 +1117,7 @@ function PlantDetailScreen({
 
           {hasAccess && (
             <div>
-              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Health log</span>
+              <span className="caption-eyebrow">Health log</span>
               {plant.healthLogs.length === 0 ? (
                 <p className="font-body mt-2" style={{ fontSize: 13, color: '#8E8E93' }}>No health checks yet.</p>
               ) : (
@@ -1131,7 +1172,7 @@ function PlantDetailScreen({
 
           <div>
             <div className="flex items-center justify-between">
-              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Grow history</span>
+              <span className="caption-eyebrow">Grow history</span>
             </div>
             {plant.history.length === 0 ? (
               <p className="font-body mt-2" style={{ fontSize: 13, color: '#8E8E93' }}>No growth check-ins yet.</p>
@@ -1251,7 +1292,7 @@ function LanguagePickerSheet({ current, onSelect, onClose }: { current: AppLangu
       <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onClose)} />
       <div className="fixed left-0 right-0 bottom-0 z-[70]">
         <div className={`sheet-panel ${open ? 'is-open' : ''} p-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-1`} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          <span className="font-body block px-3 pt-2 pb-1" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Language</span>
+          <span className="caption-eyebrow block px-3 pt-2 pb-1">Language</span>
           {LANGUAGE_OPTIONS.map((opt) => (
             <button
               key={opt.code}
@@ -1418,8 +1459,8 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
           <button
             type="button"
             onClick={() => galleryInputRef.current?.click()}
-            className="font-heading w-full mt-3"
-            style={{ height: 52, fontSize: 15, textTransform: 'uppercase', borderRadius: 9999, background: 'transparent', border: '1.5px solid #ddd', color: '#111' }}
+            className="btn-outline-ink w-full mt-3"
+            style={{ height: 52, fontSize: 15 }}
           >
             From gallery
           </button>
@@ -1434,7 +1475,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
           {draft && (
             <>
               <div style={{ height: 1, background: '#eee', margin: '20px 0' }} />
-              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Enter details manually</span>
+              <span className="caption-eyebrow">Enter details manually</span>
 
               <label className="flex flex-col gap-1.5 mt-4">
                 <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>Plant name</span>
@@ -1449,14 +1490,19 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
 
               <label className="flex flex-col gap-1.5 mt-4">
                 <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>Category</span>
-                <select
-                  value={draft.category}
-                  onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-                  className="font-body px-4"
-                  style={{ height: 48, fontSize: 15, color: '#111', background: '#f5f5f5', borderRadius: 14 }}
-                >
-                  {PLANT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className="relative">
+                  <select
+                    value={draft.category}
+                    onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+                    className="font-body px-4 w-full appearance-none"
+                    style={{ height: 48, fontSize: 15, color: '#111', background: '#f5f5f5', borderRadius: 14 }}
+                  >
+                    {PLANT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <div className="absolute pointer-events-none" style={{ right: 16, top: '50%', transform: 'translateY(-50%)', color: '#666' }}>
+                    <IconChevronDown size={18} />
+                  </div>
+                </div>
               </label>
 
               <div className="mt-4 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#f5f5f5' }}>
@@ -1491,9 +1537,8 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
             </>
           )}
         </div>
-        <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-3 flex gap-3 shrink-0">
-          <button type="button" onClick={onBack} className="font-heading flex-1" style={{ height: 52, borderRadius: 9999, background: '#f0f0f0', color: '#111' }}>Edit</button>
-          <button type="button" disabled={!draft} onClick={() => draft && onAdd(draft)} className="btn-fill flex-1" style={{ height: 52 }}>Add to jungle</button>
+        <div className="px-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pt-3 shrink-0">
+          <button type="button" disabled={!draft} onClick={() => draft && onAdd(draft)} className="btn-fill w-full" style={{ height: 52 }}>Add to jungle</button>
         </div>
       </div>
     </div>
@@ -1539,7 +1584,7 @@ function HealthReportCard({ photo, plantName, scannedAt, result }: {
         <p className="font-body" style={{ fontSize: 14, color: '#555', lineHeight: 1.5 }}>{result.treatmentNotes}</p>
       </div>
       <div className="card-white p-5 flex flex-col gap-3">
-        <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Recommended actions</span>
+        <span className="caption-eyebrow">Recommended actions</span>
         {result.recommendedActions.map((a, i) => (
           <div key={i} className="flex items-start gap-2">
             <div style={{ color: '#111', marginTop: 2 }}><IconCheck size={16} /></div>
@@ -1982,7 +2027,7 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
           <span>Unlock Pro</span>
         </button>
       )}
-      <span className="font-body block" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, marginTop: 20 }}>Settings &amp; configuration</span>
+      <span className="caption-eyebrow block" style={{ marginBottom: 8, marginTop: 20 }}>Settings &amp; configuration</span>
       <div className="card-white overflow-hidden">
         <button type="button" onClick={() => setShowNotifSettings((v) => !v)} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
           <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Notification preferences</span>
@@ -2024,14 +2069,12 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
           <div style={{ color: '#111' }}><IconDownload size={18} /></div>
           <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Export my data</span>
         </button>
-        <button type="button" onClick={onReset} className="flex items-center gap-3 w-full px-5 py-4" style={{ color: '#FF3B30' }}>
+        <button type="button" onClick={onReset} className="flex items-center gap-3 w-full px-5 py-4" style={{ color: '#FF3B30', borderBottom: '1px solid #eee' }}>
           <IconTrash size={18} />
           <span className="font-heading" style={{ fontSize: 16, color: '#FF3B30' }}>Reset all data</span>
         </button>
-      </div>
 
-      <span className="font-body block" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, marginTop: 20 }}>Legal</span>
-      <div className="card-white overflow-hidden">
+        <span className="caption-eyebrow block px-5" style={{ paddingBottom: 8, paddingTop: 20 }}>Legal</span>
         <button type="button" onClick={() => onOpenLegal('terms')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
           <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>Terms of Use</span>
           <div style={{ color: '#111' }}><IconChevronRight size={16} /></div>
@@ -2119,17 +2162,17 @@ function LimitReachedSheet({ onUnlock, onCancel }: { onUnlock: () => void; onCan
   return (
     <>
       <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onCancel)} />
-      <div className="fixed left-0 right-0 bottom-0 z-[70]">
-        <div className={`sheet-panel ${open ? 'is-open' : ''} p-6 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] flex flex-col items-center gap-4 text-center`}>
+      <div className="fixed left-4 right-4 z-[70]" style={{ top: '50%', transform: 'translateY(-50%)' }}>
+        <div className={`modal-card ${open ? 'is-open' : ''} p-6 flex flex-col items-center gap-4 text-center`}>
           <div className="flex items-center justify-center rounded-full" style={{ width: 64, height: 64, background: '#f3ecec' }}>
             <IconAlert size={28} />
           </div>
-          <h2 className="font-heading" style={{ fontSize: 22 }}>You have reached your {MAX_FREE_PLANTS} free plants</h2>
+          <h2 className="font-heading" style={{ fontSize: 24, lineHeight: 1.2 }}>You have reached your {MAX_FREE_PLANTS} free plants</h2>
           <p className="font-body" style={{ fontSize: 14, color: '#666', lineHeight: 1.5 }}>
             Pro lets you add unlimited plants, plus health &amp; growth tracking and priority support.
           </p>
           <button type="button" onClick={() => close(onUnlock)} className="btn-fill w-full" style={{ height: 52 }}>Unlock Pro</button>
-          <button type="button" onClick={() => close(onCancel)} className="font-heading w-full" style={{ height: 52, borderRadius: 9999, background: '#f0f0f0', color: '#888' }}>Cancel</button>
+          <button type="button" onClick={() => close(onCancel)} className="font-heading w-full" style={{ height: 52, borderRadius: 9999, background: '#f0f0ec', color: '#888' }}>Cancel</button>
         </div>
       </div>
     </>
@@ -2190,47 +2233,50 @@ function ProUnlockScreen({ onClose, onUnlock }: { onClose: () => void; onUnlock:
         <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Upgrade</span>
         <div style={{ width: 44 }} />
       </div>
-      <div className="scroll-y flex-1 px-6 pb-6 flex flex-col items-center">
-        <div className="flex items-center justify-center rounded-full mb-6 mt-2" style={{ width: 88, height: 88, background: GREEN }}>
-          <IconLock size={32} />
+      <div className="flex items-center justify-center shrink-0" style={{ height: 190 }}>
+        <div className="flex items-center justify-center rounded-full" style={{ width: 140, height: 140, background: 'var(--color-surface)' }}>
+          <div style={{ color: GREEN }}><IconLock size={48} /></div>
+        </div>
+      </div>
+      <div className="sheet-body scroll-y flex-1 px-6 pt-6 pb-24 flex flex-col items-center">
+        <div className="grid grid-cols-2 rounded-2xl w-full" style={{ background: '#f0f0ec' }}>
+          <div className="p-4 flex flex-col gap-1 items-start text-left">
+            <span className="caption-eyebrow">Free plan</span>
+            <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{MAX_FREE_PLANTS} plants limit</span>
+          </div>
+          <div className="p-4 flex flex-col gap-1 items-start text-left" style={{ borderLeft: '1px solid #ddd' }}>
+            <span className="caption-eyebrow" style={{ color: '#0a8f3f' }}>Pro membership</span>
+            <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>Unlimited plants</span>
+          </div>
         </div>
 
-        <div className="card-white w-full p-5">
-          <div className="grid grid-cols-2 rounded-2xl overflow-hidden" style={{ background: '#f5f5f5' }}>
-            <div className="p-4 flex flex-col gap-1 items-start text-left">
-              <span className="font-body" style={{ fontSize: 11, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Free plan</span>
-              <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{MAX_FREE_PLANTS} plants limit</span>
-            </div>
-            <div className="p-4 flex flex-col gap-1 items-start text-left" style={{ borderLeft: '1px solid #ddd' }}>
-              <span className="font-body" style={{ fontSize: 11, color: '#0a8f3f', textTransform: 'uppercase', letterSpacing: 0.5 }}>Pro membership</span>
-              <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>Unlimited plants</span>
-            </div>
-          </div>
-
-          <span className="font-body block mt-5" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>Features unlocked</span>
-          <div className="flex flex-col gap-3 mt-3 items-start w-full">
-            {PRO_BENEFITS.map((b) => (
-              <div key={b} className="flex items-center gap-3">
-                <div style={{ color: '#111' }}><IconCheck size={18} /></div>
-                <span className="font-body" style={{ fontSize: 15, color: '#111' }}>{b}</span>
+        <span className="caption-eyebrow block w-full mt-5">Features unlocked</span>
+        <div className="flex flex-col gap-3 mt-3 items-start w-full">
+          {PRO_BENEFITS.map((b) => (
+            <div key={b} className="flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 24, height: 24, border: '1.5px solid #000' }}>
+                <IconCheck size={14} />
               </div>
-            ))}
-          </div>
+              <span className="font-body font-bold" style={{ fontSize: 15, color: '#111' }}>{b}</span>
+            </div>
+          ))}
         </div>
 
-        <span className="font-heading mt-6" style={{ fontSize: 34, color: '#fff' }}>$6.99</span>
-        <span className="font-body" style={{ fontSize: 13, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.5 }}>One-time purchase</span>
+        <div style={{ width: '100%', height: 1, background: '#eee', margin: '24px 0 0' }} />
+
+        <span className="font-heading mt-6" style={{ fontSize: 40, color: '#000' }}>$6.99</span>
+        <span className="caption-eyebrow">One-time purchase</span>
         <button type="button" onClick={() => void handleUnlock()} disabled={purchasing} className="btn-fill w-full mt-4" style={{ height: 56, fontSize: 16 }}>
-          {purchasing ? 'Processing…' : 'Unlock forever'}
+          {purchasing ? 'Processing…' : 'Unlock Pro'}
         </button>
-        <button type="button" onClick={() => void handleRestore()} disabled={restoring} className="font-body underline mt-3" style={{ fontSize: 12, color: '#8E8E93' }}>
+        <button type="button" onClick={() => void handleRestore()} disabled={restoring} className="font-body underline mt-3 mb-6" style={{ fontSize: 12, color: '#8E8E93' }}>
           {restoring ? 'Restoring…' : 'Restore purchase'}
         </button>
       </div>
       {toast && (
-        <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(24px + env(safe-area-inset-bottom,0px))' }}>
-          <div className="rounded-2xl px-4 py-3 text-center" style={{ background: '#fff' }}>
-            <span className="font-body" style={{ fontSize: 13, color: '#111' }}>{toast}</span>
+        <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(96px + env(safe-area-inset-bottom,0px))' }}>
+          <div className="rounded-2xl px-4 py-3 text-center" style={{ background: '#000' }}>
+            <span className="font-body" style={{ fontSize: 13, color: '#fff' }}>{toast}</span>
           </div>
         </div>
       )}
@@ -2445,43 +2491,65 @@ export default function App() {
   } else if (screen === 'plantDetail' && selectedPlant) {
     const live = plants.find((p) => p.id === selectedPlant.id) || selectedPlant
     content = (
-      <PlantDetailScreen
-        plant={live}
-        user={user}
-        todayIdx={todayIdx}
-        onBack={() => { setScreen('main'); setSelectedPlant(null) }}
-        onDelete={() => handleDeletePlant(live.id)}
-        onWater={() => handleWaterToggle(live.id)}
-        onShowLimitOrPro={() => setScreen('proUnlock')}
-        onRunHealthCheck={() => { setHealthFlowConfig({ mode: 'existing', presetPlant: live }); setScreen('healthFlow') }}
-        onEdit={() => setScreen('editPlant')}
-        onLogGrowth={() => { setGrowthFlowPlant(live); setScreen('growthFlow') }}
-      />
+      <div className="app-shell fixed inset-0">
+        <PlantDetailScreen
+          plant={live}
+          user={user}
+          todayIdx={todayIdx}
+          onBack={() => { setScreen('main'); setSelectedPlant(null) }}
+          onDelete={() => handleDeletePlant(live.id)}
+          onWater={() => handleWaterToggle(live.id)}
+          onShowLimitOrPro={() => setScreen('proUnlock')}
+          onRunHealthCheck={() => { setHealthFlowConfig({ mode: 'existing', presetPlant: live }); setScreen('healthFlow') }}
+          onEdit={() => setScreen('editPlant')}
+          onLogGrowth={() => { setGrowthFlowPlant(live); setScreen('growthFlow') }}
+        />
+        <TabBar
+          active={tab}
+          onChange={(t) => { setSelectedPlant(null); setScreen('main'); if (t === 'health' && !user.isPro) { setScreen('proUnlock') } else { setTab(t) } }}
+          onAdd={openAddFlow}
+        />
+      </div>
     )
   } else if (screen === 'manualAdd') {
     content = (
-      <ManualAddScreen
-        isPro={user.isPro}
-        language={language}
-        primaryDay={settings.primaryWateringDay}
-        remainingFreeSlots={Math.max(0, MAX_FREE_PLANTS - plants.length)}
-        onBack={() => { setScreen('main'); setTab('home') }}
-        onAdd={(draft) => {
-          setPlants((prev) => [...prev, draftToPlant(draft)])
-          setScreen('main')
-          setTab('home')
-        }}
-      />
+      <div className="app-shell fixed inset-0">
+        <ManualAddScreen
+          isPro={user.isPro}
+          language={language}
+          primaryDay={settings.primaryWateringDay}
+          remainingFreeSlots={Math.max(0, MAX_FREE_PLANTS - plants.length)}
+          onBack={() => { setScreen('main'); setTab('home') }}
+          onAdd={(draft) => {
+            setPlants((prev) => [...prev, draftToPlant(draft)])
+            setScreen('main')
+            setTab('home')
+          }}
+        />
+        <TabBar
+          active={null}
+          addActive
+          onChange={(t) => { setScreen('main'); if (t === 'health' && !user.isPro) { setScreen('proUnlock') } else { setTab(t) } }}
+          onAdd={openAddFlow}
+        />
+      </div>
     )
   } else if (screen === 'proUnlock') {
     content = (
-      <ProUnlockScreen
-        onClose={() => { setScreen('main'); setTab('profile') }}
-        onUnlock={() => {
-          setSettings((s) => ({ ...s, isPro: true }))
-          setScreen('bulkAdd')
-        }}
-      />
+      <div className="app-shell fixed inset-0">
+        <ProUnlockScreen
+          onClose={() => { setScreen('main'); setTab('profile') }}
+          onUnlock={() => {
+            setSettings((s) => ({ ...s, isPro: true }))
+            setScreen('bulkAdd')
+          }}
+        />
+        <TabBar
+          active={tab}
+          onChange={(t) => { setScreen('main'); setTab(t) }}
+          onAdd={openAddFlow}
+        />
+      </div>
     )
   } else if (screen === 'bulkAdd') {
     content = (
@@ -2561,7 +2629,7 @@ export default function App() {
     if (tab === 'home') {
       tabContent = <HomeScreen plants={plants} todayIdx={todayIdx} onOpenPlant={(p) => { setSelectedPlant(p); setScreen('plantDetail') }} />
     } else if (tab === 'days') {
-      tabContent = <DaysScreen plants={plants} todayIdx={todayIdx} onToggleWatered={handleWaterToggle} />
+      tabContent = <DaysScreen plants={plants} todayIdx={todayIdx} onToggleWatered={handleWaterToggle} onBack={() => setTab('home')} />
     } else if (tab === 'health') {
       tabContent = (
         <HealthHubScreen
