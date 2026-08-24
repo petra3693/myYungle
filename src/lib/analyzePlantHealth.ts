@@ -3,14 +3,25 @@ import { compressImageForGemini, isInlinePhoto } from '@/lib/imageCompress'
 import { parseAiJson } from '@/lib/aiJson'
 import type { AppLanguage } from '@/i18n/languages'
 
+export type HealthSeverity = 'Low' | 'Moderate' | 'High'
+
 export interface AnalyzePlantHealthResult {
   healthScore: number
   diagnosis: string
   treatmentNotes: string
   recommendedActions: string[]
+  severity: HealthSeverity
+  confidence: number
 }
 
 const DEFAULT_ACTIONS = ['Check soil moisture and drainage', 'Ensure adequate indirect light', 'Monitor for pests over the next few days']
+
+function normalizeSeverity(value: unknown): HealthSeverity {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (normalized === 'moderate' || normalized === 'medium') return 'Moderate'
+  if (normalized === 'high' || normalized === 'severe') return 'High'
+  return 'Low'
+}
 
 const FRIENDLY_FALLBACK = 'Could not analyze this plant photo. Please try again with a clearer image.'
 
@@ -71,10 +82,19 @@ export async function analyzePlantHealthImage(
     const recommendedActions = Array.isArray(record.recommendedActions)
       ? record.recommendedActions.filter((a): a is string => typeof a === 'string' && a.trim().length > 0)
       : []
+    const severity = normalizeSeverity(record.severity)
+    const confidence = Math.max(0, Math.min(100, Math.round(Number(record.confidence ?? 70))))
 
     return {
       ok: true,
-      data: { healthScore, diagnosis, treatmentNotes, recommendedActions: recommendedActions.length > 0 ? recommendedActions : DEFAULT_ACTIONS },
+      data: {
+        healthScore,
+        diagnosis,
+        treatmentNotes,
+        recommendedActions: recommendedActions.length > 0 ? recommendedActions : DEFAULT_ACTIONS,
+        severity,
+        confidence,
+      },
     }
   } catch (error) {
     console.error('[myJungle] analyze-plant-health unexpected error:', error)

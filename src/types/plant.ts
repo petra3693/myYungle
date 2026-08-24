@@ -24,6 +24,10 @@ export interface PlantHealthLog {
   treatmentNotes: string
   recommendedActions: string[]
   analyzedByAI: boolean
+  /** How serious any detected issue is. Undefined for logs saved before this field existed. */
+  severity?: 'Low' | 'Moderate' | 'High'
+  /** Model confidence in the diagnosis, 0-100. Undefined for logs saved before this field existed. */
+  confidence?: number
 }
 
 export interface Plant {

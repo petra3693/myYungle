@@ -88,6 +88,7 @@ type Screen =
   | 'legal'
   | 'editPlant'
   | 'growthFlow'
+  | 'growthHistory'
 
 type Tab = 'home' | 'days' | 'health' | 'profile'
 
@@ -252,6 +253,7 @@ const IconCalendarSmall = (p: { size?: number }) => <Icon {...p}><rect x="3" y="
 const IconDotsHorizontal = (p: { size?: number }) => <Icon {...p}><circle cx="5" cy="12" r="1.5" fill="currentColor" /><circle cx="12" cy="12" r="1.5" fill="currentColor" /><circle cx="19" cy="12" r="1.5" fill="currentColor" /></Icon>
 const IconChevronRight = (p: { size?: number }) => <Icon {...p}><path d="M9 5l7 7-7 7" /></Icon>
 const IconGlobe = (p: { size?: number }) => <Icon {...p}><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z" /></Icon>
+const IconRuler = (p: { size?: number }) => <Icon {...p}><rect x="3" y="8" width="18" height="8" rx="1.5" /><path d="M7 8v3M11 8v3M15 8v3" /></Icon>
 
 // ─── Small building blocks ───────────────────────────────────────────────────
 
@@ -1106,10 +1108,11 @@ function DaysScreen({ plants, todayIdx, onToggleWatered, onBack }: {
 // ─── Screen: Plant detail ─────────────────────────────────────────────────────
 
 function PlantDetailScreen({
-  plant, user, todayIdx, canScan, onBack, onDelete, onWater, onShowPaywall, onRunHealthCheck, onEdit, onLogGrowth,
+  plant, user, todayIdx, canScan, onBack, onDelete, onWater, onShowPaywall, onRunHealthCheck, onEdit, onLogGrowth, onViewTimeline,
 }: {
   plant: Plant; user: UserState; todayIdx: number; canScan: boolean; onBack: () => void; onDelete: () => void; onWater: () => void
   onShowPaywall: (source: PaywallSource) => void; onRunHealthCheck: () => void; onEdit: () => void; onLogGrowth: () => void
+  onViewTimeline: () => void
 }) {
   const [showActions, setShowActions] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
@@ -1297,7 +1300,7 @@ function PlantDetailScreen({
                   <p className="font-body mt-2" style={{ fontSize: 13, color: '#8E8E93' }}>No growth check-ins yet.</p>
                 ) : (
                   <div className="flex flex-col gap-2 mt-2">
-                    {plant.history.map((entry) => (
+                    {plant.history.slice(0, 2).map((entry) => (
                       <div key={entry.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#f5f5f5' }}>
                         <PlantPhoto photo={entry.photo} alt="" className="rounded-xl object-cover shrink-0 w-12 h-12" />
                         <div className="flex-1 min-w-0">
@@ -1318,6 +1321,17 @@ function PlantDetailScreen({
                     ))}
                   </div>
                 )}
+                {hasAccess && plant.history.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={onViewTimeline}
+                    className="font-heading flex items-center gap-1 mt-3"
+                    style={{ fontSize: 13, color: '#111', textTransform: 'uppercase' }}
+                  >
+                    View full timeline
+                    <IconChevronRight size={14} />
+                  </button>
+                )}
                 {hasAccess && (
                   <button
                     type="button"
@@ -1325,7 +1339,7 @@ function PlantDetailScreen({
                     className="font-heading w-full mt-3"
                     style={{ height: 48, borderRadius: 9999, background: 'transparent', border: '1.5px solid #111', color: '#111', textTransform: 'uppercase', fontSize: 13 }}
                   >
-                    Log growth
+                    New growth scan
                   </button>
                 )}
               </div>
@@ -1688,6 +1702,12 @@ function healthScoreColor(score: number): string {
   return '#FF3B30'
 }
 
+function healthStatusLabel(score: number): string {
+  if (score >= 70) return 'Healthy'
+  if (score >= 40) return 'Needs attention'
+  return 'Critical'
+}
+
 function daysAgoLabel(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
   if (days <= 0) return 'Today'
@@ -1698,7 +1718,7 @@ function daysAgoLabel(iso: string): string {
 function HealthReportCard({ photo, plantName, scannedAt, result }: {
   photo: string; plantName: string; scannedAt: string; result: AnalyzePlantHealthResult
 }) {
-  const healthy = result.healthScore >= 70
+  const statusColor = healthScoreColor(result.healthScore)
   return (
     <>
       <img src={photo} alt="" className="w-full rounded-[1.5rem] object-cover mb-4" style={{ height: 220 }} />
@@ -1708,24 +1728,41 @@ function HealthReportCard({ photo, plantName, scannedAt, result }: {
           Scanned: {new Date(scannedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
         </div>
       </div>
-      <div className="card-white p-5 flex flex-col gap-2 mb-4">
-        <div className="flex items-center gap-2">
-          <span style={{ width: 8, height: 8, borderRadius: 9999, background: healthScoreColor(result.healthScore) }} />
-          <span className="font-body font-semibold" style={{ fontSize: 12, color: healthScoreColor(result.healthScore), textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            {healthy ? 'Healthy' : 'Needs attention'}
-          </span>
-        </div>
-        <div className="font-heading" style={{ fontSize: 20 }}>{result.diagnosis}</div>
-        <p className="font-body" style={{ fontSize: 14, color: '#555', lineHeight: 1.5 }}>{result.treatmentNotes}</p>
-      </div>
+      <span className="caption-eyebrow block mb-2">AI health analysis</span>
       <div className="card-white p-5 flex flex-col gap-3">
-        <span className="caption-eyebrow">Recommended actions</span>
-        {result.recommendedActions.map((a, i) => (
-          <div key={i} className="flex items-start gap-2">
-            <div style={{ color: '#111', marginTop: 2 }}><IconCheck size={16} /></div>
-            <span className="font-body" style={{ fontSize: 14 }}>{a}</span>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+            <div style={{ color: statusColor }}><IconLeaf size={16} /></div>
+            <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{healthStatusLabel(result.healthScore)}</span>
+            <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>Status</span>
           </div>
-        ))}
+          <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+            <div style={{ color: '#0a8f3f' }}><IconRuler size={16} /></div>
+            <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{result.severity}</span>
+            <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>Severity</span>
+          </div>
+          <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+            <div style={{ color: '#0a8f3f' }}><IconCheck size={16} /></div>
+            <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{result.confidence}%</span>
+            <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>Confidence</span>
+          </div>
+        </div>
+        <div className="rounded-2xl p-4" style={{ background: '#f5f5f5' }}>
+          <span className="caption-eyebrow">Diagnosis</span>
+          <div className="font-heading mt-1" style={{ fontSize: 18 }}>{result.diagnosis}</div>
+          <p className="font-body mt-1" style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>{result.treatmentNotes}</p>
+        </div>
+        <div className="rounded-2xl p-4" style={{ background: '#f5f5f5' }}>
+          <span className="caption-eyebrow">Recommended actions</span>
+          <div className="flex flex-col gap-2 mt-2">
+            {result.recommendedActions.map((a, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <div style={{ color: '#0a8f3f', marginTop: 2 }}><IconCheck size={16} /></div>
+                <span className="font-body" style={{ fontSize: 14 }}>{a}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </>
   )
@@ -1860,6 +1897,8 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
       treatmentNotes: result.treatmentNotes,
       recommendedActions: result.recommendedActions,
       analyzedByAI: true,
+      severity: result.severity,
+      confidence: result.confidence,
     }
     onSaveLog(targetPlant.id, log)
     setShowAttachPicker(false)
@@ -2055,13 +2094,16 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
       <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.target.value = '' }} />
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
         <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
-        <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Log growth</span>
+        <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Growth scan</span>
         <div style={{ width: 44 }} />
       </div>
       <div className="scroll-y flex-1 px-5 pb-6">
         {!photo && (
-          <div className="dash-picker w-full flex flex-col items-center justify-center gap-4" style={{ height: 260 }}>
+          <div className="dash-picker w-full flex flex-col items-center justify-center gap-4 p-6" style={{ minHeight: 260 }}>
             <IconCamera size={30} />
+            <p className="font-body text-center" style={{ fontSize: 13, color: '#8E8E93', lineHeight: 1.4 }}>
+              Our AI will analyze your plant's age, maturity, and estimated size.
+            </p>
             <div className="flex gap-3 w-full px-6">
               <button type="button" onClick={() => cameraInputRef.current?.click()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>Take photo</button>
               <button
@@ -2097,25 +2139,34 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
         {photo && result && !analyzing && (
           <>
             <img src={photo} alt="" className="w-full rounded-[1.5rem] object-cover mb-4" style={{ height: 220 }} />
-            <div className="mb-4">
-              <div className="font-heading" style={{ fontSize: 22, color: '#fff' }}>{plant.name}</div>
-              <div className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>
-                Checked: {new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+            <div className="mb-4 flex items-start justify-between gap-2">
+              <div>
+                <div className="font-heading" style={{ fontSize: 22, color: '#fff' }}>{plant.name}</div>
+                <div className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>Growth match verified</div>
               </div>
+              <span className="badge-pro-dark shrink-0" style={{ fontSize: 10, padding: '3px 10px' }}>PRO</span>
             </div>
-            <div className="card-white p-5 flex flex-col gap-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
-                  <span className="font-heading" style={{ fontSize: 18 }}>{result.heightCm} cm</span>
-                  <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Estimated height</span>
+            <span className="caption-eyebrow block mb-2">AI growth analysis</span>
+            <div className="card-white p-5 flex flex-col gap-3">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+                  <div style={{ color: '#0a8f3f' }}><IconLeaf size={16} /></div>
+                  <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{result.estimatedAge}</span>
+                  <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>Maturity</span>
                 </div>
-                <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
-                  <span className="font-heading" style={{ fontSize: 18 }}>{result.estimatedAge}</span>
-                  <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>Estimated age</span>
+                <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+                  <div style={{ color: '#0a8f3f' }}><IconRuler size={16} /></div>
+                  <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{result.heightCm} cm</span>
+                  <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>Est. size</span>
+                </div>
+                <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+                  <div style={{ color: '#0a8f3f' }}><IconCheck size={16} /></div>
+                  <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{result.condition}</span>
+                  <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>Health</span>
                 </div>
               </div>
-              <div className="rounded-2xl p-4 mt-1" style={{ background: '#f5f5f5' }}>
-                <span className="font-heading" style={{ fontSize: 16 }}>{result.condition}</span>
+              <div className="rounded-2xl p-4" style={{ background: '#f5f5f5' }}>
+                <span className="caption-eyebrow">AI observations</span>
                 <p className="font-body mt-1" style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>{result.summary}</p>
               </div>
             </div>
@@ -2127,18 +2178,106 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
           {saved ? (
             <button type="button" onClick={onBack} className="btn-fill w-full" style={{ height: 52 }}>Done</button>
           ) : (
-            <button type="button" onClick={handleSave} className="btn-fill w-full" style={{ height: 52 }}>Save to grow history</button>
+            <button type="button" onClick={handleSave} className="btn-fill w-full" style={{ height: 52 }}>Save to growth log</button>
           )}
           <button
             type="button"
             onClick={reset}
             className="font-heading w-full"
-            style={{ height: 52, borderRadius: 9999, background: 'transparent', border: `1.5px solid ${GREEN}`, color: GREEN, textTransform: 'uppercase' }}
+            style={{ height: 52, borderRadius: 9999, background: 'transparent', border: '1.5px solid #fff', color: '#fff', textTransform: 'uppercase' }}
           >
-            Scan again
+            Retake photo
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Screen: Growth history ─────────────────────────────────────────────────
+
+function GrowthHistoryScreen({ plant, onBack, onNewScan }: {
+  plant: Plant; onBack: () => void; onNewScan: () => void
+}) {
+  const entries = plant.history
+  const hasEntries = entries.length > 0
+  const oldest = hasEntries ? entries[entries.length - 1] : null
+  const newest = hasEntries ? entries[0] : null
+  const monthsTracked = oldest ? Math.max(1, Math.round((Date.now() - new Date(oldest.date).getTime()) / (30.44 * 86400000))) : 0
+  const growthCm =
+    oldest && newest && oldest.heightCm !== undefined && newest.heightCm !== undefined
+      ? Math.max(0, newest.heightCm - oldest.heightCm)
+      : null
+  const currentYear = new Date().getFullYear()
+
+  return (
+    <div className="app-shell fixed inset-0 flex flex-col">
+      <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
+        <IconCircleBtn onClick={onBack} label="Back"><IconChevronLeft /></IconCircleBtn>
+        <span className="font-heading truncate px-2" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>Growth history</span>
+        <div style={{ width: 44 }} />
+      </div>
+      <div className="scroll-y flex-1 px-5 pb-28">
+        <div className="flex items-center gap-3 rounded-2xl p-3" style={{ background: 'var(--color-surface)' }}>
+          <PlantPhoto photo={plant.photo} alt={plant.name} className="rounded-2xl object-cover shrink-0 w-14 h-14" />
+          <div className="min-w-0">
+            <div className="font-heading truncate" style={{ fontSize: 17, color: '#fff' }}>{plant.name}</div>
+            <div className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>
+              {oldest ? `First logged: ${new Date(oldest.date).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}` : 'No entries yet'}
+            </div>
+          </div>
+        </div>
+
+        {hasEntries && (
+          <div className="rounded-2xl px-4 py-3 mt-3 flex items-center justify-center" style={{ background: '#000' }}>
+            <span className="font-heading text-center" style={{ fontSize: 12, color: GREEN, textTransform: 'uppercase' }}>
+              {entries.length} entr{entries.length === 1 ? 'y' : 'ies'} · {monthsTracked} month{monthsTracked === 1 ? '' : 's'} tracked
+              {growthCm !== null && growthCm > 0 ? ` · +${growthCm}cm growth` : ''}
+            </span>
+          </div>
+        )}
+
+        {hasEntries ? (
+          <>
+            <span className="caption-eyebrow block mt-6 mb-3">Timeline journey</span>
+            <div className="flex flex-col">
+              {entries.map((entry, i) => (
+                <div key={entry.id} className="flex gap-3">
+                  <div className="flex flex-col items-center shrink-0" style={{ width: 12 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 9999, background: GREEN, flexShrink: 0, marginTop: 4 }} />
+                    {i < entries.length - 1 && <span style={{ width: 1.5, flex: 1, background: '#333', marginTop: 2 }} />}
+                  </div>
+                  <div className="flex-1 min-w-0 pb-5">
+                    <span className="font-heading inline-block shrink-0 mb-2" style={{ fontSize: 10, background: GREEN, color: '#000', borderRadius: 6, padding: '3px 7px' }}>
+                      {new Date(entry.date)
+                        .toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: new Date(entry.date).getFullYear() !== currentYear ? 'numeric' : undefined,
+                        })
+                        .toUpperCase()}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <PlantPhoto photo={entry.photo} alt="" className="rounded-xl object-cover shrink-0 w-12 h-12" />
+                      <div className="min-w-0">
+                        <div className="font-heading truncate" style={{ fontSize: 15, color: '#fff' }}>
+                          {entry.estimatedAge}{entry.heightCm !== undefined && entry.heightCm > 0 ? ` · ${entry.heightCm}cm` : ''}
+                        </div>
+                        <div className="font-body truncate" style={{ fontSize: 12, color: '#8E8E93' }}>{entry.note}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="font-body text-center mt-10" style={{ fontSize: 14, color: '#8E8E93' }}>No growth check-ins yet.</p>
+        )}
+      </div>
+      <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-3 shrink-0">
+        <button type="button" onClick={onNewScan} className="btn-fill w-full" style={{ height: 56, fontSize: 15 }}>New growth scan</button>
+      </div>
     </div>
   )
 }
@@ -2273,8 +2412,15 @@ const LEGAL_CONTENT: Record<LegalDoc, { title: string; body: string }> = {
     body:
       '[Placeholder — replace before publishing]\n\n' +
       'By using myJungle, you agree to use the app for its intended purpose of tracking and caring for your houseplants. ' +
-      'AI-generated plant identification, health, and care guidance is provided for informational purposes only and may not always be accurate — always use your own judgment for plant and pet safety. ' +
-      'The Pro unlock is a one-time, non-subscription purchase. ' +
+      'AI-generated plant identification, health, and care guidance is provided for informational purposes only and may not always be accurate — always use your own judgment for plant and pet safety.\n\n' +
+      'Subscriptions. myJungle Pro Monthly and myJungle Pro Annual are auto-renewing subscriptions. ' +
+      'Payment is charged to your Apple ID account at confirmation of purchase. ' +
+      'Subscriptions automatically renew for the same price and duration unless auto-renew is turned off at least 24 hours before the end of the current period. ' +
+      'Your account will be charged for renewal within 24 hours prior to the end of the current period. ' +
+      'You can manage your subscription and turn off auto-renewal at any time in your device’s Account Settings after purchase. ' +
+      'Any unused portion of a free trial period will be forfeited when you purchase a subscription, where applicable. ' +
+      'myJungle Pro Lifetime is a one-time, non-renewing purchase that grants permanent Pro access on the account that bought it. ' +
+      'Users who bought the legacy one-time Pro unlock keep permanent Pro access at no extra cost.\n\n' +
       'We may update these terms from time to time; continued use of the app after changes constitutes acceptance.',
   },
   privacy: {
@@ -2283,6 +2429,7 @@ const LEGAL_CONTENT: Record<LegalDoc, { title: string; body: string }> = {
       '[Placeholder — replace before publishing]\n\n' +
       'myJungle stores your plants, photos, and settings locally on your device. ' +
       'Photos you capture are sent to our AI provider (Google Gemini) solely to identify plants and diagnose health issues, and are not stored by us beyond what your device retains. ' +
+      'Purchases and subscription status are processed by RevenueCat and the App Store on our behalf; we receive purchase and entitlement status, not your payment details. ' +
       'We do not sell your personal data. ' +
       'Contact us at [your-support-email@example.com] with any privacy questions or data deletion requests.',
   },
@@ -2357,13 +2504,14 @@ type SelectablePlan = 'monthly' | 'annual' | 'lifetime'
 // overrides a real RevenueCat price. Matches the configured store products.
 const FALLBACK_PREVIEW_PRICES = { monthly: 1.99, annual: 19.99, lifetime: 49.99 }
 
-function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchased, onOpenLegal }: {
+function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchased, onOpenLegal, onRetryOfferings }: {
   source: PaywallSource | null
   offering: PurchasesOffering | null
   offeringsStatus: OfferingsStatus
   onClose: () => void
   onPurchased: (customerInfo: CustomerInfo, plan: SelectablePlan) => void
   onOpenLegal: (doc: LegalDoc) => void
+  onRetryOfferings: () => void
 }) {
   const [selected, setSelected] = useState<SelectablePlan>('annual')
   const [purchasing, setPurchasing] = useState(false)
@@ -2371,6 +2519,8 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
   const [toast, setToast] = useState<string | null>(null)
   const copy = paywallCopyForSource(source)
   const isWebPreview = Capacitor.getPlatform() !== 'ios' && Capacitor.getPlatform() !== 'android'
+  // A real load failure on a real device (not the expected "no SDK on web" case) — offer a retry, not just dashes.
+  const offeringsFailed = offeringsStatus === 'unavailable' && !isWebPreview
   const monthlyPkg = offering?.monthly ?? null
   const annualPkg = offering?.annual ?? null
   const lifetimePkg = offering?.lifetime ?? null
@@ -2549,22 +2699,31 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
           ))}
         </div>
 
+        {offeringsFailed && (
+          <div className="rounded-2xl px-4 py-3 mt-4 flex items-center justify-between gap-2" style={{ background: '#fdecec' }}>
+            <span className="font-body" style={{ fontSize: 12, color: '#a33', lineHeight: 1.4 }}>Couldn't load pricing. Check your connection.</span>
+            <button type="button" onClick={onRetryOfferings} className="font-heading shrink-0" style={{ fontSize: 12, color: '#a33', textTransform: 'uppercase' }}>Retry</button>
+          </div>
+        )}
+
         <button
           type="button"
           onClick={() => void handlePurchase()}
-          disabled={!ready || purchasing}
+          disabled={!ready || purchasing || restoring}
           className="btn-fill w-full mt-6"
           style={{ height: 64, fontSize: 17 }}
         >
           {purchasing
             ? 'Processing…'
-            : !ready
-              ? 'Pricing unavailable'
-              : hasTrial
-                ? `Start ${getTrialDays()}-Day Free Trial`
-                : selected === 'lifetime'
-                  ? 'Get lifetime access'
-                  : 'Subscribe'}
+            : offeringsStatus === 'loading'
+              ? 'Loading prices…'
+              : !ready
+                ? 'Pricing unavailable'
+                : hasTrial
+                  ? `Start ${getTrialDays()}-Day Free Trial`
+                  : selected === 'lifetime'
+                    ? 'Get lifetime access'
+                    : 'Subscribe'}
         </button>
         <p className="font-body text-center mt-3" style={{ fontSize: 11, color: '#8E8E93', lineHeight: 1.4 }}>
           {hasTrial
@@ -2577,7 +2736,7 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
         </p>
 
         <div className="flex items-center justify-center gap-3 mt-4 mb-6">
-          <button type="button" onClick={() => void handleRestore()} disabled={restoring} className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>
+          <button type="button" onClick={() => void handleRestore()} disabled={restoring || purchasing} className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>
             {restoring ? 'Restoring…' : 'Restore purchase'}
           </button>
           <span style={{ color: '#ccc' }}>·</span>
@@ -2597,14 +2756,20 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
   )
 }
 
-function LifetimeOfferScreen({ offering, onDismiss, onPurchased }: {
+function LifetimeOfferScreen({ offering, offeringsStatus, onDismiss, onPurchased, onOpenLegal }: {
   offering: PurchasesOffering | null
+  offeringsStatus: OfferingsStatus
   onDismiss: () => void
   onPurchased: (customerInfo: CustomerInfo) => void
+  onOpenLegal: (doc: LegalDoc) => void
 }) {
   const [purchasing, setPurchasing] = useState(false)
+  const [restoring, setRestoring] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const lifetimePkg = offering?.lifetime ?? null
+  const isWebPreview = Capacitor.getPlatform() !== 'ios' && Capacitor.getPlatform() !== 'android'
+  const priceLabel = lifetimePkg ? lifetimePkg.product.priceString : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.lifetime.toFixed(2)}` : '—'
+  const ready = offeringsStatus === 'ready' && lifetimePkg !== null
 
   useEffect(() => {
     logEvent('lifetime_offer_shown', {})
@@ -2634,6 +2799,27 @@ function LifetimeOfferScreen({ offering, onDismiss, onPurchased }: {
     }
   }
 
+  async function handleRestore() {
+    setRestoring(true)
+    logEvent('restore_attempted', { source: 'lifetime_offer' })
+    try {
+      const { customerInfo } = await Purchases.restorePurchases()
+      const restored = Object.keys(customerInfo.entitlements.active).length > 0
+      if (restored) {
+        logEvent('restore_succeeded', { source: 'lifetime_offer' })
+        showToast('Purchase restored!')
+        onPurchased(customerInfo)
+      } else {
+        showToast('Nothing to restore.')
+      }
+    } catch (error) {
+      console.error('[myJungle] restore purchases failed:', error)
+      showToast('Could not restore purchases. Please try again.')
+    } finally {
+      setRestoring(false)
+    }
+  }
+
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
       <div className="px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-6 shrink-0">
@@ -2642,7 +2828,7 @@ function LifetimeOfferScreen({ offering, onDismiss, onPurchased }: {
         <p className="font-body mt-3" style={{ fontSize: 15, color: 'rgba(255,255,255,0.6)', lineHeight: 1.35 }}>Own myJungle Pro forever with a single purchase.</p>
       </div>
       <div className="sheet-body scroll-y flex-1 px-5 pt-6 flex flex-col items-center">
-        <span className="font-heading" style={{ fontSize: 40, color: '#000' }}>{lifetimePkg?.product.priceString ?? '—'}</span>
+        <span className="font-heading" style={{ fontSize: 40, color: '#000' }}>{priceLabel}</span>
         <span className="caption-eyebrow">One-time purchase, forever</span>
 
         <span className="caption-eyebrow block w-full mt-6">Features unlocked</span>
@@ -2657,12 +2843,31 @@ function LifetimeOfferScreen({ offering, onDismiss, onPurchased }: {
           ))}
         </div>
 
-        <button type="button" onClick={() => void handlePurchase()} disabled={!lifetimePkg || purchasing} className="btn-fill w-full mt-6" style={{ height: 64, fontSize: 17 }}>
-          {purchasing ? 'Processing…' : 'Get lifetime access'}
+        <button
+          type="button"
+          onClick={() => void handlePurchase()}
+          disabled={!ready || purchasing || restoring}
+          className="btn-fill w-full mt-6"
+          style={{ height: 64, fontSize: 17 }}
+        >
+          {purchasing ? 'Processing…' : offeringsStatus === 'loading' ? 'Loading price…' : !ready ? 'Pricing unavailable' : 'Get lifetime access'}
         </button>
-        <button type="button" onClick={onDismiss} className="font-body mt-4 mb-6" style={{ fontSize: 13, color: '#8E8E93' }}>
+        <p className="font-body text-center mt-3" style={{ fontSize: 11, color: '#8E8E93', lineHeight: 1.4 }}>
+          One-time payment. Yours forever — no renewals.
+        </p>
+        <button type="button" onClick={onDismiss} className="font-body mt-4" style={{ fontSize: 13, color: '#8E8E93' }}>
           No thanks
         </button>
+
+        <div className="flex items-center justify-center gap-3 mt-5 mb-6">
+          <button type="button" onClick={() => void handleRestore()} disabled={restoring || purchasing} className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>
+            {restoring ? 'Restoring…' : 'Restore purchase'}
+          </button>
+          <span style={{ color: '#ccc' }}>·</span>
+          <button type="button" onClick={() => onOpenLegal('terms')} className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Terms</button>
+          <span style={{ color: '#ccc' }}>·</span>
+          <button type="button" onClick={() => onOpenLegal('privacy')} className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Privacy</button>
+        </div>
       </div>
       {toast && (
         <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(24px + env(safe-area-inset-bottom,0px))' }}>
@@ -2764,16 +2969,44 @@ export default function App() {
     })
   }
 
+  /** Fetches offerings; exposed (not just used at boot) so the paywall can offer a "Retry" after a network failure. */
+  async function fetchOfferings() {
+    setOfferingsStatus('loading')
+    try {
+      const offerings = await Purchases.getOfferings()
+      setOffering(offerings.current)
+      setOfferingsStatus('ready')
+    } catch (error) {
+      console.error('[myJungle] failed to fetch offerings:', error)
+      setOfferingsStatus('unavailable')
+    }
+  }
+
   useEffect(() => {
+    let listenerId: string | null = null
+    let cancelled = false
+
     async function configurePurchases() {
-      await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG })
       const platform = Capacitor.getPlatform()
       if (platform !== 'ios' && platform !== 'android') {
-        // Native-only SDK — web/dev preview never has real offerings to show.
+        // Native-only SDK — every method (including setLogLevel) rejects on
+        // web, so nothing in this SDK is called at all in that case. Web/dev
+        // preview never has real offerings to show.
         setOfferingsStatus('unavailable')
         return
       }
+      await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG })
       await Purchases.configure({ apiKey: 'test_XsjuRyhMrzEQuaHZEwejrcVDtfL' })
+      if (cancelled) return
+
+      // Keeps Pro status and the UI in sync in real time for anything that
+      // changes entitlements outside a direct purchase/restore call in this
+      // screen — renewals, cancellations, refunds, billing-issue resolution,
+      // and family-shared purchases all arrive here.
+      listenerId = await Purchases.addCustomerInfoUpdateListener((customerInfo) => {
+        reconcileCustomerInfo(customerInfo)
+      })
+
       try {
         const { customerInfo } = await Purchases.getCustomerInfo()
         reconcileCustomerInfo(customerInfo)
@@ -2789,16 +3022,13 @@ export default function App() {
       } catch (error) {
         console.error('[myJungle] failed to sync entitlements on boot:', error)
       }
-      try {
-        const offerings = await Purchases.getOfferings()
-        setOffering(offerings.current)
-        setOfferingsStatus('ready')
-      } catch (error) {
-        console.error('[myJungle] failed to fetch offerings:', error)
-        setOfferingsStatus('unavailable')
-      }
+      await fetchOfferings()
     }
     void configurePurchases()
+    return () => {
+      cancelled = true
+      if (listenerId) void Purchases.removeCustomerInfoUpdateListener({ listenerToRemove: listenerId })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -2876,6 +3106,14 @@ export default function App() {
       if (!result.ok) return { ok: false, error: result.error }
       setSettings((s) => ({ ...s, proPreviewUsedAt: new Date().toISOString() }))
       try {
+        // The entitlement was just granted server-side (RevenueCat's promotional
+        // API), not through a local StoreKit/Play transaction the SDK observed
+        // itself — so its cached CustomerInfo can be stale. Invalidate it first
+        // so getCustomerInfo() does a real network fetch instead of returning
+        // pre-grant data. (Per RevenueCat: exactly the recommended pattern for
+        // "customer information updated outside the app", e.g. a dashboard-
+        // granted promotional subscription — same situation as our REST grant.)
+        await Purchases.invalidateCustomerInfoCache()
         const { customerInfo } = await Purchases.getCustomerInfo()
         reconcileCustomerInfo(customerInfo)
       } catch (error) {
@@ -3024,6 +3262,7 @@ export default function App() {
           onRunHealthCheck={() => { setHealthFlowConfig({ mode: 'existing', presetPlant: live }); setScreen('healthFlow') }}
           onEdit={() => setScreen('editPlant')}
           onLogGrowth={() => { setGrowthFlowPlant(live); setScreen('growthFlow') }}
+          onViewTimeline={() => { setGrowthFlowPlant(live); setScreen('growthHistory') }}
         />
         <TabBar
           active={tab}
@@ -3064,6 +3303,7 @@ export default function App() {
         offeringsStatus={offeringsStatus}
         onClose={handleClosePaywall}
         onOpenLegal={(doc) => { setLegalDoc(doc); setScreen('legal') }}
+        onRetryOfferings={() => void fetchOfferings()}
         onPurchased={(customerInfo) => {
           reconcileCustomerInfo(customerInfo)
           setScreen(paywallSource === 'plant_limit' ? 'bulkAdd' : 'main')
@@ -3074,7 +3314,9 @@ export default function App() {
     content = (
       <LifetimeOfferScreen
         offering={offering}
+        offeringsStatus={offeringsStatus}
         onDismiss={() => setScreen('main')}
+        onOpenLegal={(doc) => { setLegalDoc(doc); setScreen('legal') }}
         onPurchased={(customerInfo) => { reconcileCustomerInfo(customerInfo); setScreen('main') }}
       />
     )
@@ -3150,6 +3392,15 @@ export default function App() {
         onSave={(entry) => {
           setPlants((prev) => prev.map((p) => (p.id === live.id ? { ...p, history: [entry, ...plantHistory(p)] } : p)))
         }}
+      />
+    )
+  } else if (screen === 'growthHistory' && growthFlowPlant) {
+    const live = plants.find((p) => p.id === growthFlowPlant.id) || growthFlowPlant
+    content = (
+      <GrowthHistoryScreen
+        plant={live}
+        onBack={() => { setGrowthFlowPlant(null); setScreen('plantDetail') }}
+        onNewScan={() => setScreen('growthFlow')}
       />
     )
   } else {

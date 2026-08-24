@@ -8,6 +8,20 @@ function clampHealthScore(score: number): number {
   return Math.max(0, Math.min(100, Math.round(score)))
 }
 
+const SEVERITY_LEVELS = ['Low', 'Moderate', 'High'] as const
+type Severity = (typeof SEVERITY_LEVELS)[number]
+
+function normalizeSeverity(value: unknown): Severity {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (normalized === 'moderate' || normalized === 'medium') return 'Moderate'
+  if (normalized === 'high' || normalized === 'severe') return 'High'
+  return 'Low'
+}
+
+function clampConfidence(value: unknown): number {
+  return Math.max(0, Math.min(100, Math.round(Number(value ?? 70))))
+}
+
 export const analyzePlantHealthPayloadSchema = z.object({
   imageBase64: z.string().min(1, 'No image provided'),
   mimeType: z.string().default('image/jpeg'),
@@ -19,6 +33,8 @@ export interface AnalyzePlantHealthResult {
   diagnosis: string
   treatmentNotes: string
   recommendedActions: string[]
+  severity: Severity
+  confidence: number
 }
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash'
@@ -34,8 +50,15 @@ const responseSchema: Schema = {
       items: { type: SchemaType.STRING },
       description: '2-4 short, concrete actions the owner should take, each under 60 characters',
     },
+    severity: {
+      type: SchemaType.STRING,
+      format: 'enum',
+      enum: [...SEVERITY_LEVELS],
+      description: 'How serious any detected issue is. Use "Low" if the plant looks healthy.',
+    },
+    confidence: { type: SchemaType.NUMBER, description: 'Confidence in this diagnosis, 0-100, based on image clarity' },
   },
-  required: ['healthScore', 'diagnosis', 'treatmentNotes', 'recommendedActions'],
+  required: ['healthScore', 'diagnosis', 'treatmentNotes', 'recommendedActions', 'severity', 'confidence'],
 }
 
 async function generateHealthAnalysis(
@@ -78,6 +101,8 @@ export async function handleAnalyzePlantHealthRequest(
       'If the photo is unclear, still return JSON with a best-effort diagnosis and lower healthScore. ' +
       'Provide one short sentence in treatmentNotes describing the likely cause of the issue (or confirming health if none). ' +
       'Provide recommendedActions as 2-4 short, concrete, actionable steps (each under 60 characters), e.g. "Reduce watering frequency to once per week". ' +
+      'Set severity to "Low", "Moderate", or "High" based on how serious any detected issue is (use "Low" if the plant looks healthy). ' +
+      'Set confidence to an integer 0-100 for how confident you are in this diagnosis, based on image clarity and how visible the plant is. ' +
       languagePromptInstruction(language)
 
     const text = await generateHealthAnalysis(genAI, prompt, imagePart)
@@ -92,6 +117,8 @@ export async function handleAnalyzePlantHealthRequest(
           diagnosis: 'Unclear photo',
           treatmentNotes: 'Photo quality was too low for a confident diagnosis.',
           recommendedActions: ['Retake in brighter, even light and try again.'],
+          severity: 'Low',
+          confidence: 30,
         },
       }
     }
@@ -111,6 +138,8 @@ export async function handleAnalyzePlantHealthRequest(
           .map((a) => a.trim().slice(0, 80))
           .slice(0, 4)
       : []
+    const severity = normalizeSeverity(healthData.severity)
+    const confidence = clampConfidence(healthData.confidence)
 
     return {
       status: 200,
@@ -122,6 +151,8 @@ export async function handleAnalyzePlantHealthRequest(
           recommendedActions.length > 0
             ? recommendedActions
             : ['Check soil moisture and drainage', 'Ensure adequate indirect light', 'Monitor for pests over the next few days'],
+        severity,
+        confidence,
       },
     }
   } catch (error) {
