@@ -4,7 +4,8 @@ import type { AppSettings, UserState } from '@/types/plant'
 // Configure these exact identifiers in the RevenueCat dashboard (and the
 // underlying App Store Connect / Play Console products) before shipping.
 
-export const ENTITLEMENT_PRO = 'pro'
+/** Exact RevenueCat entitlement identifier — note the literal space, matching the dashboard config. */
+export const ENTITLEMENT_PRO = 'myJungle Pro'
 
 export const PRODUCT_ANNUAL = 'myjungle_pro_annual'
 export const PRODUCT_MONTHLY = 'myjungle_pro_monthly'
@@ -26,7 +27,25 @@ export const HABIT_UPSELL_MIN_DAYS = 7
 /** ...and only once the user has actually built a watering habit. */
 export const HABIT_UPSELL_MIN_WATERINGS = 3
 
-export type PaywallSource = 'onboarding_strip' | 'health_scan' | 'plant_limit' | 'habit_card' | 'settings'
+/** The first AI health scan is free; every scan after that needs Pro. */
+export const FREE_HEALTH_SCANS = 1
+
+/** RevenueCat promotional-grant duration for the reverse-trial Pro Preview. */
+export const PRO_PREVIEW_DURATION = 'weekly'
+/** Matches the "weekly" RevenueCat duration above — used for local copy/labels only. */
+export const PRO_PREVIEW_DAYS = 7
+
+/** The store value RevenueCat reports for an entitlement granted via the promotional API. */
+export const PROMOTIONAL_STORE = 'PROMOTIONAL'
+
+export type PaywallSource =
+  | 'onboarding_strip'
+  | 'health_scan'
+  | 'plant_limit'
+  | 'habit_card'
+  | 'settings'
+  | 'growth_tab'
+  | 'preview_expired'
 
 /** The three purchasable plans shown on the paywall (legacy is read-only, never sold again). */
 export type SubscriptionPlanId = 'annual' | 'monthly' | 'lifetime'
@@ -83,6 +102,11 @@ export function isFreeTierLimitReached(plantCount: number, user: UserState): boo
   return !user.isPro && plantCount >= FREE_PLANT_LIMIT
 }
 
+/** Free users get exactly one AI health scan; Pro is unlimited. */
+export function canStartHealthScan(healthScansUsed: number, user: UserState): boolean {
+  return user.isPro || healthScansUsed < FREE_HEALTH_SCANS
+}
+
 // ─── Lifetime win-back eligibility (§4) ────────────────────────────────────
 
 export function canShowLifetimeOffer(lastShownIso: string | null, now: Date = new Date()): boolean {
@@ -136,6 +160,10 @@ export function paywallCopyForSource(source: PaywallSource | null): PaywallCopy 
       return { headline: "FIND OUT WHAT'S WRONG WITH YOUR PLANT", subtitle: 'AI health scans and disease diagnosis, unlocked.' }
     case 'plant_limit':
       return { headline: 'ROOM FOR EVERY PLANT', subtitle: 'Add unlimited plants to your jungle.' }
+    case 'growth_tab':
+      return { headline: "SEE YOUR PLANT'S FULL JOURNEY", subtitle: 'Unlock photo timelines and growth stats.' }
+    case 'preview_expired':
+      return { headline: 'YOUR FREE PREVIEW HAS ENDED', subtitle: 'Keep unlimited access by going Pro.' }
     default:
       return { headline: 'UNLIMITED GROWTH', subtitle: 'Unlock the full care experience, no limits.' }
   }

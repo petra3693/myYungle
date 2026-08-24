@@ -5,10 +5,12 @@ import {
   canAddMorePlants,
   canShowLifetimeOffer,
   canShowHabitUpsellCard,
+  canStartHealthScan,
   userStateFromSettings,
   computeAnnualDiscountLabel,
   PRODUCT_LEGACY_ONETIME,
   FREE_PLANT_LIMIT,
+  FREE_HEALTH_SCANS,
 } from '@/lib/monetization'
 
 describe('isFoundingMember — §0 non-negotiable: never lose Pro access', () => {
@@ -152,5 +154,29 @@ describe('computeAnnualDiscountLabel — §6 discount sub-label is computed, nev
   it('returns null with missing or zero prices', () => {
     expect(computeAnnualDiscountLabel(0, 59.90)).toBe(null)
     expect(computeAnnualDiscountLabel(5.99, 0)).toBe(null)
+  })
+})
+
+describe('canStartHealthScan — first scan is free, then Pro-gated', () => {
+  const freeUser = {
+    isPro: false,
+    isFoundingMember: false,
+    subscriptionPlan: null,
+    subscriptionExpiresAt: null,
+    subscriptionWillRenew: false,
+    subscriptionManagementUrl: null,
+  } as const
+  const proUser = { ...freeUser, isPro: true }
+
+  it('allows a free user their first scan', () => {
+    expect(canStartHealthScan(0, freeUser)).toBe(true)
+  })
+
+  it('blocks a free user on their second scan', () => {
+    expect(canStartHealthScan(FREE_HEALTH_SCANS, freeUser)).toBe(false)
+  })
+
+  it('never blocks a Pro user regardless of scan count', () => {
+    expect(canStartHealthScan(50, proUser)).toBe(true)
   })
 })

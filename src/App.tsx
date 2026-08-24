@@ -20,13 +20,16 @@ import { batchedWateringDays, frequencyForWaterNeed, frequencyLabel, secondaryWa
 import { clearAllPhotos, deletePlantPhotos } from '@/lib/photoStore'
 import {
   FREE_PLANT_LIMIT,
+  FREE_HEALTH_SCANS,
   ENTITLEMENT_PRO,
   PRODUCT_ANNUAL,
   PRODUCT_MONTHLY,
   PRODUCT_LIFETIME,
   PRODUCT_LEGACY_ONETIME,
+  PROMOTIONAL_STORE,
   canAccessProFeatures,
   canAddMorePlants,
+  canStartHealthScan,
   isFoundingMember,
   canShowLifetimeOffer,
   canShowHabitUpsellCard,
@@ -35,6 +38,7 @@ import {
   computeAnnualDiscountLabel,
   type PaywallSource,
 } from '@/lib/monetization'
+import { requestProPreview } from '@/lib/revenueCatPreview'
 import { logEvent } from '@/lib/analytics'
 import { useUserState } from '@/hooks/useUserState'
 import { LANGUAGE_OPTIONS, LANGUAGE_STORAGE_KEY, normalizeAppLanguage, type AppLanguage } from '@/i18n/languages'
@@ -63,6 +67,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   lifetimeOfferLastShownAt: null,
   subscriptionPeriodType: null,
   primaryWateringDay: 0,
+  healthScansUsed: 0,
+  proPreviewUsedAt: null,
+  proPreviewExpiredPaywallShown: false,
 }
 
 type Screen =
@@ -722,15 +729,34 @@ function DayPickerSheet({ selected, onSelect, onClose }: { selected: number; onS
   )
 }
 
-function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: initialPrimaryDay, existingRooms, onChangePrimaryDay, onDone }: {
+function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: initialPrimaryDay, existingRooms, onChangePrimaryDay, onDone, showProPreviewCta, onTryProPreview }: {
   drafts: DraftPlant[]; language: AppLanguage; primaryDay: number; existingRooms: string[]; onChangePrimaryDay: (day: number) => void
   onDone: (drafts: DraftPlant[]) => void
+  /** Only offered right after onboarding, never on the reused bulk-add result screen. */
+  showProPreviewCta?: boolean
+  onTryProPreview?: () => Promise<{ ok: boolean; error?: string }>
 }) {
   const [drafts, setDrafts] = useState(initialDrafts)
   const [primaryDay, setPrimaryDay] = useState(initialPrimaryDay)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [retryingIndex, setRetryingIndex] = useState<number | null>(null)
   const [showDayPicker, setShowDayPicker] = useState(false)
+  const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [previewError, setPreviewError] = useState<string | null>(null)
+
+  async function handleTryPreview() {
+    if (!onTryProPreview) return
+    setPreviewState('loading')
+    setPreviewError(null)
+    const result = await onTryProPreview()
+    if (result.ok) {
+      setPreviewState('success')
+      setTimeout(() => onDone(drafts), 900)
+    } else {
+      setPreviewState('error')
+      setPreviewError(result.error ?? 'Could not activate Pro Preview. Please try again.')
+    }
+  }
 
   const daySet = new Set<number>()
   drafts.forEach((d) => d.wateringDays.forEach((i) => daySet.add(i)))
@@ -808,6 +834,33 @@ function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: ini
         </div>
       )}
       <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
+        {showProPreviewCta && (
+          <div className="rounded-2xl p-4 mb-3" style={{ background: '#000' }}>
+            <div className="flex items-center gap-2 mb-1">
+              <div style={{ color: GREEN }}><IconSparkles size={16} /></div>
+              <span className="font-heading" style={{ fontSize: 14, color: '#fff', textTransform: 'uppercase' }}>7-day Pro Preview</span>
+            </div>
+            <p className="font-body" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>
+              Try unlimited AI scans and growth tracking free for 7 days. No card needed.
+            </p>
+            {previewState === 'success' ? (
+              <p className="font-heading text-center" style={{ fontSize: 13, color: GREEN, textTransform: 'uppercase' }}>Pro Preview activated!</p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void handleTryPreview()}
+                disabled={previewState === 'loading'}
+                className="btn-fill w-full"
+                style={{ height: 44, fontSize: 13 }}
+              >
+                {previewState === 'loading' ? 'Activating…' : 'Try it free'}
+              </button>
+            )}
+            {previewState === 'error' && previewError && (
+              <p className="font-body text-center mt-2" style={{ fontSize: 11, color: '#ff8a8a' }}>{previewError}</p>
+            )}
+          </div>
+        )}
         <button type="button" onClick={() => onDone(drafts)} className="btn-fill btn-forward w-full" style={{ height: 56, fontSize: 15 }}>
           Go to home
           <span className="btn-forward__arrow"><IconChevronRight size={20} /></span>
@@ -1053,10 +1106,10 @@ function DaysScreen({ plants, todayIdx, onToggleWatered, onBack }: {
 // ─── Screen: Plant detail ─────────────────────────────────────────────────────
 
 function PlantDetailScreen({
-  plant, user, todayIdx, onBack, onDelete, onWater, onShowLimitOrPro, onRunHealthCheck, onEdit, onLogGrowth,
+  plant, user, todayIdx, canScan, onBack, onDelete, onWater, onShowPaywall, onRunHealthCheck, onEdit, onLogGrowth,
 }: {
-  plant: Plant; user: UserState; todayIdx: number; onBack: () => void; onDelete: () => void; onWater: () => void
-  onShowLimitOrPro: () => void; onRunHealthCheck: () => void; onEdit: () => void; onLogGrowth: () => void
+  plant: Plant; user: UserState; todayIdx: number; canScan: boolean; onBack: () => void; onDelete: () => void; onWater: () => void
+  onShowPaywall: (source: PaywallSource) => void; onRunHealthCheck: () => void; onEdit: () => void; onLogGrowth: () => void
 }) {
   const [showActions, setShowActions] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
@@ -1177,111 +1230,118 @@ function PlantDetailScreen({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={hasAccess ? undefined : onShowLimitOrPro}
-            className="flex items-center gap-2 rounded-2xl px-4 py-3"
-            style={{ background: hasAccess ? '#e8f9ee' : '#f5f5f5', cursor: hasAccess ? 'default' : 'pointer' }}
-          >
-            {!hasAccess && <IconLock size={16} />}
-            <span className="font-body font-medium" style={{ fontSize: 13 }}>
-              {hasAccess ? 'Growth & health tracking unlocked' : 'Growth & health — unlocks with Pro'}
-            </span>
-          </button>
-
-          {hasAccess && (
-            <div>
-              <span className="caption-eyebrow">Health log</span>
-              {plant.healthLogs.length === 0 ? (
-                <p className="font-body mt-2" style={{ fontSize: 13, color: '#8E8E93' }}>No health checks yet.</p>
-              ) : (
-                <div className="flex flex-col gap-2 mt-2">
-                  {plant.healthLogs.map((log) => {
-                    const healthy = log.healthScore >= 70
-                    const isOpen = expandedLog === log.id
-                    return (
-                      <div key={log.id} className="rounded-2xl overflow-hidden" style={{ background: '#f5f5f5' }}>
-                        <button
-                          type="button"
-                          onClick={() => setExpandedLog(isOpen ? null : log.id)}
-                          className="flex items-center gap-3 w-full p-3 text-left"
-                        >
-                          <span className="font-heading shrink-0" style={{ fontSize: 11, background: GREEN, color: '#000', borderRadius: 8, padding: '4px 8px' }}>
-                            {new Date(log.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase()}
-                          </span>
-                          <span style={{ width: 6, height: 6, borderRadius: 9999, background: healthScoreColor(log.healthScore), flexShrink: 0 }} />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-heading truncate" style={{ fontSize: 14 }}>{log.diagnosis}</div>
-                            <div className="font-body truncate" style={{ fontSize: 11, color: healthy ? '#0a8f3f' : '#8E8E93' }}>
-                              {healthy ? 'Healthy' : log.treatmentNotes}
-                            </div>
-                          </div>
-                          <div style={{ color: '#8E8E93', transform: isOpen ? 'rotate(180deg)' : 'none' }}><IconChevronDown size={16} /></div>
-                        </button>
-                        {isOpen && (
-                          <div className="px-3 pb-3 flex flex-col gap-1.5">
-                            {log.recommendedActions.map((a, i) => (
-                              <div key={i} className="flex items-start gap-2">
-                                <div style={{ color: '#111', marginTop: 2 }}><IconCheck size={14} /></div>
-                                <span className="font-body" style={{ fontSize: 13 }}>{a}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={onRunHealthCheck}
-                className="font-heading w-full mt-3"
-                style={{ height: 48, borderRadius: 9999, background: 'transparent', border: `1.5px solid ${GREEN}`, color: '#0a8f3f', textTransform: 'uppercase', fontSize: 13 }}
-              >
-                Run new health check
-              </button>
-            </div>
-          )}
-
           <div>
-            <div className="flex items-center justify-between">
-              <span className="caption-eyebrow">Grow history</span>
-            </div>
-            {plant.history.length === 0 ? (
-              <p className="font-body mt-2" style={{ fontSize: 13, color: '#8E8E93' }}>No growth check-ins yet.</p>
+            <span className="caption-eyebrow">Health log</span>
+            {plant.healthLogs.length === 0 ? (
+              <p className="font-body mt-2" style={{ fontSize: 13, color: '#8E8E93' }}>No health checks yet.</p>
             ) : (
               <div className="flex flex-col gap-2 mt-2">
-                {plant.history.map((entry) => (
-                  <div key={entry.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#f5f5f5' }}>
-                    <PlantPhoto photo={entry.photo} alt="" className="rounded-xl object-cover shrink-0 w-12 h-12" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-heading shrink-0" style={{ fontSize: 11, background: GREEN, color: '#000', borderRadius: 8, padding: '3px 7px' }}>
-                          {new Date(entry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase()}
+                {plant.healthLogs.map((log) => {
+                  const healthy = log.healthScore >= 70
+                  const isOpen = expandedLog === log.id
+                  return (
+                    <div key={log.id} className="rounded-2xl overflow-hidden" style={{ background: '#f5f5f5' }}>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedLog(isOpen ? null : log.id)}
+                        className="flex items-center gap-3 w-full p-3 text-left"
+                      >
+                        <span className="font-heading shrink-0" style={{ fontSize: 11, background: GREEN, color: '#000', borderRadius: 8, padding: '4px 8px' }}>
+                          {new Date(log.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase()}
                         </span>
-                        {entry.heightCm !== undefined && entry.heightCm > 0 && (
-                          <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>{entry.heightCm} cm</span>
-                        )}
-                        {entry.estimatedAge && (
-                          <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>· {entry.estimatedAge}</span>
-                        )}
-                      </div>
-                      <div className="font-body truncate mt-0.5" style={{ fontSize: 12, color: '#555' }}>{entry.note}</div>
+                        <span style={{ width: 6, height: 6, borderRadius: 9999, background: healthScoreColor(log.healthScore), flexShrink: 0 }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-heading truncate" style={{ fontSize: 14 }}>{log.diagnosis}</div>
+                          <div className="font-body truncate" style={{ fontSize: 11, color: healthy ? '#0a8f3f' : '#8E8E93' }}>
+                            {healthy ? 'Healthy' : log.treatmentNotes}
+                          </div>
+                        </div>
+                        <div style={{ color: '#8E8E93', transform: isOpen ? 'rotate(180deg)' : 'none' }}><IconChevronDown size={16} /></div>
+                      </button>
+                      {isOpen && (
+                        <div className="px-3 pb-3 flex flex-col gap-1.5">
+                          {log.recommendedActions.map((a, i) => (
+                            <div key={i} className="flex items-start gap-2">
+                              <div style={{ color: '#111', marginTop: 2 }}><IconCheck size={14} /></div>
+                              <span className="font-body" style={{ fontSize: 13 }}>{a}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
             <button
               type="button"
-              onClick={hasAccess ? onLogGrowth : onShowLimitOrPro}
+              onClick={canScan ? onRunHealthCheck : () => onShowPaywall('health_scan')}
               className="font-heading w-full mt-3 flex items-center justify-center gap-2"
-              style={{ height: 48, borderRadius: 9999, background: 'transparent', border: '1.5px solid #111', color: '#111', textTransform: 'uppercase', fontSize: 13 }}
+              style={{ height: 48, borderRadius: 9999, background: 'transparent', border: `1.5px solid ${GREEN}`, color: '#0a8f3f', textTransform: 'uppercase', fontSize: 13 }}
             >
-              {!hasAccess && <IconLock size={14} />}
-              Log growth
+              {!canScan && <IconLock size={14} />}
+              Run new health check
             </button>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="caption-eyebrow">Grow history</span>
+              {!hasAccess && (
+                <span className="badge-pro-dark" style={{ fontSize: 10, padding: '3px 10px' }}>PRO</span>
+              )}
+            </div>
+            <div style={{ position: 'relative', minHeight: hasAccess ? undefined : 96 }}>
+              <div style={hasAccess ? undefined : { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' }}>
+                {plant.history.length === 0 ? (
+                  <p className="font-body mt-2" style={{ fontSize: 13, color: '#8E8E93' }}>No growth check-ins yet.</p>
+                ) : (
+                  <div className="flex flex-col gap-2 mt-2">
+                    {plant.history.map((entry) => (
+                      <div key={entry.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#f5f5f5' }}>
+                        <PlantPhoto photo={entry.photo} alt="" className="rounded-xl object-cover shrink-0 w-12 h-12" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-heading shrink-0" style={{ fontSize: 11, background: GREEN, color: '#000', borderRadius: 8, padding: '3px 7px' }}>
+                              {new Date(entry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase()}
+                            </span>
+                            {entry.heightCm !== undefined && entry.heightCm > 0 && (
+                              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>{entry.heightCm} cm</span>
+                            )}
+                            {entry.estimatedAge && (
+                              <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>· {entry.estimatedAge}</span>
+                            )}
+                          </div>
+                          <div className="font-body truncate mt-0.5" style={{ fontSize: 12, color: '#555' }}>{entry.note}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {hasAccess && (
+                  <button
+                    type="button"
+                    onClick={onLogGrowth}
+                    className="font-heading w-full mt-3"
+                    style={{ height: 48, borderRadius: 9999, background: 'transparent', border: '1.5px solid #111', color: '#111', textTransform: 'uppercase', fontSize: 13 }}
+                  >
+                    Log growth
+                  </button>
+                )}
+              </div>
+              {!hasAccess && (
+                <button
+                  type="button"
+                  onClick={() => onShowPaywall('growth_tab')}
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+                >
+                  <div className="flex items-center justify-center rounded-full" style={{ width: 36, height: 36, background: '#111' }}>
+                    <div style={{ color: GREEN }}><IconLock size={16} /></div>
+                  </div>
+                  <span className="font-heading" style={{ fontSize: 12, color: '#111', textTransform: 'uppercase' }}>Unlock with Pro</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <button type="button" onClick={onWater} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>
@@ -1671,8 +1731,8 @@ function HealthReportCard({ photo, plantName, scannedAt, result }: {
   )
 }
 
-function HealthHubScreen({ plants, isPro, onScanNew, onCheckExisting, onOpenPlant, onShowPro }: {
-  plants: Plant[]; isPro: boolean
+function HealthHubScreen({ plants, isPro, canScan, onScanNew, onCheckExisting, onOpenPlant, onShowPro }: {
+  plants: Plant[]; isPro: boolean; canScan: boolean
   onScanNew: () => void; onCheckExisting: () => void; onOpenPlant: (p: Plant) => void; onShowPro: () => void
 }) {
   const recentChecks = plants
@@ -1688,7 +1748,7 @@ function HealthHubScreen({ plants, isPro, onScanNew, onCheckExisting, onOpenPlan
         Scan your plant to diagnose issues and get care advice.
       </p>
 
-      <button type="button" onClick={isPro ? onScanNew : onShowPro} className="card-white p-4 flex items-center gap-3 w-full text-left mb-3">
+      <button type="button" onClick={canScan ? onScanNew : onShowPro} className="card-white p-4 flex items-center gap-3 w-full text-left mb-3">
         <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 44, height: 44, background: '#111', color: GREEN }}>
           <IconCamera size={20} />
         </div>
@@ -1696,15 +1756,15 @@ function HealthHubScreen({ plants, isPro, onScanNew, onCheckExisting, onOpenPlan
           <div className="font-heading" style={{ fontSize: 16 }}>Scan a new plant</div>
           <div className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Take a photo of any plant to check its health.</div>
         </div>
-        <div style={{ color: '#8E8E93' }}>{isPro ? <IconChevronRight size={18} /> : <IconLock size={18} />}</div>
+        <div style={{ color: '#8E8E93' }}>{canScan ? <IconChevronRight size={18} /> : <IconLock size={18} />}</div>
       </button>
 
       <button
         type="button"
-        onClick={isPro ? onCheckExisting : onShowPro}
-        disabled={isPro && plants.length === 0}
+        onClick={canScan ? onCheckExisting : onShowPro}
+        disabled={canScan && plants.length === 0}
         className="card-white p-4 flex items-center gap-3 w-full text-left"
-        style={{ opacity: isPro && plants.length === 0 ? 0.5 : 1 }}
+        style={{ opacity: canScan && plants.length === 0 ? 0.5 : 1 }}
       >
         <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 44, height: 44, background: '#111', color: GREEN }}>
           <IconLeaf size={20} />
@@ -1713,7 +1773,7 @@ function HealthHubScreen({ plants, isPro, onScanNew, onCheckExisting, onOpenPlan
           <div className="font-heading" style={{ fontSize: 16 }}>Check an existing plant</div>
           <div className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>Select from your jungle to run a health check.</div>
         </div>
-        <div style={{ color: '#8E8E93' }}>{isPro ? <IconChevronRight size={18} /> : <IconLock size={18} />}</div>
+        <div style={{ color: '#8E8E93' }}>{canScan ? <IconChevronRight size={18} /> : <IconLock size={18} />}</div>
       </button>
 
       {recentChecks.length > 0 && (
@@ -2283,7 +2343,7 @@ function LimitReachedSheet({ onUnlock, onCancel }: { onUnlock: () => void; onCan
 
 // Health scan is the headline paid value — keep it first (§2 of the monetization spec).
 const PRO_BENEFITS = [
-  'AI health & disease diagnosis',
+  'Unlimited AI health & disease diagnosis',
   'Unlimited plants',
   'Bulk add — any number of photos at once',
   'Growth timeline & photo journal',
@@ -2625,13 +2685,15 @@ export default function App() {
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_PRO]
       const plan = founding
         ? 'legacy' as const
-        : entitlement?.productIdentifier === PRODUCT_LIFETIME
-          ? 'lifetime' as const
-          : entitlement?.productIdentifier === PRODUCT_ANNUAL
-            ? 'annual' as const
-            : entitlement?.productIdentifier === PRODUCT_MONTHLY
-              ? 'monthly' as const
-              : null
+        : entitlement?.store === PROMOTIONAL_STORE
+          ? 'preview' as const
+          : entitlement?.productIdentifier === PRODUCT_LIFETIME
+            ? 'lifetime' as const
+            : entitlement?.productIdentifier === PRODUCT_ANNUAL
+              ? 'annual' as const
+              : entitlement?.productIdentifier === PRODUCT_MONTHLY
+                ? 'monthly' as const
+                : null
       const periodType = entitlement?.periodType ?? null
       // Trial conversion/cancellation only has a visible "moment" as a periodType
       // transition across boots — there's no client-side event for it otherwise.
@@ -2666,6 +2728,15 @@ export default function App() {
       try {
         const { customerInfo } = await Purchases.getCustomerInfo()
         reconcileCustomerInfo(customerInfo)
+        // The Pro Preview (reverse trial) is a promotional entitlement grant.
+        // Once it's no longer active, force the full paywall exactly once, at
+        // this "next open" — not on every subsequent boot.
+        const everGranted = customerInfo.entitlements.all[ENTITLEMENT_PRO]
+        const stillActive = customerInfo.entitlements.active[ENTITLEMENT_PRO]
+        if (everGranted?.store === PROMOTIONAL_STORE && !stillActive && !settings.proPreviewExpiredPaywallShown) {
+          setSettings((s) => ({ ...s, proPreviewExpiredPaywallShown: true }))
+          openPaywall('preview_expired')
+        }
       } catch (error) {
         console.error('[myJungle] failed to sync entitlements on boot:', error)
       }
@@ -2737,6 +2808,36 @@ export default function App() {
 
   function handleSaveHealthLog(plantId: string, log: PlantHealthLog) {
     setPlants((prev) => prev.map((p) => (p.id === plantId ? { ...p, healthLogs: [log, ...p.healthLogs] } : p)))
+    setSettings((s) => ({ ...s, healthScansUsed: s.healthScansUsed + 1 }))
+  }
+
+  /**
+   * Reverse-trial Pro Preview: 7 days of Pro, no card, once per user lifetime.
+   * The server enforces the one-time rule against RevenueCat's own record —
+   * this only reflects the result locally and refreshes the entitlement.
+   */
+  async function handleTryProPreview(): Promise<{ ok: boolean; error?: string }> {
+    const platform = Capacitor.getPlatform()
+    if (platform !== 'ios' && platform !== 'android') {
+      return { ok: false, error: 'Pro Preview requires the mobile app.' }
+    }
+    try {
+      const { appUserID } = await Purchases.getAppUserID()
+      const result = await requestProPreview(appUserID)
+      if (!result.ok) return { ok: false, error: result.error }
+      setSettings((s) => ({ ...s, proPreviewUsedAt: new Date().toISOString() }))
+      try {
+        const { customerInfo } = await Purchases.getCustomerInfo()
+        reconcileCustomerInfo(customerInfo)
+      } catch (error) {
+        console.error('[myJungle] failed to refresh entitlements after preview grant:', error)
+      }
+      logEvent('trial_started', { source: 'onboarding_strip' })
+      return { ok: true }
+    } catch (error) {
+      console.error('[myJungle] pro preview request failed:', error)
+      return { ok: false, error: 'Could not activate Pro Preview. Please try again.' }
+    }
   }
 
   function draftToPlant(d: DraftPlant): Plant {
@@ -2845,6 +2946,8 @@ export default function App() {
         primaryDay={settings.primaryWateringDay}
         existingRooms={Array.from(new Set(plants.map((p) => p.room).filter((r) => r && r !== 'Unknown')))}
         onChangePrimaryDay={(day) => setSettings((s) => ({ ...s, primaryWateringDay: day }))}
+        showProPreviewCta={!user.isPro && !settings.proPreviewUsedAt}
+        onTryProPreview={handleTryProPreview}
         onDone={(finalDrafts) => {
           setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
           logEvent('plant_added', { count: plants.length + finalDrafts.length })
@@ -2864,10 +2967,11 @@ export default function App() {
           plant={live}
           user={user}
           todayIdx={todayIdx}
+          canScan={canStartHealthScan(settings.healthScansUsed, user)}
           onBack={() => { setScreen('main'); setSelectedPlant(null) }}
           onDelete={() => handleDeletePlant(live.id)}
           onWater={() => handleWaterToggle(live.id)}
-          onShowLimitOrPro={() => openPaywall('health_scan')}
+          onShowPaywall={openPaywall}
           onRunHealthCheck={() => { setHealthFlowConfig({ mode: 'existing', presetPlant: live }); setScreen('healthFlow') }}
           onEdit={() => setScreen('editPlant')}
           onLogGrowth={() => { setGrowthFlowPlant(live); setScreen('growthFlow') }}
@@ -3019,6 +3123,7 @@ export default function App() {
         <HealthHubScreen
           plants={plants}
           isPro={user.isPro}
+          canScan={canStartHealthScan(settings.healthScansUsed, user)}
           onScanNew={() => { logEvent('health_scan_attempted', { is_pro: user.isPro }); setHealthFlowConfig({ mode: 'new', presetPlant: null }); setScreen('healthFlow') }}
           onCheckExisting={() => { logEvent('health_scan_attempted', { is_pro: user.isPro }); setHealthFlowConfig({ mode: 'existing', presetPlant: null }); setScreen('healthFlow') }}
           onOpenPlant={(p) => { setSelectedPlant(p); setScreen('plantDetail') }}

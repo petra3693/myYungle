@@ -54,7 +54,7 @@ export interface Plant {
   confidence?: number
 }
 
-export type SubscriptionPlan = 'annual' | 'monthly' | 'lifetime' | 'legacy' | null
+export type SubscriptionPlan = 'annual' | 'monthly' | 'lifetime' | 'legacy' | 'preview' | null
 
 /** Freemium gating: annual/monthly subscription, a lifetime win-back, or a grandfathered legacy unlock. */
 export interface UserState {
@@ -89,4 +89,10 @@ export interface AppSettings {
   subscriptionPeriodType: string | null
   /** Day index (0 = Monday .. 6 = Sunday) new AI-batched plants are consolidated onto. */
   primaryWateringDay: number
+  /** Completed AI health scans — the first is free, the rest require Pro. */
+  healthScansUsed: number
+  /** ISO timestamp of when the 7-day Pro Preview (reverse trial) was redeemed — client-side bookkeeping only, the server enforces the once-per-lifetime rule. */
+  proPreviewUsedAt: string | null
+  /** Whether the forced full-screen paywall has already been shown for this Pro Preview expiry. */
+  proPreviewExpiredPaywallShown: boolean
 }
