@@ -2351,7 +2351,11 @@ const PRO_BENEFITS = [
 ]
 
 type OfferingsStatus = 'loading' | 'ready' | 'unavailable'
-type SelectablePlan = 'monthly' | 'annual'
+type SelectablePlan = 'monthly' | 'annual' | 'lifetime'
+
+// Shown only when the SDK has no real offering (web/dev preview) — never
+// overrides a real RevenueCat price. Matches the configured store products.
+const FALLBACK_PREVIEW_PRICES = { monthly: 1.99, annual: 19.99, lifetime: 49.99 }
 
 function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchased, onOpenLegal }: {
   source: PaywallSource | null
@@ -2366,15 +2370,29 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
   const [restoring, setRestoring] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const copy = paywallCopyForSource(source)
+  const isWebPreview = Capacitor.getPlatform() !== 'ios' && Capacitor.getPlatform() !== 'android'
   const monthlyPkg = offering?.monthly ?? null
   const annualPkg = offering?.annual ?? null
-  const selectedPkg = selected === 'annual' ? annualPkg : monthlyPkg
+  const lifetimePkg = offering?.lifetime ?? null
+  const selectedPkg = selected === 'annual' ? annualPkg : selected === 'monthly' ? monthlyPkg : lifetimePkg
   const ready = offeringsStatus === 'ready' && selectedPkg !== null
-  const hasTrial = selected === 'annual' && !!annualPkg?.product.introPrice
-  const discountLabel = annualPkg && monthlyPkg ? computeAnnualDiscountLabel(monthlyPkg.product.price, annualPkg.product.price) : null
+  // Annual always carries the trial per §1 — when the real product data isn't
+  // available (web/dev preview), still show trial messaging using the
+  // fallback price so the UI can be reviewed end to end.
+  const hasTrial = selected === 'annual' && (annualPkg ? !!annualPkg.product.introPrice : isWebPreview)
+  const discountLabel = annualPkg && monthlyPkg
+    ? computeAnnualDiscountLabel(monthlyPkg.product.price, annualPkg.product.price)
+    : isWebPreview
+      ? computeAnnualDiscountLabel(FALLBACK_PREVIEW_PRICES.monthly, FALLBACK_PREVIEW_PRICES.annual)
+      : null
+  const monthlyPriceLabel = monthlyPkg ? `${monthlyPkg.product.priceString}/mo` : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.monthly.toFixed(2)}/mo` : '—'
+  const annualPriceLabel = annualPkg ? `${annualPkg.product.priceString}/yr` : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.annual.toFixed(2)}/yr` : '—'
+  const lifetimePriceLabel = lifetimePkg ? lifetimePkg.product.priceString : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.lifetime.toFixed(2)}` : '—'
+  const annualTrialLabel = hasTrial ? `${getTrialDays()} days free, then ${annualPriceLabel}` : null
+  const annualBasePriceLabel = annualPkg ? annualPkg.product.priceString : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.annual.toFixed(2)}` : 'the plan price'
 
   useEffect(() => {
-    logEvent('paywall_shown', { source: source ?? undefined, plan_shown: ['monthly', 'annual'] })
+    logEvent('paywall_shown', { source: source ?? undefined, plan_shown: ['monthly', 'annual', 'lifetime'] })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -2467,7 +2485,7 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
               <div className="font-body" style={{ fontSize: 13, color: selected === 'monthly' ? 'rgba(255,255,255,0.6)' : '#8E8E93' }}>Unlimited plants + AI</div>
             </div>
             <span className="font-heading" style={{ fontSize: 18, color: selected === 'monthly' ? GREEN : '#111' }}>
-              {monthlyPkg ? `${monthlyPkg.product.priceString}/mo` : '—'}
+              {monthlyPriceLabel}
             </span>
           </button>
 
@@ -2487,11 +2505,32 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
                 <span className="badge-pro-solid" style={{ fontSize: 10, padding: '3px 9px', textTransform: 'uppercase' }}>Popular</span>
               </div>
               <div className="font-body" style={{ fontSize: 13, color: selected === 'annual' ? 'rgba(255,255,255,0.6)' : '#8E8E93' }}>
-                {discountLabel ?? 'Best value'}
+                {annualTrialLabel ?? discountLabel ?? 'Best value'}
               </div>
             </div>
             <span className="font-heading" style={{ fontSize: 18, color: selected === 'annual' ? GREEN : '#111' }}>
-              {annualPkg ? `${annualPkg.product.priceString}/yr` : '—'}
+              {annualPriceLabel}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => selectPlan('lifetime')}
+            className="rounded-2xl px-5 flex items-center justify-between text-left"
+            style={{
+              height: 76,
+              background: selected === 'lifetime' ? '#000' : '#fff',
+              border: selected === 'lifetime' ? `2px solid ${GREEN}` : '1.5px solid #e5e5e0',
+            }}
+          >
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-heading" style={{ fontSize: 17, color: selected === 'lifetime' ? '#fff' : '#111' }}>Lifetime</span>
+              </div>
+              <div className="font-body" style={{ fontSize: 13, color: selected === 'lifetime' ? 'rgba(255,255,255,0.6)' : '#8E8E93' }}>One-time — yours forever</div>
+            </div>
+            <span className="font-heading" style={{ fontSize: 18, color: selected === 'lifetime' ? GREEN : '#111' }}>
+              {lifetimePriceLabel}
             </span>
           </button>
         </div>
@@ -2517,14 +2556,24 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
           className="btn-fill w-full mt-6"
           style={{ height: 64, fontSize: 17 }}
         >
-          {purchasing ? 'Processing…' : !ready ? 'Pricing unavailable' : hasTrial ? `Start ${getTrialDays()}-day free trial` : 'Subscribe'}
+          {purchasing
+            ? 'Processing…'
+            : !ready
+              ? 'Pricing unavailable'
+              : hasTrial
+                ? `Start ${getTrialDays()}-Day Free Trial`
+                : selected === 'lifetime'
+                  ? 'Get lifetime access'
+                  : 'Subscribe'}
         </button>
         <p className="font-body text-center mt-3" style={{ fontSize: 11, color: '#8E8E93', lineHeight: 1.4 }}>
           {hasTrial
-            ? `Free for ${getTrialDays()} days, then ${annualPkg?.product.priceString ?? 'the plan price'}/year. Cancel anytime before the trial ends.`
-            : selected === 'annual'
-              ? `Renews yearly at ${annualPkg?.product.priceString ?? 'the plan price'}. Cancel anytime.`
-              : `Renews monthly at ${monthlyPkg?.product.priceString ?? 'the plan price'}. Cancel anytime.`}
+            ? `Free for ${getTrialDays()} days, then ${annualBasePriceLabel}/year. Cancel anytime before the trial ends.`
+            : selected === 'lifetime'
+              ? 'One-time payment. Yours forever — no renewals.'
+              : selected === 'annual'
+                ? `Renews yearly at ${annualPkg?.product.priceString ?? 'the plan price'}. Cancel anytime.`
+                : `Renews monthly at ${monthlyPkg?.product.priceString ?? 'the plan price'}. Cancel anytime.`}
         </p>
 
         <div className="flex items-center justify-center gap-3 mt-4 mb-6">
