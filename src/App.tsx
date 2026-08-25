@@ -2504,7 +2504,7 @@ type SelectablePlan = 'monthly' | 'annual' | 'lifetime'
 // overrides a real RevenueCat price. Matches the configured store products.
 const FALLBACK_PREVIEW_PRICES = { monthly: 1.99, annual: 19.99, lifetime: 49.99 }
 
-function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchased, onOpenLegal, onRetryOfferings }: {
+function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchased, onOpenLegal, onRetryOfferings, onSimulateWebPurchase }: {
   source: PaywallSource | null
   offering: PurchasesOffering | null
   offeringsStatus: OfferingsStatus
@@ -2512,13 +2512,15 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
   onPurchased: (customerInfo: CustomerInfo, plan: SelectablePlan) => void
   onOpenLegal: (doc: LegalDoc) => void
   onRetryOfferings: () => void
+  onSimulateWebPurchase: (plan: SelectablePlan) => void
 }) {
   const [selected, setSelected] = useState<SelectablePlan>('annual')
   const [purchasing, setPurchasing] = useState(false)
   const [restoring, setRestoring] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const copy = paywallCopyForSource(source)
-  const isWebPreview = Capacitor.getPlatform() !== 'ios' && Capacitor.getPlatform() !== 'android'
+  // RevenueCat's SDK is native-only — anything outside iOS/Android is web/dev preview.
+  const isWebPreview = !Capacitor.isNativePlatform()
   // A real load failure on a real device (not the expected "no SDK on web" case) — offer a retry, not just dashes.
   const offeringsFailed = offeringsStatus === 'unavailable' && !isWebPreview
   const monthlyPkg = offering?.monthly ?? null
@@ -2735,6 +2737,17 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
                 : `Renews monthly at ${monthlyPkg?.product.priceString ?? 'the plan price'}. Cancel anytime.`}
         </p>
 
+        {isWebPreview && (
+          <button
+            type="button"
+            onClick={() => onSimulateWebPurchase(selected)}
+            className="font-heading w-full mt-3"
+            style={{ height: 44, borderRadius: 9999, background: 'transparent', border: '1.5px dashed #b8860b', color: '#b8860b', textTransform: 'uppercase', fontSize: 12 }}
+          >
+            Simulate purchase (web test mode)
+          </button>
+        )}
+
         <div className="flex items-center justify-center gap-3 mt-4 mb-6">
           <button type="button" onClick={() => void handleRestore()} disabled={restoring || purchasing} className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>
             {restoring ? 'Restoring…' : 'Restore purchase'}
@@ -2756,18 +2769,19 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
   )
 }
 
-function LifetimeOfferScreen({ offering, offeringsStatus, onDismiss, onPurchased, onOpenLegal }: {
+function LifetimeOfferScreen({ offering, offeringsStatus, onDismiss, onPurchased, onOpenLegal, onSimulateWebPurchase }: {
   offering: PurchasesOffering | null
   offeringsStatus: OfferingsStatus
   onDismiss: () => void
   onPurchased: (customerInfo: CustomerInfo) => void
   onOpenLegal: (doc: LegalDoc) => void
+  onSimulateWebPurchase: () => void
 }) {
   const [purchasing, setPurchasing] = useState(false)
   const [restoring, setRestoring] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const lifetimePkg = offering?.lifetime ?? null
-  const isWebPreview = Capacitor.getPlatform() !== 'ios' && Capacitor.getPlatform() !== 'android'
+  const isWebPreview = !Capacitor.isNativePlatform()
   const priceLabel = lifetimePkg ? lifetimePkg.product.priceString : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.lifetime.toFixed(2)}` : '—'
   const ready = offeringsStatus === 'ready' && lifetimePkg !== null
 
@@ -2855,6 +2869,16 @@ function LifetimeOfferScreen({ offering, offeringsStatus, onDismiss, onPurchased
         <p className="font-body text-center mt-3" style={{ fontSize: 11, color: '#8E8E93', lineHeight: 1.4 }}>
           One-time payment. Yours forever — no renewals.
         </p>
+        {isWebPreview && (
+          <button
+            type="button"
+            onClick={onSimulateWebPurchase}
+            className="font-heading w-full mt-3"
+            style={{ height: 44, borderRadius: 9999, background: 'transparent', border: '1.5px dashed #b8860b', color: '#b8860b', textTransform: 'uppercase', fontSize: 12 }}
+          >
+            Simulate purchase (web test mode)
+          </button>
+        )}
         <button type="button" onClick={onDismiss} className="font-body mt-4" style={{ fontSize: 13, color: '#8E8E93' }}>
           No thanks
         </button>
@@ -3127,6 +3151,31 @@ export default function App() {
     }
   }
 
+  /**
+   * Web/dev-only test affordance: the RevenueCat SDK never runs on web (it's
+   * native-only), so there's no real purchase to make when previewing the app
+   * at my-jungle-app.vercel.app. This grants Pro locally, entirely client-side
+   * — it never calls RevenueCat or any backend. Hard-gated on
+   * !Capacitor.isNativePlatform() here too (not just at the call sites) so it
+   * can never fire inside a real iOS/Android build even if a caller forgets
+   * the check.
+   */
+  function simulateWebPurchase(plan: SelectablePlan) {
+    if (Capacitor.isNativePlatform()) return
+    console.info('[myJungle] Simulated web purchase (test mode only):', plan)
+    const expiresAt =
+      plan === 'lifetime' ? null : new Date(Date.now() + (plan === 'annual' ? 365 : 30) * 86400000).toISOString()
+    setSettings((s) => ({
+      ...s,
+      isPro: true,
+      subscriptionPlan: plan,
+      subscriptionExpiresAt: expiresAt,
+      subscriptionWillRenew: plan !== 'lifetime',
+      subscriptionManagementUrl: null,
+      subscriptionPeriodType: 'NORMAL',
+    }))
+  }
+
   function draftToPlant(d: DraftPlant): Plant {
     return {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -3308,6 +3357,10 @@ export default function App() {
           reconcileCustomerInfo(customerInfo)
           setScreen(paywallSource === 'plant_limit' ? 'bulkAdd' : 'main')
         }}
+        onSimulateWebPurchase={(plan) => {
+          simulateWebPurchase(plan)
+          setScreen(paywallSource === 'plant_limit' ? 'bulkAdd' : 'main')
+        }}
       />
     )
   } else if (screen === 'lifetimeOffer') {
@@ -3318,6 +3371,7 @@ export default function App() {
         onDismiss={() => setScreen('main')}
         onOpenLegal={(doc) => { setLegalDoc(doc); setScreen('legal') }}
         onPurchased={(customerInfo) => { reconcileCustomerInfo(customerInfo); setScreen('main') }}
+        onSimulateWebPurchase={() => { simulateWebPurchase('lifetime'); setScreen('main') }}
       />
     )
   } else if (screen === 'bulkAdd') {
