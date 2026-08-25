@@ -1,8 +1,9 @@
-import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai'
+import { SchemaType, type Schema } from '@google/generative-ai'
 import { z } from 'zod'
 import { asJsonObject, parseAiJson } from '../lib/aiJson.js'
 import { languagePromptInstruction, normalizeAppLanguage, SUPPORTED_LANGUAGES } from '../i18n/languages.js'
 import { friendlyGeminiError, isImagePayloadError, toGeminiInlineDataPart } from './geminiImagePart.js'
+import { GeminiOverloadedError, generateGeminiJsonResilient } from './geminiResilience.js'
 
 export const analyzePlantGrowthPayloadSchema = z.object({
   imageBase64: z.string().min(1, 'No image provided'),
@@ -17,8 +18,6 @@ export interface AnalyzePlantGrowthResult {
   summary: string
 }
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash'
-
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
@@ -28,19 +27,6 @@ const responseSchema: Schema = {
     summary: { type: SchemaType.STRING, description: 'One short sentence summarizing the plant\'s current growth stage and condition' },
   },
   required: ['heightCm', 'estimatedAge', 'condition', 'summary'],
-}
-
-async function generateGrowthAnalysis(
-  genAI: GoogleGenerativeAI,
-  prompt: string,
-  imagePart: { inlineData: { data: string; mimeType: string } },
-): Promise<string> {
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    generationConfig: { responseMimeType: 'application/json', responseSchema },
-  })
-  const result = await model.generateContent([prompt, imagePart])
-  return result.response.text()
 }
 
 export async function handleAnalyzePlantGrowthRequest(
@@ -60,7 +46,6 @@ export async function handleAnalyzePlantGrowthRequest(
   try {
     const { imageBase64, mimeType, language: rawLanguage } = parsed.data
     const language = normalizeAppLanguage(rawLanguage)
-    const genAI = new GoogleGenerativeAI(apiKey)
     const imagePart = toGeminiInlineDataPart(imageBase64, mimeType)
     const prompt =
       'Look at this plant photo and estimate its growth stage. ' +
@@ -72,7 +57,7 @@ export async function handleAnalyzePlantGrowthRequest(
       'If the photo is unclear, still return a best-effort JSON object. ' +
       languagePromptInstruction(language)
 
-    const text = await generateGrowthAnalysis(genAI, prompt, imagePart)
+    const text = await generateGeminiJsonResilient(apiKey, responseSchema, prompt, imagePart)
     const parsedJson = parseAiJson(text)
     const data = asJsonObject(parsedJson)
 
@@ -101,6 +86,9 @@ export async function handleAnalyzePlantGrowthRequest(
     return { status: 200, body: { heightCm, estimatedAge, condition, summary } }
   } catch (error) {
     console.error('Gemini Growth API Error:', error)
+    if (error instanceof GeminiOverloadedError) {
+      return { status: 503, body: { error: error.message } }
+    }
     const fallback = 'Failed to analyze plant growth. Please try another photo.'
     return {
       status: isImagePayloadError(error) ? 400 : 500,

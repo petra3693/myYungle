@@ -65,7 +65,9 @@
     "identifying_other": "正在识别 {{count}} 株植物…",
     "bulkAddTitle": "把其余的也带进来！",
     "bulkAddSubtitle": "拍摄你所有剩余的植物以填满名额。",
-    "bulkAddDone": "一键添加全部"
+    "bulkAddDone": "一键添加全部",
+    "tapToCapture": "点击拍摄或选择照片",
+    "addMore": "添加更多"
   },
   "analysisResult": {
     "plantsAdded_one": "已添加 {{count}} 株植物",

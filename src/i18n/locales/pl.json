@@ -65,7 +65,9 @@
     "identifying_other": "Identyfikowanie {{count}} roślin…",
     "bulkAddTitle": "Wprowadź resztę!",
     "bulkAddSubtitle": "Sfotografuj wszystkie pozostałe rośliny, aby uzupełnić.",
-    "bulkAddDone": "Dodaj wszystkie jednym dotknięciem"
+    "bulkAddDone": "Dodaj wszystkie jednym dotknięciem",
+    "tapToCapture": "Dotknij, aby zrobić lub wybrać zdjęcia",
+    "addMore": "Dodaj więcej"
   },
   "analysisResult": {
     "plantsAdded_one": "Dodano {{count}} roślinę",

@@ -1,15 +1,16 @@
-import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai'
+import { SchemaType, type Schema } from '@google/generative-ai'
 import { z } from 'zod'
 import {
   normalizeAppLanguage,
   normalizePreferredDays,
   parseGeminiPlantAnalysisText,
   type AnalyzePlantResult,
-} from '../lib/analyzePlantResult'
-import { languagePromptInstruction, SUPPORTED_LANGUAGES } from '../i18n/languages'
-import { friendlyGeminiError, isImagePayloadError, toGeminiInlineDataPart } from './geminiImagePart'
+} from '../lib/analyzePlantResult.js'
+import { languagePromptInstruction, SUPPORTED_LANGUAGES } from '../i18n/languages.js'
+import { friendlyGeminiError, isImagePayloadError, toGeminiInlineDataPart } from './geminiImagePart.js'
+import { GeminiOverloadedError, generateGeminiJsonResilient } from './geminiResilience.js'
 
-export type { AnalyzePlantResult } from '../lib/analyzePlantResult'
+export type { AnalyzePlantResult } from '../lib/analyzePlantResult.js'
 
 export const analyzePlantPayloadSchema = z.object({
   imageBase64: z.string().min(1, 'No image provided'),
@@ -23,8 +24,6 @@ export type AnalyzePlantPayload = z.infer<typeof analyzePlantPayloadSchema>
 export interface AnalyzePlantError {
   error: string
 }
-
-const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash'
 
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,
@@ -133,23 +132,6 @@ function buildAnalyzePrompt(
   ].join('\n')
 }
 
-async function generatePlantAnalysis(
-  genAI: GoogleGenerativeAI,
-  prompt: string,
-  imagePart: { inlineData: { data: string; mimeType: string } },
-): Promise<string> {
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema,
-    },
-  })
-
-  const result = await model.generateContent([prompt, imagePart])
-  return result.response.text()
-}
-
 export async function handleAnalyzePlantRequest(
   body: unknown,
 ): Promise<{ status: number; body: AnalyzePlantResult | AnalyzePlantError }> {
@@ -168,11 +150,10 @@ export async function handleAnalyzePlantRequest(
     const { imageBase64, mimeType, preferredDays: rawPreferredDays, language: rawLanguage } = parsed.data
     const preferredDays = normalizePreferredDays(rawPreferredDays)
     const language = normalizeAppLanguage(rawLanguage)
-    const genAI = new GoogleGenerativeAI(apiKey)
 
     const imagePart = toGeminiInlineDataPart(imageBase64, mimeType)
     const prompt = buildAnalyzePrompt(preferredDays, language)
-    const text = await generatePlantAnalysis(genAI, prompt, imagePart)
+    const text = await generateGeminiJsonResilient(apiKey, responseSchema, prompt, imagePart)
     const result = parseGeminiPlantAnalysisText(text, preferredDays, language)
 
     return {
@@ -181,6 +162,9 @@ export async function handleAnalyzePlantRequest(
     }
   } catch (error) {
     console.error('Gemini API Error:', error)
+    if (error instanceof GeminiOverloadedError) {
+      return { status: 503, body: { error: error.message } }
+    }
     const fallback = 'Failed to analyze plant image. Please try another photo.'
     return {
       status: isImagePayloadError(error) ? 400 : 500,

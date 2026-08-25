@@ -1,6 +1,6 @@
-import { asJsonObject, parseAiJson } from './aiJson'
-import { normalizeAppLanguage, type AppLanguage } from '@/i18n/languages'
-import { defaultCareNotes } from './aiDefaultCareNotes'
+import { asJsonObject, parseAiJson } from './aiJson.js'
+import { normalizeAppLanguage, type AppLanguage } from '../i18n/languages.js'
+import { defaultCareNotes } from './aiDefaultCareNotes.js'
 
 export type AnalyzePlantConfidence = 'low' | 'medium' | 'high'
 
@@ -18,8 +18,8 @@ export interface AnalyzePlantResult {
   toxicityNotes: string
 }
 
-export type { AppLanguage } from '@/i18n/languages'
-export { normalizeAppLanguage } from '@/i18n/languages'
+export type { AppLanguage } from '../i18n/languages.js'
+export { normalizeAppLanguage } from '../i18n/languages.js'
 
 const FULL_DAY_NAMES = [
   'Monday',

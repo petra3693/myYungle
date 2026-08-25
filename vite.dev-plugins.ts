@@ -50,7 +50,18 @@ function feedbackApiDevPlugin(env: Record<string, string>): Plugin {
   }
 }
 
-/** Dev/preview POST /api/analyze-plant — mirrors Vercel serverless route in `api/analyze-plant.ts`. */
+/**
+ * Dev/preview POST /api/analyze-plant — mirrors Vercel serverless route in `api/analyze-plant.ts`.
+ *
+ * Loads the handler modules via `server.ssrLoadModule()` rather than a plain
+ * dynamic `import()`. A raw `import()` of a `.ts` file here falls through to
+ * Node's native ESM resolver for that module's own sub-imports, which can't
+ * follow this project's TS-style `.js`-suffixed relative imports (they
+ * resolve fine in Vite's own transform pipeline and in Vercel's build
+ * bundler, just not under plain `node:internal/modules/esm/resolve`).
+ * `ssrLoadModule` runs the file through Vite's full transform pipeline
+ * instead, so aliases and extensions resolve exactly like the rest of the app.
+ */
 function analyzePlantApiDevPlugin(env: Record<string, string>): Plugin {
   const registerAnalyzePlantRoute = (
     middlewares: {
@@ -62,6 +73,7 @@ function analyzePlantApiDevPlugin(env: Record<string, string>): Plugin {
         ) => void,
       ) => void
     },
+    loadModule: (path: string) => Promise<Record<string, unknown>>,
   ) => {
     middlewares.use(async (req, res, next) => {
       const url = req.url?.split('?')[0]
@@ -96,8 +108,11 @@ function analyzePlantApiDevPlugin(env: Record<string, string>): Plugin {
           }
         }
 
-        process.env.GEMINI_API_KEY = env.GEMINI_API_KEY ?? process.env.GEMINI_API_KEY
-        process.env.GEMINI_MODEL = env.GEMINI_MODEL ?? process.env.GEMINI_MODEL
+        // Assigning `undefined` to a process.env property stringifies it to
+        // the literal text "undefined" instead of leaving it unset — only
+        // assign when there's an actual value to assign.
+        if (env.GEMINI_API_KEY) process.env.GEMINI_API_KEY = env.GEMINI_API_KEY
+        if (env.GEMINI_MODEL) process.env.GEMINI_MODEL = env.GEMINI_MODEL
 
         if (!process.env.GEMINI_API_KEY) {
           res.statusCode = 503
@@ -111,14 +126,25 @@ function analyzePlantApiDevPlugin(env: Record<string, string>): Plugin {
           return
         }
 
-        const { handleAnalyzePlantRequest } = await import('./src/server/analyzePlantHandler.ts')
-        const { handleAnalyzePlantHealthRequest } = await import('./src/server/analyzePlantHealthHandler.ts')
-        const { handleAnalyzePlantGrowthRequest } = await import('./src/server/analyzePlantGrowthHandler.ts')
+        // Only load the handler the matched route actually needs — loading all three
+        // unconditionally meant a failure in any one of them broke every route.
         const result = isHealthRoute
-          ? await handleAnalyzePlantHealthRequest(body)
+          ? await (
+              (await loadModule('/src/server/analyzePlantHealthHandler.ts')) as {
+                handleAnalyzePlantHealthRequest: (body: unknown) => Promise<{ status: number; body: unknown }>
+              }
+            ).handleAnalyzePlantHealthRequest(body)
           : isGrowthRoute
-            ? await handleAnalyzePlantGrowthRequest(body)
-            : await handleAnalyzePlantRequest(body)
+            ? await (
+                (await loadModule('/src/server/analyzePlantGrowthHandler.ts')) as {
+                  handleAnalyzePlantGrowthRequest: (body: unknown) => Promise<{ status: number; body: unknown }>
+                }
+              ).handleAnalyzePlantGrowthRequest(body)
+            : await (
+                (await loadModule('/src/server/analyzePlantHandler.ts')) as {
+                  handleAnalyzePlantRequest: (body: unknown) => Promise<{ status: number; body: unknown }>
+                }
+              ).handleAnalyzePlantRequest(body)
         res.statusCode = result.status
         res.setHeader('Content-Type', 'application/json')
         res.end(JSON.stringify(result.body))
@@ -136,10 +162,16 @@ function analyzePlantApiDevPlugin(env: Record<string, string>): Plugin {
     apply: 'serve',
     enforce: 'pre',
     configureServer(server) {
-      registerAnalyzePlantRoute(server.middlewares)
+      // Routes through Vite's own module graph so TS-style `.js`-suffixed
+      // relative imports and the `@/` alias resolve exactly like they do
+      // for the rest of the app.
+      registerAnalyzePlantRoute(server.middlewares, (path) => server.ssrLoadModule(path))
     },
     configurePreviewServer(server) {
-      registerAnalyzePlantRoute(server.middlewares)
+      // The preview server serves the built `dist/` output and has no module
+      // graph to load source `.ts` files through, so this falls back to a
+      // plain dynamic import (same as before).
+      registerAnalyzePlantRoute(server.middlewares, (path) => import(/* @vite-ignore */ `.${path}`))
     },
   }
 }

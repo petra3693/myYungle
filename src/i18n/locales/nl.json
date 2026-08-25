@@ -65,7 +65,9 @@
     "identifying_other": "{{count}} planten identificeren…",
     "bulkAddTitle": "Breng de rest binnen!",
     "bulkAddSubtitle": "Fotografeer al je overige planten om aan te vullen.",
-    "bulkAddDone": "Alles in één tik toevoegen"
+    "bulkAddDone": "Alles in één tik toevoegen",
+    "tapToCapture": "Tik om foto's te maken of te kiezen",
+    "addMore": "Meer toevoegen"
   },
   "analysisResult": {
     "plantsAdded_one": "{{count}} plant toegevoegd",

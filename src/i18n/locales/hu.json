@@ -65,7 +65,9 @@
     "identifying_other": "{{count}} növény azonosítása…",
     "bulkAddTitle": "Hozd be a többit!",
     "bulkAddSubtitle": "Fotózd le az összes megmaradt növényedet, hogy feltöltsd a helyeket.",
-    "bulkAddDone": "Mindet egy koppintással"
+    "bulkAddDone": "Mindet egy koppintással",
+    "tapToCapture": "Koppints fotók készítéséhez vagy kiválasztásához",
+    "addMore": "Több hozzáadása"
   },
   "analysisResult": {
     "plantsAdded_one": "{{count}} növény hozzáadva",

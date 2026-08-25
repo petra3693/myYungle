@@ -442,6 +442,8 @@ function BatchCaptureScreen({
   const { t } = useTranslation()
   const [photos, setPhotos] = useState<CapturedPhoto[]>([])
   const [busy, setBusy] = useState(false)
+  // Set while the picker is open to replace one existing photo rather than append new ones.
+  const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const limit = freeSlots ?? Infinity
   const atLimit = photos.length >= limit
@@ -450,22 +452,51 @@ function BatchCaptureScreen({
     if (!fileList || fileList.length === 0) return
     setBusy(true)
     try {
-      const remaining = limit - photos.length
-      const files = Array.from(fileList).slice(0, Math.max(0, remaining))
-      const compressed = await Promise.all(files.map((f) => readAndCompressPhotoFile(f)))
-      setPhotos((prev) => [...prev, ...compressed.map((dataUrl) => ({ id: `${Date.now()}-${Math.random()}`, dataUrl }))])
+      if (replaceTargetId) {
+        const file = fileList[0]
+        if (file) {
+          const dataUrl = await readAndCompressPhotoFile(file)
+          setPhotos((prev) => prev.map((p) => (p.id === replaceTargetId ? { ...p, dataUrl } : p)))
+        }
+      } else {
+        const remaining = limit - photos.length
+        const files = Array.from(fileList).slice(0, Math.max(0, remaining))
+        const compressed = await Promise.all(files.map((f) => readAndCompressPhotoFile(f)))
+        setPhotos((prev) => [...prev, ...compressed.map((dataUrl) => ({ id: `${Date.now()}-${Math.random()}`, dataUrl }))])
+      }
     } catch (error) {
       console.error('[myJungle] batch capture failed:', error)
     } finally {
       setBusy(false)
+      setReplaceTargetId(null)
     }
   }
 
-  const slotsCells = Math.max(6, photos.length + (atLimit ? 0 : 1))
+  /** Opens the picker to append new photos, or (with an id) to replace one existing photo in place. */
+  function openPicker(replaceId?: string) {
+    setReplaceTargetId(replaceId ?? null)
+    const input = fileInputRef.current
+    if (!input) return
+    // Set `multiple` directly — React's re-render (and thus the JSX-driven
+    // attribute) hasn't happened yet by the time click() fires below.
+    input.multiple = !replaceId
+    input.click()
+  }
+
+  function removePhoto(id: string) {
+    setPhotos((prev) => prev.filter((p) => p.id !== id))
+  }
 
   return (
     <div className="app-shell-light fixed inset-0 flex flex-col">
-      <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { void handleFiles(e.target.files); e.target.value = '' }} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple={!replaceTargetId}
+        className="hidden"
+        onChange={(e) => { void handleFiles(e.target.files); e.target.value = '' }}
+      />
       <div className="flex items-center px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-4 shrink-0">
         {onBack ? <IconCircleBtn onClick={onBack} label={t('common.back')}><IconChevronLeft /></IconCircleBtn> : <div style={{ width: 44 }} />}
       </div>
@@ -477,49 +508,82 @@ function BatchCaptureScreen({
           </p>
         )}
       </div>
-      <div className="scroll-y flex-1 px-5 pt-4 pb-4">
-        <div className="grid grid-cols-2 gap-3">
-          {photos.map((p) => (
-            <div key={p.id} className="relative rounded-[1.5rem] overflow-hidden" style={{ aspectRatio: '1/1' }}>
-              <img src={p.dataUrl} alt="" className="w-full h-full object-cover" />
-              <button
-                type="button"
-                onClick={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))}
-                className="absolute top-2 right-2 icon-circle"
-                style={{ width: 30, height: 30, background: 'rgba(0,0,0,0.75)' }}
-                aria-label={t('common.removePhoto')}
-              >
-                <IconX size={14} />
-              </button>
+      <div className="scroll-y flex-1 px-5 pt-4 pb-4 flex flex-col">
+        {photos.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => openPicker()}
+            disabled={busy}
+            className="w-full flex flex-col items-center justify-center gap-3"
+            style={{ flex: 1, minHeight: 260, borderRadius: '1.5rem', background: '#f0f0ec', border: '2px dashed #ccc' }}
+          >
+            <div className="flex items-center justify-center rounded-full" style={{ width: 64, height: 64, background: '#fff', border: '1.5px solid #ccc' }}>
+              <IconPlus size={28} />
             </div>
-          ))}
-          {Array.from({ length: Math.max(0, (freeSlots !== null ? limit : slotsCells) - photos.length) }).map((_, i) => (
-            <button
-              key={`add-${i}`}
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="rounded-[1.5rem] flex items-center justify-center"
-              style={{ aspectRatio: '1/1', background: '#f0f0ec' }}
-              disabled={busy}
-            >
-              <div className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, border: '1.5px solid #bbb' }}>
-                <IconPlus size={20} />
-              </div>
-            </button>
-          ))}
-          {freeSlots !== null && (
-            <div className="rounded-[1.5rem] flex items-center justify-center" style={{ aspectRatio: '1/1', background: '#f0f0ec' }}>
-              <div style={{ color: '#999' }}><IconLock size={22} /></div>
+            <span className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>{t('onboarding.tapToCapture')}</span>
+          </button>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-heading" style={{ fontSize: 13, color: '#111', textTransform: 'uppercase' }}>
+                {freeSlots !== null ? t('onboarding.capturedCount', { count: photos.length, total: freeSlots }) : photos.length}
+              </span>
+              {!atLimit && (
+                <button
+                  type="button"
+                  onClick={() => openPicker()}
+                  disabled={busy}
+                  className="font-body flex items-center gap-1"
+                  style={{ fontSize: 13, color: '#111' }}
+                >
+                  <IconPlus size={14} /> {t('onboarding.addMore')}
+                </button>
+              )}
             </div>
-          )}
-        </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              {photos.map((p, i) => (
+                <div key={p.id} className="relative rounded-2xl overflow-hidden" style={{ aspectRatio: '1/1' }}>
+                  <button type="button" onClick={() => openPicker(p.id)} disabled={busy} className="w-full h-full block">
+                    <img src={p.dataUrl} alt="" className="w-full h-full object-cover" />
+                  </button>
+                  <span
+                    className="absolute bottom-1.5 left-1.5 font-heading"
+                    style={{ fontSize: 10, background: 'rgba(0,0,0,0.65)', color: '#fff', borderRadius: 6, padding: '2px 6px', pointerEvents: 'none' }}
+                  >
+                    {freeSlots !== null ? `${i + 1}/${freeSlots}` : i + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(p.id)}
+                    className="absolute top-1.5 right-1.5 icon-circle"
+                    style={{ width: 26, height: 26, background: 'rgba(0,0,0,0.75)' }}
+                    aria-label={t('common.removePhoto')}
+                  >
+                    <IconX size={12} />
+                  </button>
+                </div>
+              ))}
+              {!atLimit && (
+                <button
+                  type="button"
+                  onClick={() => openPicker()}
+                  disabled={busy}
+                  className="rounded-2xl flex items-center justify-center"
+                  style={{ aspectRatio: '1/1', background: '#f0f0ec', border: '1.5px dashed #ccc' }}
+                >
+                  <IconPlus size={22} />
+                </button>
+              )}
+              {freeSlots !== null && atLimit && (
+                <div className="rounded-2xl flex items-center justify-center" style={{ aspectRatio: '1/1', background: '#f0f0ec' }}>
+                  <div style={{ color: '#999' }}><IconLock size={22} /></div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
       <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
-        {freeSlots !== null && (
-          <p className="font-body text-center" style={{ fontSize: 13, color: '#8E8E93', marginBottom: 6 }}>
-            {t('onboarding.capturedCount', { count: photos.length, total: freeSlots })}
-          </p>
-        )}
         <div className="flex items-center justify-center gap-2" style={{ marginBottom: 12 }}>
           <div style={{ color: GREEN }}><IconCheck size={14} /></div>
           <span className="font-body" style={{ fontSize: 12, color: '#666' }}>{t('onboarding.healthGrowthHint')}</span>

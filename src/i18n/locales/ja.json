@@ -65,7 +65,9 @@
     "identifying_other": "{{count}}件の植物を識別中…",
     "bulkAddTitle": "残りも迎え入れよう！",
     "bulkAddSubtitle": "残りのすべての植物を撮影して満たしましょう。",
-    "bulkAddDone": "ワンタップですべて追加"
+    "bulkAddDone": "ワンタップですべて追加",
+    "tapToCapture": "タップして写真を撮影または選択",
+    "addMore": "さらに追加"
   },
   "analysisResult": {
     "plantsAdded_one": "{{count}}件の植物を追加しました",

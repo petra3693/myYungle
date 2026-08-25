@@ -65,7 +65,9 @@
     "identifying_other": "Identificazione di {{count}} piante…",
     "bulkAddTitle": "Porta dentro il resto!",
     "bulkAddSubtitle": "Fotografa tutte le piante rimanenti per completare.",
-    "bulkAddDone": "Aggiungi tutte con un tocco"
+    "bulkAddDone": "Aggiungi tutte con un tocco",
+    "tapToCapture": "Tocca per scattare o scegliere foto",
+    "addMore": "Aggiungi altre"
   },
   "analysisResult": {
     "plantsAdded_one": "{{count}} pianta aggiunta",

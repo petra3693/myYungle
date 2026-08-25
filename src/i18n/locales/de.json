@@ -65,7 +65,9 @@
     "identifying_other": "Identifiziere {{count}} Pflanzen…",
     "bulkAddTitle": "Hol den Rest rein!",
     "bulkAddSubtitle": "Fotografiere alle restlichen Pflanzen, um aufzufüllen.",
-    "bulkAddDone": "Alle mit einem Tipp hinzufügen"
+    "bulkAddDone": "Alle mit einem Tipp hinzufügen",
+    "tapToCapture": "Tippen, um Fotos aufzunehmen oder auszuwählen",
+    "addMore": "Mehr hinzufügen"
   },
   "analysisResult": {
     "plantsAdded_one": "{{count}} Pflanze hinzugefügt",

@@ -65,7 +65,9 @@
     "identifying_other": "Identification de {{count}} plantes…",
     "bulkAddTitle": "Ramenez le reste !",
     "bulkAddSubtitle": "Photographiez toutes vos plantes restantes pour compléter.",
-    "bulkAddDone": "Tout ajouter en un geste"
+    "bulkAddDone": "Tout ajouter en un geste",
+    "tapToCapture": "Touchez pour prendre ou choisir des photos",
+    "addMore": "Ajouter plus"
   },
   "analysisResult": {
     "plantsAdded_one": "{{count}} plante ajoutée",
