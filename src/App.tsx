@@ -17,7 +17,7 @@ import {
 } from '@/lib/wateringDue'
 import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, type StorageResult } from '@/lib/plantStorage'
 import { LAST_ACTIVE_DATE_KEY, localDateString, rolloverWateredState } from '@/lib/dailyRollover'
-import { batchedWateringDays, frequencyForWaterNeed, frequencyLabel, secondaryWateringDay } from '@/lib/wateringBatch'
+import { batchedWateringDays, frequencyForWaterNeed, frequencyLabel, secondaryWateringDay, wateringDaysForStrategy } from '@/lib/wateringBatch'
 import { clearAllPhotos, deletePlantPhotos } from '@/lib/photoStore'
 import {
   checkNotificationPermissionStatus,
@@ -74,6 +74,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   lifetimeOfferLastShownAt: null,
   subscriptionPeriodType: null,
   primaryWateringDay: 0,
+  groupWateringDays: true,
   healthScansUsed: 0,
   proPreviewUsedAt: null,
   proPreviewExpiredPaywallShown: false,
@@ -937,8 +938,9 @@ function HomeScreen({
 
 // ─── Screen: Days ─────────────────────────────────────────────────────────────
 
-function DaysScreen({ plants, todayIdx, onToggleWatered, onBack }: {
+function DaysScreen({ plants, todayIdx, onToggleWatered, onBack, onOpenScheduleSettings }: {
   plants: Plant[]; todayIdx: number; onToggleWatered: (id: string) => void; onBack: () => void
+  onOpenScheduleSettings: () => void
 }) {
   const { t } = useTranslation()
   const [selected, setSelected] = useState(todayIdx)
@@ -962,9 +964,7 @@ function DaysScreen({ plants, todayIdx, onToggleWatered, onBack }: {
     <div className="app-shell-light scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
       <div className="flex items-center justify-between mb-5">
         <IconCircleBtn onClick={onBack} label={t('common.back')}><IconChevronLeft size={20} /></IconCircleBtn>
-        <div className="icon-circle" style={{ color: '#fff' }} aria-hidden>
-          <IconMenu size={20} />
-        </div>
+        <IconCircleBtn onClick={onOpenScheduleSettings} label={t('scheduleSettings.title')}><IconMenu size={20} /></IconCircleBtn>
       </div>
       <p className="font-body" style={{ fontSize: 15, color: '#666', marginBottom: 20 }}>
         {t('days.groupedSummary', { count: plants.length, days: groupedDays.size, daysPlural: groupedDays.size === 1 ? '' : 's' })}
@@ -1466,6 +1466,93 @@ function NotificationSettingsSheet({ pushNotifications, reminderTime, onToggle, 
           </button>
         </div>
       </div>
+    </>
+  )
+}
+
+function WateringScheduleSettingsSheet({
+  primaryWateringDay, groupWateringDays, customScheduleCount, onChangePrimaryDay, onChangeGroupingStrategy, onRecalculateAll, onClose,
+}: {
+  primaryWateringDay: number
+  groupWateringDays: boolean
+  /** Plants currently on a hand-edited schedule — drives whether "recalculate" has anything left to do. */
+  customScheduleCount: number
+  onChangePrimaryDay: (day: number) => void
+  onChangeGroupingStrategy: (groupIntoFewerDays: boolean) => void
+  onRecalculateAll: () => void
+  onClose: () => void
+}) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const [showDayPicker, setShowDayPicker] = useState(false)
+
+  useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
+  function close(action?: () => void) { setOpen(false); setTimeout(() => action?.(), 180) }
+
+  // Nothing left to reconcile once no plant has a hand-edited schedule diverging
+  // from the current global settings — stays mounted either way, just disabled.
+  const recalculateDisabled = customScheduleCount === 0
+
+  return (
+    <>
+      <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onClose)} />
+      <div className="fixed left-0 right-0 bottom-0 z-[70]">
+        <div className={`sheet-panel ${open ? 'is-open' : ''} p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-4`}>
+          <div className="flex items-center justify-between">
+            <span className="font-heading" style={{ fontSize: 18 }}>{t('scheduleSettings.title')}</span>
+            <IconCircleBtn onClick={() => close(onClose)} label={t('common.close')}><IconX size={16} /></IconCircleBtn>
+          </div>
+          <p className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>{t('scheduleSettings.description')}</p>
+
+          <div className="rounded-2xl overflow-hidden" style={{ background: '#E6E6E6' }}>
+            <button
+              type="button"
+              onClick={() => setShowDayPicker(true)}
+              className="flex items-center justify-between w-full px-4 py-3.5"
+              style={{ borderBottom: '1px solid #d8d8d8' }}
+            >
+              <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{t('scheduleSettings.primaryDay')}</span>
+              <span className="flex items-center gap-1.5">
+                <span className="font-body" style={{ fontSize: 14, color: '#666' }}>{fullDayName(t, primaryWateringDay)}</span>
+                <IconChevronRight size={16} />
+              </span>
+            </button>
+            <div className="flex items-center justify-between px-4 py-3.5">
+              <div className="min-w-0 pr-3">
+                <div className="font-heading" style={{ fontSize: 15, color: '#111' }}>{t('scheduleSettings.groupToggle')}</div>
+                <div className="font-body" style={{ fontSize: 12, color: '#666', marginTop: 2 }}>{t('scheduleSettings.groupToggleHint')}</div>
+              </div>
+              <Toggle on={groupWateringDays} onChange={onChangeGroupingStrategy} />
+            </div>
+          </div>
+
+          {/* Fixed-height slot reserved regardless of content, so this note appearing/disappearing never shifts the layout. */}
+          <div style={{ minHeight: 20 }}>
+            {customScheduleCount > 0 && (
+              <p className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>
+                {t('scheduleSettings.customScheduleNote', { count: customScheduleCount })}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onRecalculateAll}
+            disabled={recalculateDisabled}
+            className="btn-fill w-full"
+            style={{ height: 52, fontSize: 15, opacity: recalculateDisabled ? 0.5 : 1 }}
+          >
+            {recalculateDisabled ? t('scheduleSettings.upToDateLabel') : t('scheduleSettings.recalculateButton')}
+          </button>
+        </div>
+      </div>
+      {showDayPicker && (
+        <DayPickerSheet
+          selected={primaryWateringDay}
+          onClose={() => setShowDayPicker(false)}
+          onSelect={onChangePrimaryDay}
+        />
+      )}
     </>
   )
 }
@@ -3015,6 +3102,7 @@ export default function App() {
   const [language, setLanguage] = useState<AppLanguage>(loadLanguage)
   const [showLanguagePicker, setShowLanguagePicker] = useState(false)
   const [showNotificationSettings, setShowNotificationSettings] = useState(false)
+  const [showScheduleSettings, setShowScheduleSettings] = useState(false)
   const [paywallSource, setPaywallSource] = useState<PaywallSource | null>(null)
   const [offering, setOffering] = useState<PurchasesOffering | null>(null)
   const [offeringsStatus, setOfferingsStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading')
@@ -3217,6 +3305,33 @@ export default function App() {
     }
     const granted = await requestNotificationPermission()
     setSettings((s) => ({ ...s, pushNotifications: granted }))
+  }
+
+  /** Remaps every plant still on the auto schedule (never touches isCustomSchedule ones) to the current primary day + grouping strategy. */
+  function remapAutoScheduledPlants(primaryDay: number, groupIntoFewerDays: boolean) {
+    setPlants((prev) => prev.map((p, i) => {
+      if (p.isCustomSchedule) return p
+      const days = wateringDaysForStrategy(i, p.waterNeed, primaryDay, groupIntoFewerDays)
+      return { ...p, wateringDays: days, scheduleDays: days.map((d) => DAYS[d]) }
+    }))
+  }
+
+  function handleChangePrimaryWateringDay(day: number) {
+    setSettings((s) => ({ ...s, primaryWateringDay: day }))
+    remapAutoScheduledPlants(day, settings.groupWateringDays)
+  }
+
+  function handleChangeGroupingStrategy(groupIntoFewerDays: boolean) {
+    setSettings((s) => ({ ...s, groupWateringDays: groupIntoFewerDays }))
+    remapAutoScheduledPlants(settings.primaryWateringDay, groupIntoFewerDays)
+  }
+
+  /** Force-reflows every plant, including ones with a hand-edited (isCustomSchedule) day — an explicit reset back to the global schedule. */
+  function handleRecalculateAllSchedules() {
+    setPlants((prev) => prev.map((p, i) => {
+      const days = wateringDaysForStrategy(i, p.waterNeed, settings.primaryWateringDay, settings.groupWateringDays)
+      return { ...p, wateringDays: days, scheduleDays: days.map((d) => DAYS[d]), isCustomSchedule: false }
+    }))
   }
 
   function handleSaveHealthLog(plantId: string, log: PlantHealthLog) {
@@ -3557,7 +3672,15 @@ export default function App() {
         />
       )
     } else if (tab === 'days') {
-      tabContent = <DaysScreen plants={plants} todayIdx={todayIdx} onToggleWatered={handleWaterToggle} onBack={() => setTab('home')} />
+      tabContent = (
+        <DaysScreen
+          plants={plants}
+          todayIdx={todayIdx}
+          onToggleWatered={handleWaterToggle}
+          onBack={() => setTab('home')}
+          onOpenScheduleSettings={() => setShowScheduleSettings(true)}
+        />
+      )
     } else if (tab === 'health') {
       tabContent = (
         <HealthHubScreen
@@ -3582,16 +3705,7 @@ export default function App() {
           onOpenLegal={(doc) => { setLegalDoc(doc); setScreen('legal') }}
           language={language}
           onPickLanguage={() => setShowLanguagePicker(true)}
-          onChangePrimaryWateringDay={(day) => {
-            setSettings((s) => ({ ...s, primaryWateringDay: day }))
-            // Only remap plants still on the AI-batched schedule — a manually
-            // customized schedule (isCustomSchedule) is left exactly as the user set it.
-            setPlants((prev) => prev.map((p) => (
-              p.isCustomSchedule
-                ? p
-                : { ...p, wateringDays: batchedWateringDays(p.waterNeed, day), scheduleDays: batchedWateringDays(p.waterNeed, day).map((i) => DAYS[i]) }
-            )))
-          }}
+          onChangePrimaryWateringDay={handleChangePrimaryWateringDay}
           onToggleNotifications={() => void handleToggleNotifications()}
         />
       )
@@ -3636,6 +3750,17 @@ export default function App() {
           onToggle={handleToggleNotifications}
           onChangeReminderTime={(time) => setSettings((s) => ({ ...s, reminderTime: time }))}
           onClose={() => setShowNotificationSettings(false)}
+        />
+      )}
+      {showScheduleSettings && (
+        <WateringScheduleSettingsSheet
+          primaryWateringDay={settings.primaryWateringDay}
+          groupWateringDays={settings.groupWateringDays}
+          customScheduleCount={plants.filter((p) => p.isCustomSchedule).length}
+          onChangePrimaryDay={handleChangePrimaryWateringDay}
+          onChangeGroupingStrategy={handleChangeGroupingStrategy}
+          onRecalculateAll={handleRecalculateAllSchedules}
+          onClose={() => setShowScheduleSettings(false)}
         />
       )}
     </div>

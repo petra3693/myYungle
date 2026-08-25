@@ -348,5 +348,16 @@
     "deniedHint": "Le notifiche sono disattivate nelle impostazioni del dispositivo. Attivale per ricevere i promemoria di irrigazione.",
     "enableButton": "Attiva notifiche",
     "enabledLabel": "Notifiche attivate"
+  },
+  "scheduleSettings": {
+    "title": "Impostazioni del calendario di irrigazione",
+    "description": "Scegli il giorno condiviso dalle nuove piante e come distribuire l'irrigazione durante la settimana.",
+    "primaryDay": "Giorno di irrigazione principale",
+    "groupToggle": "Raggruppa in meno giorni",
+    "groupToggleHint": "Disattivato distribuisce le piante nella settimana invece di raggrupparle in un giorno.",
+    "customScheduleNote_one": "{{count}} pianta ha un calendario personalizzato che non cambierà automaticamente.",
+    "customScheduleNote_other": "{{count}} piante hanno un calendario personalizzato che non cambierà automaticamente.",
+    "recalculateButton": "Ricalcola tutti i calendari",
+    "upToDateLabel": "Tutti i calendari aggiornati"
   }
 }

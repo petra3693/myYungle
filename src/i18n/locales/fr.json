@@ -348,5 +348,16 @@
     "deniedHint": "Les notifications sont désactivées dans les paramètres de votre appareil. Activez-les pour recevoir les rappels d'arrosage.",
     "enableButton": "Activer les notifications",
     "enabledLabel": "Notifications activées"
+  },
+  "scheduleSettings": {
+    "title": "Paramètres du calendrier d'arrosage",
+    "description": "Choisissez le jour partagé par les nouvelles plantes et comment l'arrosage se répartit sur la semaine.",
+    "primaryDay": "Jour d'arrosage principal",
+    "groupToggle": "Regrouper sur moins de jours",
+    "groupToggleHint": "Désactivé répartit les plantes sur la semaine au lieu de les regrouper sur un jour.",
+    "customScheduleNote_one": "{{count}} plante a un calendrier personnalisé qui ne changera pas automatiquement.",
+    "customScheduleNote_other": "{{count}} plantes ont un calendrier personnalisé qui ne changera pas automatiquement.",
+    "recalculateButton": "Recalculer tous les calendriers",
+    "upToDateLabel": "Tous les calendriers à jour"
   }
 }

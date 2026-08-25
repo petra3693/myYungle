@@ -348,5 +348,16 @@
     "deniedHint": "As notificações estão desativadas nas definições do seu dispositivo. Ative-as para receber lembretes de rega.",
     "enableButton": "Ativar notificações",
     "enabledLabel": "Notificações ativadas"
+  },
+  "scheduleSettings": {
+    "title": "Definições do calendário de rega",
+    "description": "Escolha o dia partilhado pelas novas plantas e como a rega se distribui ao longo da semana.",
+    "primaryDay": "Dia principal de rega",
+    "groupToggle": "Agrupar em menos dias",
+    "groupToggleHint": "Desativado distribui as plantas pela semana em vez de as agrupar num único dia.",
+    "customScheduleNote_one": "{{count}} planta tem um calendário personalizado que não mudará automaticamente.",
+    "customScheduleNote_other": "{{count}} plantas têm um calendário personalizado que não mudará automaticamente.",
+    "recalculateButton": "Recalcular todos os calendários",
+    "upToDateLabel": "Todos os calendários atualizados"
   }
 }

@@ -348,5 +348,16 @@
     "deniedHint": "Notifications are turned off in your device settings. Enable them there to receive watering reminders.",
     "enableButton": "Enable Notifications",
     "enabledLabel": "Notifications Enabled"
+  },
+  "scheduleSettings": {
+    "title": "Watering Schedule Settings",
+    "description": "Choose which day new plants share, and how watering is spread out across the week.",
+    "primaryDay": "Primary watering day",
+    "groupToggle": "Group into fewer days",
+    "groupToggleHint": "Off spreads plants across the week instead of stacking them on one day.",
+    "customScheduleNote_one": "{{count}} plant has a custom schedule that won't change automatically.",
+    "customScheduleNote_other": "{{count}} plants have a custom schedule that won't change automatically.",
+    "recalculateButton": "Recalculate All Schedules",
+    "upToDateLabel": "All Schedules Up to Date"
   }
 }

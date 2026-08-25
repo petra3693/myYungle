@@ -14,6 +14,30 @@ export function batchedWateringDays(waterNeed: WaterNeed, primaryDay: number): n
   return waterNeed === 'Heavy' ? [primaryDay, secondaryWateringDay(primaryDay)] : [primaryDay]
 }
 
+/**
+ * Alternate strategy to batchedWateringDays: instead of stacking every plant
+ * onto the same primary (+secondary) day, offsets each plant's day by its
+ * position in the list so plants land round-robin across the week. Heavy
+ * drinkers still get a second day, 3 days after their first. Used when the
+ * user turns off "group into fewer days" in the watering schedule settings.
+ */
+export function spreadWateringDays(index: number, waterNeed: WaterNeed, primaryDay: number): number[] {
+  const day1 = (primaryDay + index) % 7
+  if (waterNeed !== 'Heavy') return [day1]
+  const day2 = (day1 + 3) % 7
+  return [day1, day2].sort((a, b) => a - b)
+}
+
+/** Picks batchedWateringDays or spreadWateringDays per the user's grouping preference. */
+export function wateringDaysForStrategy(
+  index: number,
+  waterNeed: WaterNeed,
+  primaryDay: number,
+  groupIntoFewerDays: boolean,
+): number[] {
+  return groupIntoFewerDays ? batchedWateringDays(waterNeed, primaryDay) : spreadWateringDays(index, waterNeed, primaryDay)
+}
+
 /** AI water-need band → how often, independent of which day(s) it lands on. */
 export function frequencyForWaterNeed(waterNeed: WaterNeed): WateringFrequency {
   return waterNeed === 'Light' ? 'biweekly' : 'weekly'

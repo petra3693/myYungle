@@ -348,5 +348,16 @@
     "deniedHint": "Las notificaciones están desactivadas en la configuración de tu dispositivo. Actívalas para recibir recordatorios de riego.",
     "enableButton": "Activar notificaciones",
     "enabledLabel": "Notificaciones activadas"
+  },
+  "scheduleSettings": {
+    "title": "Ajustes del calendario de riego",
+    "description": "Elige el día que comparten las plantas nuevas y cómo se reparte el riego a lo largo de la semana.",
+    "primaryDay": "Día principal de riego",
+    "groupToggle": "Agrupar en menos días",
+    "groupToggleHint": "Desactivado reparte las plantas a lo largo de la semana en vez de agruparlas en un día.",
+    "customScheduleNote_one": "{{count}} planta tiene un calendario personalizado que no cambiará automáticamente.",
+    "customScheduleNote_other": "{{count}} plantas tienen un calendario personalizado que no cambiará automáticamente.",
+    "recalculateButton": "Recalcular todos los calendarios",
+    "upToDateLabel": "Todos los calendarios actualizados"
   }
 }

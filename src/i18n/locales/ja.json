@@ -348,5 +348,16 @@
     "deniedHint": "デバイスの設定で通知がオフになっています。水やりのリマインダーを受け取るには、そこで通知をオンにしてください。",
     "enableButton": "通知を有効にする",
     "enabledLabel": "通知が有効です"
+  },
+  "scheduleSettings": {
+    "title": "水やりスケジュール設定",
+    "description": "新しい植物が共有する曜日と、水やりを週内にどう分散させるかを選択します。",
+    "primaryDay": "基本の水やり曜日",
+    "groupToggle": "少ない日数にまとめる",
+    "groupToggleHint": "オフにすると、1日にまとめず植物を週全体に分散させます。",
+    "customScheduleNote_one": "{{count}}件の植物にカスタムスケジュールがあり、自動では変更されません。",
+    "customScheduleNote_other": "{{count}}件の植物にカスタムスケジュールがあり、自動では変更されません。",
+    "recalculateButton": "すべてのスケジュールを再計算",
+    "upToDateLabel": "すべてのスケジュールは最新です"
   }
 }

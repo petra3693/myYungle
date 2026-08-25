@@ -348,5 +348,16 @@
     "deniedHint": "Benachrichtigungen sind in deinen Geräteeinstellungen deaktiviert. Aktiviere sie dort, um Gieß-Erinnerungen zu erhalten.",
     "enableButton": "Benachrichtigungen aktivieren",
     "enabledLabel": "Benachrichtigungen aktiviert"
+  },
+  "scheduleSettings": {
+    "title": "Gießplan-Einstellungen",
+    "description": "Wähle den Tag, den neue Pflanzen teilen, und wie das Gießen über die Woche verteilt wird.",
+    "primaryDay": "Haupt-Gießtag",
+    "groupToggle": "Auf wenige Tage bündeln",
+    "groupToggleHint": "Aus verteilt Pflanzen über die Woche, statt sie auf einen Tag zu stapeln.",
+    "customScheduleNote_one": "{{count}} Pflanze hat einen eigenen Zeitplan, der sich nicht automatisch ändert.",
+    "customScheduleNote_other": "{{count}} Pflanzen haben einen eigenen Zeitplan, der sich nicht automatisch ändert.",
+    "recalculateButton": "Alle Zeitpläne neu berechnen",
+    "upToDateLabel": "Alle Zeitpläne aktuell"
   }
 }

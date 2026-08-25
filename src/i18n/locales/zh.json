@@ -348,5 +348,16 @@
     "deniedHint": "通知在您的设备设置中已关闭。请在那里开启通知以接收浇水提醒。",
     "enableButton": "开启通知",
     "enabledLabel": "通知已启用"
+  },
+  "scheduleSettings": {
+    "title": "浇水计划设置",
+    "description": "选择新植物共享的日期，以及浇水在一周内如何分布。",
+    "primaryDay": "主要浇水日",
+    "groupToggle": "集中到更少的天数",
+    "groupToggleHint": "关闭后，植物将分散在一周内，而不是集中在同一天。",
+    "customScheduleNote_one": "有 {{count}} 株植物使用自定义计划，不会自动更改。",
+    "customScheduleNote_other": "有 {{count}} 株植物使用自定义计划，不会自动更改。",
+    "recalculateButton": "重新计算所有计划",
+    "upToDateLabel": "所有计划均已是最新"
   }
 }

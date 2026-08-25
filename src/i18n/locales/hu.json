@@ -348,5 +348,16 @@
     "deniedHint": "Az értesítések ki vannak kapcsolva a készüléked beállításaiban. Kapcsold be őket az öntözési emlékeztetők fogadásához.",
     "enableButton": "Értesítések engedélyezése",
     "enabledLabel": "Értesítések engedélyezve"
+  },
+  "scheduleSettings": {
+    "title": "Öntözési ütemterv beállításai",
+    "description": "Válaszd ki, melyik napot osszák meg az új növények, és hogyan oszoljon el az öntözés a héten.",
+    "primaryDay": "Elsődleges öntözési nap",
+    "groupToggle": "Csoportosítás kevesebb napra",
+    "groupToggleHint": "Kikapcsolva a növények szétoszlanak a héten, nem egy napra halmozódnak.",
+    "customScheduleNote_one": "{{count}} növénynek egyéni ütemterve van, ami nem változik automatikusan.",
+    "customScheduleNote_other": "{{count}} növénynek egyéni ütemterve van, ami nem változik automatikusan.",
+    "recalculateButton": "Összes ütemterv újraszámítása",
+    "upToDateLabel": "Minden ütemterv naprakész"
   }
 }

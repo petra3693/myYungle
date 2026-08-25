@@ -348,5 +348,16 @@
     "deniedHint": "Meldingen staan uit in je apparaatinstellingen. Zet ze daar aan om giet-herinneringen te ontvangen.",
     "enableButton": "Meldingen inschakelen",
     "enabledLabel": "Meldingen ingeschakeld"
+  },
+  "scheduleSettings": {
+    "title": "Instellingen giet schema",
+    "description": "Kies de dag die nieuwe planten delen en hoe het gieten over de week wordt verdeeld.",
+    "primaryDay": "Belangrijkste giet dag",
+    "groupToggle": "Groeperen op minder dagen",
+    "groupToggleHint": "Uit verspreidt planten over de week in plaats van ze op één dag te stapelen.",
+    "customScheduleNote_one": "{{count}} plant heeft een aangepast schema dat niet automatisch verandert.",
+    "customScheduleNote_other": "{{count}} planten hebben een aangepast schema dat niet automatisch verandert.",
+    "recalculateButton": "Alle schema's herberekenen",
+    "upToDateLabel": "Alle schema's zijn actueel"
   }
 }

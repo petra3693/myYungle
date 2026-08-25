@@ -348,5 +348,16 @@
     "deniedHint": "Powiadomienia są wyłączone w ustawieniach urządzenia. Włącz je tam, aby otrzymywać przypomnienia o podlewaniu.",
     "enableButton": "Włącz powiadomienia",
     "enabledLabel": "Powiadomienia włączone"
+  },
+  "scheduleSettings": {
+    "title": "Ustawienia harmonogramu podlewania",
+    "description": "Wybierz dzień, który będą dzielić nowe rośliny, oraz sposób rozłożenia podlewania w tygodniu.",
+    "primaryDay": "Główny dzień podlewania",
+    "groupToggle": "Grupuj na mniej dni",
+    "groupToggleHint": "Wyłączone rozkłada rośliny na cały tydzień zamiast grupować je w jednym dniu.",
+    "customScheduleNote_one": "{{count}} roślina ma niestandardowy harmonogram, który nie zmieni się automatycznie.",
+    "customScheduleNote_other": "{{count}} roślin ma niestandardowy harmonogram, który nie zmieni się automatycznie.",
+    "recalculateButton": "Przelicz wszystkie harmonogramy",
+    "upToDateLabel": "Wszystkie harmonogramy aktualne"
   }
 }
