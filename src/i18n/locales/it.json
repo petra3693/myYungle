@@ -346,6 +346,7 @@
     "permissionPrompt": "Non ancora richiesta",
     "permissionUnavailable": "Gestito dall'app (anteprima web)",
     "deniedHint": "Le notifiche sono disattivate nelle impostazioni del dispositivo. Attivale per ricevere i promemoria di irrigazione.",
-    "enableButton": "Attiva notifiche"
+    "enableButton": "Attiva notifiche",
+    "enabledLabel": "Notifiche attivate"
   }
 }

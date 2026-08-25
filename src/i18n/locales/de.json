@@ -346,6 +346,7 @@
     "permissionPrompt": "Noch nicht angefragt",
     "permissionUnavailable": "Wird von der App verwaltet (Web-Vorschau)",
     "deniedHint": "Benachrichtigungen sind in deinen Geräteeinstellungen deaktiviert. Aktiviere sie dort, um Gieß-Erinnerungen zu erhalten.",
-    "enableButton": "Benachrichtigungen aktivieren"
+    "enableButton": "Benachrichtigungen aktivieren",
+    "enabledLabel": "Benachrichtigungen aktiviert"
   }
 }

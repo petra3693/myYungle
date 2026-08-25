@@ -346,6 +346,7 @@
     "permissionPrompt": "Nog niet gevraagd",
     "permissionUnavailable": "Wordt beheerd door de app (webpreview)",
     "deniedHint": "Meldingen staan uit in je apparaatinstellingen. Zet ze daar aan om giet-herinneringen te ontvangen.",
-    "enableButton": "Meldingen inschakelen"
+    "enableButton": "Meldingen inschakelen",
+    "enabledLabel": "Meldingen ingeschakeld"
   }
 }

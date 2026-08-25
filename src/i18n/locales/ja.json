@@ -346,6 +346,7 @@
     "permissionPrompt": "まだリクエストしていません",
     "permissionUnavailable": "アプリが管理します（Webプレビュー）",
     "deniedHint": "デバイスの設定で通知がオフになっています。水やりのリマインダーを受け取るには、そこで通知をオンにしてください。",
-    "enableButton": "通知を有効にする"
+    "enableButton": "通知を有効にする",
+    "enabledLabel": "通知が有効です"
   }
 }

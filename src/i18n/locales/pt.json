@@ -346,6 +346,7 @@
     "permissionPrompt": "Ainda não solicitada",
     "permissionUnavailable": "Gerido pela aplicação (pré-visualização web)",
     "deniedHint": "As notificações estão desativadas nas definições do seu dispositivo. Ative-as para receber lembretes de rega.",
-    "enableButton": "Ativar notificações"
+    "enableButton": "Ativar notificações",
+    "enabledLabel": "Notificações ativadas"
   }
 }

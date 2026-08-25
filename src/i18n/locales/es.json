@@ -346,6 +346,7 @@
     "permissionPrompt": "Aún no solicitado",
     "permissionUnavailable": "Gestionado por la app (vista previa web)",
     "deniedHint": "Las notificaciones están desactivadas en la configuración de tu dispositivo. Actívalas para recibir recordatorios de riego.",
-    "enableButton": "Activar notificaciones"
+    "enableButton": "Activar notificaciones",
+    "enabledLabel": "Notificaciones activadas"
   }
 }

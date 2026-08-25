@@ -346,6 +346,7 @@
     "permissionPrompt": "Jeszcze nie poproszono",
     "permissionUnavailable": "Zarządzane przez aplikację (podgląd web)",
     "deniedHint": "Powiadomienia są wyłączone w ustawieniach urządzenia. Włącz je tam, aby otrzymywać przypomnienia o podlewaniu.",
-    "enableButton": "Włącz powiadomienia"
+    "enableButton": "Włącz powiadomienia",
+    "enabledLabel": "Powiadomienia włączone"
   }
 }

@@ -346,6 +346,7 @@
     "permissionPrompt": "尚未请求",
     "permissionUnavailable": "由应用管理（网页预览）",
     "deniedHint": "通知在您的设备设置中已关闭。请在那里开启通知以接收浇水提醒。",
-    "enableButton": "开启通知"
+    "enableButton": "开启通知",
+    "enabledLabel": "通知已启用"
   }
 }

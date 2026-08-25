@@ -346,6 +346,7 @@
     "permissionPrompt": "Még nem kérted",
     "permissionUnavailable": "Az alkalmazás kezeli (webes előnézet)",
     "deniedHint": "Az értesítések ki vannak kapcsolva a készüléked beállításaiban. Kapcsold be őket az öntözési emlékeztetők fogadásához.",
-    "enableButton": "Értesítések engedélyezése"
+    "enableButton": "Értesítések engedélyezése",
+    "enabledLabel": "Értesítések engedélyezve"
   }
 }

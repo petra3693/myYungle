@@ -414,7 +414,7 @@ function OnboardingWelcome({ onNext, language, onPickLanguage }: { onNext: () =>
         type="button"
         onClick={onPickLanguage}
         className="flex items-center gap-3 rounded-full px-5 mb-4"
-        style={{ background: '#f0f0ec', height: 56 }}
+        style={{ background: '#E6E6E6', height: 56 }}
       >
         <IconGlobe size={18} />
         <span className="font-body flex-1 text-left" style={{ fontSize: 15, color: '#111' }}>{t(`language.${language}`)}</span>
@@ -522,7 +522,7 @@ function BatchCaptureScreen({
             onClick={() => openPicker()}
             disabled={busy}
             className="w-full flex flex-col items-center justify-center gap-3"
-            style={{ flex: 1, minHeight: 260, borderRadius: '1.5rem', background: '#f0f0ec', border: '2px dashed #ccc' }}
+            style={{ flex: 1, minHeight: 260, borderRadius: '1.5rem', background: '#E6E6E6', border: '2px dashed #ccc' }}
           >
             <div className="flex items-center justify-center rounded-full" style={{ width: 64, height: 64, background: '#fff', border: '1.5px solid #ccc' }}>
               <IconPlus size={28} />
@@ -576,13 +576,13 @@ function BatchCaptureScreen({
                   onClick={() => openPicker()}
                   disabled={busy}
                   className="rounded-2xl flex items-center justify-center"
-                  style={{ aspectRatio: '1/1', background: '#f0f0ec', border: '1.5px dashed #ccc' }}
+                  style={{ aspectRatio: '1/1', background: '#E6E6E6', border: '1.5px dashed #ccc' }}
                 >
                   <IconPlus size={22} />
                 </button>
               )}
               {freeSlots !== null && atLimit && (
-                <div className="rounded-2xl flex items-center justify-center" style={{ aspectRatio: '1/1', background: '#f0f0ec' }}>
+                <div className="rounded-2xl flex items-center justify-center" style={{ aspectRatio: '1/1', background: '#E6E6E6' }}>
                   <div style={{ color: '#999' }}><IconLock size={22} /></div>
                 </div>
               )}
@@ -830,7 +830,7 @@ function HomeScreen({
         <span className="stat-hero__label">{t('home.totalPlants')}</span>
       </div>
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="stat-pill" style={{ background: '#f0f0ec' }}>
+        <div className="stat-pill" style={{ background: '#E6E6E6' }}>
           <span className="stat-pill__value" style={{ color: '#000' }}>{thirsty}</span>
           <span className="stat-pill__label">{t('home.thirstyPlants')}</span>
         </div>
@@ -1072,7 +1072,7 @@ function PlantDetailScreen({
                     {plant.healthLogs[0].healthScore}% {plant.healthLogs[0].diagnosis}
                   </span>
                 </div>
-                <div style={{ height: 10, borderRadius: 9999, background: '#f0f0ec', overflow: 'hidden' }}>
+                <div style={{ height: 10, borderRadius: 9999, background: '#E6E6E6', overflow: 'hidden' }}>
                   <div style={{ width: `${plant.healthLogs[0].healthScore}%`, height: '100%', background: healthScoreColor(plant.healthLogs[0].healthScore), borderRadius: 9999 }} />
                 </div>
                 <div className="flex items-center justify-between mt-3">
@@ -1086,7 +1086,7 @@ function PlantDetailScreen({
                   <span className="caption-eyebrow">{t('plantDetail.wateringRhythm')}</span>
                   <span className="font-body font-bold" style={{ fontSize: 13, color: '#000' }}>{health.score}% {health.label}</span>
                 </div>
-                <div style={{ height: 10, borderRadius: 9999, background: '#f0f0ec', overflow: 'hidden' }}>
+                <div style={{ height: 10, borderRadius: 9999, background: '#E6E6E6', overflow: 'hidden' }}>
                   <div style={{ width: `${health.score}%`, height: '100%', background: GREEN, borderRadius: 9999 }} />
                 </div>
               </>
@@ -1094,28 +1094,28 @@ function PlantDetailScreen({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#f0f0ec' }}>
+            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#E6E6E6' }}>
               <div style={{ color: '#000' }}><IconDroplet size={18} /></div>
               <div className="flex flex-col min-w-0">
                 <span className="font-heading" style={{ fontSize: 13, color: '#000', lineHeight: 1.2 }}>{t('plantDetail.waterFrequency', { frequency: wateringFrequencyLabel })}</span>
                 <span className="font-body truncate" style={{ fontSize: 11, color: '#8E8E93' }}>{t('plantDetail.soilHydration')}</span>
               </div>
             </div>
-            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#f0f0ec' }}>
+            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#E6E6E6' }}>
               <div style={{ color: '#000' }}><IconSun size={18} /></div>
               <div className="flex flex-col min-w-0">
                 <span className="font-heading" style={{ fontSize: 13, color: '#000', lineHeight: 1.2 }}>{plant.lightNeed === 'High' ? t('plantDetail.lightDirect') : plant.lightNeed === 'Low' ? t('plantDetail.lightShade') : t('plantDetail.lightIndirect')}</span>
                 <span className="font-body truncate" style={{ fontSize: 11, color: '#8E8E93' }}>{t('plantDetail.brightFiltered')}</span>
               </div>
             </div>
-            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#f0f0ec' }}>
+            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#E6E6E6' }}>
               <div style={{ color: '#000' }}><IconThermometer size={18} /></div>
               <div className="flex flex-col min-w-0">
                 <span className="font-heading" style={{ fontSize: 13, color: '#000', lineHeight: 1.2 }}>{t('plantDetail.temp', { range: plant.temperatureRangeC ?? '18-27°C' })}</span>
                 <span className="font-body truncate" style={{ fontSize: 11, color: '#8E8E93' }}>{t('plantDetail.keepStable')}</span>
               </div>
             </div>
-            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#f0f0ec' }}>
+            <div className="rounded-full p-4 flex items-center gap-3" style={{ background: '#E6E6E6' }}>
               <div style={{ color: '#000' }}><IconDroplets size={18} /></div>
               <div className="flex flex-col min-w-0">
                 <span className="font-heading" style={{ fontSize: 13, color: '#000', lineHeight: 1.2 }}>{plant.humidityNeed === 'high' ? t('plantDetail.humidityHigh') : plant.humidityNeed === 'low' ? t('plantDetail.humidityLow') : t('plantDetail.humidityNormal')}</span>
@@ -1147,7 +1147,7 @@ function PlantDetailScreen({
                   const healthy = log.healthScore >= 70
                   const isOpen = expandedLog === log.id
                   return (
-                    <div key={log.id} className="rounded-2xl overflow-hidden" style={{ background: '#f5f5f5' }}>
+                    <div key={log.id} className="rounded-2xl overflow-hidden" style={{ background: '#E6E6E6' }}>
                       <button
                         type="button"
                         onClick={() => setExpandedLog(isOpen ? null : log.id)}
@@ -1205,7 +1205,7 @@ function PlantDetailScreen({
                 ) : (
                   <div className="flex flex-col gap-2 mt-2">
                     {plant.history.slice(0, 2).map((entry) => (
-                      <div key={entry.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#f5f5f5' }}>
+                      <div key={entry.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#E6E6E6' }}>
                         <PlantPhoto photo={entry.photo} alt="" className="rounded-xl object-cover shrink-0 w-12 h-12" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -1321,7 +1321,7 @@ function ConfirmSheet({ title, body, confirmLabel, danger, onCancel, onConfirm }
           <span className="font-heading" style={{ fontSize: 18 }}>{title}</span>
           <p className="font-body" style={{ fontSize: 14, color: '#444', lineHeight: 1.5 }}>{body}</p>
           <div className="flex gap-2">
-            <button type="button" onClick={() => close(onCancel)} className="btn-ghost-dark flex-1" style={{ height: 46, background: '#f0f0f0', color: '#111' }}>{t('common.cancel')}</button>
+            <button type="button" onClick={() => close(onCancel)} className="btn-ghost-dark flex-1" style={{ height: 46, background: '#E6E6E6', color: '#111' }}>{t('common.cancel')}</button>
             <button
               type="button"
               onClick={() => close(onConfirm)}
@@ -1376,7 +1376,11 @@ function NotificationSettingsSheet({ pushNotifications, reminderTime, onToggle, 
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
-  const [permissionStatus, setPermissionStatus] = useState<NotificationPermissionStatus | null>(null)
+  // Seeded synchronously (not null) so the status row never pops in after mount —
+  // it's refined a moment later by the real async check, without a layout jump.
+  const [permissionStatus, setPermissionStatus] = useState<NotificationPermissionStatus>(
+    () => (Capacitor.isNativePlatform() ? 'prompt' : 'unavailable'),
+  )
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -1402,6 +1406,11 @@ function NotificationSettingsSheet({ pushNotifications, reminderTime, onToggle, 
     : permissionStatus === 'prompt' ? t('notificationSettings.permissionPrompt')
     : t('notificationSettings.permissionUnavailable')
   const statusColor = permissionStatus === 'granted' ? '#0a8f3f' : permissionStatus === 'denied' ? '#FF3B30' : '#8E8E93'
+  const hasValidTime = /^\d{2}:\d{2}$/.test(reminderTime)
+  // The button stays mounted at all times (never removed) — only its enabled/label state changes,
+  // so the sheet never resizes as permissions or the toggle change.
+  const alreadyEnabled = pushNotifications && permissionStatus !== 'denied'
+  const buttonDisabled = busy || alreadyEnabled || !hasValidTime
 
   return (
     <>
@@ -1414,19 +1423,22 @@ function NotificationSettingsSheet({ pushNotifications, reminderTime, onToggle, 
           </div>
           <p className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>{t('notificationSettings.description')}</p>
 
-          {permissionStatus !== null && permissionStatus !== 'unavailable' && (
-            <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: '#f5f5f5' }}>
+          {permissionStatus !== 'unavailable' && (
+            <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: '#E6E6E6' }}>
               <span style={{ width: 8, height: 8, borderRadius: 9999, background: statusColor, flexShrink: 0 }} />
               <span className="font-body" style={{ fontSize: 13, color: '#444' }}>{statusLabel}</span>
             </div>
           )}
-          {permissionStatus === 'denied' && (
-            <p className="font-body" style={{ fontSize: 12, color: '#8E8E93', marginTop: -8 }}>
-              {t('notificationSettings.deniedHint')}
-            </p>
-          )}
+          {/* Fixed-height slot reserved regardless of content, so the denied hint appearing/disappearing never shifts the layout. */}
+          <div style={{ minHeight: 32 }}>
+            {permissionStatus === 'denied' && (
+              <p className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>
+                {t('notificationSettings.deniedHint')}
+              </p>
+            )}
+          </div>
 
-          <div className="rounded-2xl overflow-hidden" style={{ background: '#f5f5f5' }}>
+          <div className="rounded-2xl overflow-hidden" style={{ background: '#E6E6E6' }}>
             <div className="flex items-center justify-between px-4 py-3.5" style={{ borderBottom: '1px solid #eee' }}>
               <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{t('settings.wateringReminders')}</span>
               <Toggle on={pushNotifications} onChange={() => void handleToggle()} />
@@ -1443,17 +1455,15 @@ function NotificationSettingsSheet({ pushNotifications, reminderTime, onToggle, 
             </div>
           </div>
 
-          {!pushNotifications && (
-            <button
-              type="button"
-              onClick={() => void handleToggle()}
-              disabled={busy}
-              className="btn-fill w-full"
-              style={{ height: 52, fontSize: 15, opacity: busy ? 0.7 : 1 }}
-            >
-              {t('notificationSettings.enableButton')}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => void handleToggle()}
+            disabled={buttonDisabled}
+            className="btn-fill w-full"
+            style={{ height: 52, fontSize: 15, opacity: buttonDisabled ? 0.5 : 1 }}
+          >
+            {alreadyEnabled ? t('notificationSettings.enabledLabel') : t('notificationSettings.enableButton')}
+          </button>
         </div>
       </div>
     </>
@@ -1640,7 +1650,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   className="font-heading px-4"
-                  style={{ height: 48, fontSize: 16, color: '#111', background: '#f5f5f5', borderRadius: 14 }}
+                  style={{ height: 48, fontSize: 16, color: '#111', background: '#E6E6E6', borderRadius: 14 }}
                 />
               </label>
 
@@ -1651,7 +1661,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
                     value={draft.category}
                     onChange={(e) => setDraft({ ...draft, category: e.target.value })}
                     className="font-body px-4 w-full appearance-none"
-                    style={{ height: 48, fontSize: 15, color: '#111', background: '#f5f5f5', borderRadius: 14 }}
+                    style={{ height: 48, fontSize: 15, color: '#111', background: '#E6E6E6', borderRadius: 14 }}
                   >
                     {PLANT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -1661,11 +1671,11 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
                 </div>
               </label>
 
-              <div className="mt-4 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#f5f5f5' }}>
+              <div className="mt-4 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#E6E6E6' }}>
                 <span className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>{t('manualAdd.lightRequirement')}</span>
                 <span className="font-heading" style={{ fontSize: 14, color: '#111' }}>{draft.lightNeed.toLowerCase()}</span>
               </div>
-              <div className="mt-3 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#f5f5f5' }}>
+              <div className="mt-3 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#E6E6E6' }}>
                 <span className="font-body" style={{ fontSize: 14, color: '#8E8E93' }}>{t('manualAdd.humidity')}</span>
                 <span className="font-heading" style={{ fontSize: 14, color: '#111' }}>{draft.humidityNeed}</span>
               </div>
@@ -1677,7 +1687,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
                 </span>
               </div>
 
-              <div className="mt-3 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#f5f5f5' }}>
+              <div className="mt-3 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#E6E6E6' }}>
                 <div>
                   <div className="font-heading" style={{ fontSize: 14, color: '#111' }}>{t('manualAdd.setReminders')}</div>
                   <div className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>{t('manualAdd.receiveNotifications')}</div>
@@ -1738,28 +1748,28 @@ function HealthReportCard({ photo, plantName, scannedAt, result }: {
       <span className="caption-eyebrow block mb-2">{t('health.aiAnalysis')}</span>
       <div className="card-white p-5 flex flex-col gap-3">
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+          <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#E6E6E6' }}>
             <div style={{ color: statusColor }}><IconLeaf size={16} /></div>
             <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{healthStatusLabel(result.healthScore, t)}</span>
             <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>{t('health.status')}</span>
           </div>
-          <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+          <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#E6E6E6' }}>
             <div style={{ color: '#0a8f3f' }}><IconRuler size={16} /></div>
             <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{t(`health.severity${result.severity}`)}</span>
             <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>{t('health.severity')}</span>
           </div>
-          <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+          <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#E6E6E6' }}>
             <div style={{ color: '#0a8f3f' }}><IconCheck size={16} /></div>
             <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{result.confidence}%</span>
             <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>{t('health.confidence')}</span>
           </div>
         </div>
-        <div className="rounded-2xl p-4" style={{ background: '#f5f5f5' }}>
+        <div className="rounded-2xl p-4" style={{ background: '#E6E6E6' }}>
           <span className="caption-eyebrow">{t('health.diagnosis')}</span>
           <div className="font-heading mt-1" style={{ fontSize: 18 }}>{result.diagnosis}</div>
           <p className="font-body mt-1" style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>{result.treatmentNotes}</p>
         </div>
-        <div className="rounded-2xl p-4" style={{ background: '#f5f5f5' }}>
+        <div className="rounded-2xl p-4" style={{ background: '#E6E6E6' }}>
           <span className="caption-eyebrow">{t('health.recommendedActions')}</span>
           <div className="flex flex-col gap-2 mt-2">
             {result.recommendedActions.map((a, i) => (
@@ -2031,7 +2041,7 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
               ) : (
                 <div className="scroll-y flex flex-col gap-2" style={{ maxHeight: 320 }}>
                   {plants.map((p) => (
-                    <button key={p.id} type="button" onClick={() => handleLogToProfile(p)} className="flex items-center gap-3 rounded-2xl px-3 py-2" style={{ background: '#f5f5f5' }}>
+                    <button key={p.id} type="button" onClick={() => handleLogToProfile(p)} className="flex items-center gap-3 rounded-2xl px-3 py-2" style={{ background: '#E6E6E6' }}>
                       <PlantPhoto photo={p.photo} alt={p.name} className="rounded-xl object-cover shrink-0 w-10 h-10" />
                       <span className="font-heading" style={{ fontSize: 15 }}>{p.name}</span>
                     </button>
@@ -2169,23 +2179,23 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
             <span className="caption-eyebrow block mb-2">{t('growthScan.aiAnalysis')}</span>
             <div className="card-white p-5 flex flex-col gap-3">
               <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+                <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#E6E6E6' }}>
                   <div style={{ color: '#0a8f3f' }}><IconLeaf size={16} /></div>
                   <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{result.estimatedAge}</span>
                   <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>{t('growthScan.maturity')}</span>
                 </div>
-                <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+                <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#E6E6E6' }}>
                   <div style={{ color: '#0a8f3f' }}><IconRuler size={16} /></div>
                   <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{result.heightCm} cm</span>
                   <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>{t('growthScan.estSize')}</span>
                 </div>
-                <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#f5f5f5' }}>
+                <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#E6E6E6' }}>
                   <div style={{ color: '#0a8f3f' }}><IconCheck size={16} /></div>
                   <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{result.condition}</span>
                   <span className="font-body" style={{ fontSize: 10, color: '#8E8E93' }}>{t('growthScan.health')}</span>
                 </div>
               </div>
-              <div className="rounded-2xl p-4" style={{ background: '#f5f5f5' }}>
+              <div className="rounded-2xl p-4" style={{ background: '#E6E6E6' }}>
                 <span className="caption-eyebrow">{t('growthScan.aiObservations')}</span>
                 <p className="font-body mt-1" style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>{result.summary}</p>
               </div>
@@ -2374,7 +2384,7 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
                 value={settings.reminderTime}
                 onChange={(e) => onSave({ ...settings, reminderTime: e.target.value })}
                 className="font-body"
-                style={{ fontSize: 14, border: 'none', borderRadius: 8, padding: '4px 8px', background: '#f0f0ec', color: '#111' }}
+                style={{ fontSize: 14, border: 'none', borderRadius: 8, padding: '4px 8px', background: '#E6E6E6', color: '#111' }}
               />
             </div>
           </div>
@@ -2522,7 +2532,7 @@ function LimitReachedSheet({ onUnlock, onCancel }: { onUnlock: () => void; onCan
             {t('limitReached.body')}
           </p>
           <button type="button" onClick={() => close(onUnlock)} className="btn-fill w-full" style={{ height: 52 }}>{t('limitReached.unlockPro')}</button>
-          <button type="button" onClick={() => close(onCancel)} className="font-heading w-full" style={{ height: 52, borderRadius: 9999, background: '#f0f0ec', color: '#888' }}>{t('limitReached.cancel')}</button>
+          <button type="button" onClick={() => close(onCancel)} className="font-heading w-full" style={{ height: 52, borderRadius: 9999, background: '#E6E6E6', color: '#888' }}>{t('limitReached.cancel')}</button>
         </div>
       </div>
     </>

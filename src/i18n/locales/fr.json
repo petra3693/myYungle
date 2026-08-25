@@ -346,6 +346,7 @@
     "permissionPrompt": "Pas encore demandée",
     "permissionUnavailable": "Géré par l'application (aperçu web)",
     "deniedHint": "Les notifications sont désactivées dans les paramètres de votre appareil. Activez-les pour recevoir les rappels d'arrosage.",
-    "enableButton": "Activer les notifications"
+    "enableButton": "Activer les notifications",
+    "enabledLabel": "Notifications activées"
   }
 }
