@@ -97,7 +97,9 @@
     "waterToday": "Podlej dzisiaj",
     "nextWaterTomorrow": "Następne podlewanie: Jutro",
     "nextWaterOn": "Następne podlewanie: {{day}}",
-    "noSchedule": "Brak harmonogramu"
+    "noSchedule": "Brak harmonogramu",
+    "notificationsOn": "Powiadomienia włączone",
+    "notificationsOff": "Powiadomienia wyłączone"
   },
   "days": {
     "groupedSummary_one": "Pogrupowaliśmy Twoją {{count}} roślinę w {{days}} dzień/dni.",

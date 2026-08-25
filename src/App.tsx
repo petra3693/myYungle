@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n/i18n'
 import { Capacitor } from '@capacitor/core'
-import { LocalNotifications } from '@capacitor/local-notifications'
 import { Purchases, LOG_LEVEL, type CustomerInfo, type PurchasesOffering, type PurchasesError } from '@revenuecat/purchases-capacitor'
 import Spline from '@splinetool/react-spline'
 import PlantPhoto from '@/components/PlantPhoto'
@@ -20,6 +19,7 @@ import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, t
 import { LAST_ACTIVE_DATE_KEY, localDateString, rolloverWateredState } from '@/lib/dailyRollover'
 import { batchedWateringDays, frequencyForWaterNeed, frequencyLabel, secondaryWateringDay } from '@/lib/wateringBatch'
 import { clearAllPhotos, deletePlantPhotos } from '@/lib/photoStore'
+import { requestCameraPermission, requestNotificationPermission } from '@/lib/permissions'
 import {
   FREE_PLANT_LIMIT,
   FREE_HEALTH_SCANS,
@@ -234,6 +234,7 @@ const IconCamera = (p: { size?: number }) => <Icon {...p}><path d="M4 8h3l1.5-2h
 const IconPlus = (p: { size?: number }) => <Icon {...p}><path d="M12 5v14M5 12h14" /></Icon>
 const IconMenu = (p: { size?: number }) => <Icon {...p}><path d="M4 7h16M4 12h16M4 17h16" /></Icon>
 const IconBell = (p: { size?: number }) => <Icon {...p}><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" /><path d="M10 19a2 2 0 0 0 4 0" /></Icon>
+const IconBellOff = (p: { size?: number }) => <Icon {...p}><path d="M6 10a6 6 0 0 1 10.4-4.05M18 10c0 4 1.5 5.5 1.5 5.5H8" /><path d="M6 10v0c0 3-.8 4.4-1.3 5.1a.5.5 0 0 0 .4.9h4.4" /><path d="M10 19a2 2 0 0 0 4 0" /><path d="M3 3l18 18" /></Icon>
 const IconCheck = (p: { size?: number }) => <Icon {...p}><path d="M4 12l6 6L20 6" /></Icon>
 const IconAlert = (p: { size?: number }) => <Icon {...p}><path d="M10.3 3.9L2.6 18a1.5 1.5 0 0 0 1.3 2.2h16.2a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0z" /><path d="M12 9v4M12 17h.01" /></Icon>
 const IconSparkles = (p: { size?: number }) => <Icon {...p}><path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3z" /></Icon>
@@ -472,7 +473,9 @@ function BatchCaptureScreen({
   }
 
   /** Opens the picker to append new photos, or (with an id) to replace one existing photo in place. */
-  function openPicker(replaceId?: string) {
+  async function openPicker(replaceId?: string) {
+    const granted = await requestCameraPermission()
+    if (!granted) return
     setReplaceTargetId(replaceId ?? null)
     const input = fileInputRef.current
     if (!input) return
@@ -643,16 +646,6 @@ function withMinDelay<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.all([promise, new Promise((r) => setTimeout(r, ms))]).then(([value]) => value)
 }
 
-/** Ask the OS for notification permission — triggered once, when the user adds their first plant. */
-async function requestNotificationPermission(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return
-  try {
-    await LocalNotifications.requestPermissions()
-  } catch (error) {
-    console.error('[myJungle] notification permission request failed:', error)
-  }
-}
-
 async function identifyPhoto(dataUrl: string, language: AppLanguage = 'en', primaryDay = 0): Promise<DraftPlant> {
   try {
     const result = await analyzePlantImage(dataUrl, [], language)
@@ -784,11 +777,13 @@ function nextWaterStatus(plant: Plant, todayIdx: number, t: (key: string, opts?:
 function HomeScreen({
   plants, todayIdx, onOpenPlant, showHabitCard, onDismissHabitCard, onShowHabitPro,
   showProPreviewBanner, onDismissProPreviewBanner, onTryProPreview,
+  notificationsEnabled, onToggleNotifications,
 }: {
   plants: Plant[]; todayIdx: number; onOpenPlant: (p: Plant) => void
   showHabitCard: boolean; onDismissHabitCard: () => void; onShowHabitPro: () => void
   showProPreviewBanner: boolean; onDismissProPreviewBanner: () => void
   onTryProPreview: () => Promise<{ ok: boolean; error?: string }>
+  notificationsEnabled: boolean; onToggleNotifications: () => void
 }) {
   const { t } = useTranslation()
   const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -813,9 +808,17 @@ function HomeScreen({
     <div className="app-shell-light scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-heading" style={{ fontSize: 22, color: '#000' }}>{t('home.title')}</h1>
-        <div className="icon-circle" style={{ background: '#000' }} aria-hidden>
-          <div style={{ color: '#fff' }}><IconBell size={18} /></div>
-        </div>
+        <button
+          type="button"
+          onClick={onToggleNotifications}
+          className="icon-circle"
+          style={{ background: notificationsEnabled ? '#000' : '#e5e5e0' }}
+          aria-label={notificationsEnabled ? t('home.notificationsOn') : t('home.notificationsOff')}
+        >
+          <div style={{ color: notificationsEnabled ? '#fff' : '#8E8E93' }}>
+            {notificationsEnabled ? <IconBell size={18} /> : <IconBellOff size={18} />}
+          </div>
+        </button>
       </div>
       <div className="stat-hero mb-3">
         <span className="stat-hero__value">{plants.length}</span>
@@ -1479,6 +1482,11 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
     }
   }
 
+  async function openCamera() {
+    const granted = await requestCameraPermission()
+    if (granted) cameraInputRef.current?.click()
+  }
+
   const wateringFrequencyLabel = draft ? frequencyLabel(draft.wateringFrequency, draft.wateringDays.length) : ''
   const usedSlots = Math.max(0, FREE_PLANT_LIMIT - remainingFreeSlots)
 
@@ -1504,7 +1512,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
       </div>
       <div className="flex-1 min-h-0 flex flex-col" style={{ background: '#fff', borderRadius: '1.75rem 1.75rem 0 0' }}>
         <div className="scroll-y flex-1 px-5 pt-5">
-          <button type="button" onClick={() => cameraInputRef.current?.click()} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>{t('manualAdd.takePhoto')}</button>
+          <button type="button" onClick={() => void openCamera()} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>{t('manualAdd.takePhoto')}</button>
           <button
             type="button"
             onClick={() => galleryInputRef.current?.click()}
@@ -1814,6 +1822,11 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
     setSaved(false)
   }
 
+  async function openCamera() {
+    const granted = await requestCameraPermission()
+    if (granted) cameraInputRef.current?.click()
+  }
+
   if (step === 'picker') {
     return (
       <div className="app-shell fixed inset-0 flex flex-col">
@@ -1849,7 +1862,7 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
           <div className="dash-picker w-full flex flex-col items-center justify-center gap-4" style={{ height: 260 }}>
             <div style={{ color: GREEN }}><IconNavHealth size={30} /></div>
             <div className="flex gap-3 w-full px-6">
-              <button type="button" onClick={() => cameraInputRef.current?.click()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>{t('common.takePhoto')}</button>
+              <button type="button" onClick={() => void openCamera()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>{t('common.takePhoto')}</button>
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
@@ -1991,6 +2004,11 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
     setSaved(false)
   }
 
+  async function openCamera() {
+    const granted = await requestCameraPermission()
+    if (granted) cameraInputRef.current?.click()
+  }
+
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.target.value = '' }} />
@@ -2008,7 +2026,7 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
               {t('growthScan.helper')}
             </p>
             <div className="flex gap-3 w-full px-6">
-              <button type="button" onClick={() => cameraInputRef.current?.click()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>{t('common.takePhoto')}</button>
+              <button type="button" onClick={() => void openCamera()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>{t('common.takePhoto')}</button>
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
@@ -2188,14 +2206,23 @@ function GrowthHistoryScreen({ plant, onBack, onNewScan }: {
 
 // ─── Screen: Profile ────────────────────────────────────────────────────────
 
-function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, onOpenLegal, language, onPickLanguage, onChangePrimaryWateringDay }: {
+function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, onOpenLegal, language, onPickLanguage, onChangePrimaryWateringDay, onToggleNotifications }: {
   settings: AppSettings; user: UserState; onSave: (s: AppSettings) => void
   onExport: () => void; onReset: () => void; onShowPro: () => void; onOpenLegal: (doc: LegalDoc) => void
   language: AppLanguage; onPickLanguage: () => void; onChangePrimaryWateringDay: (day: number) => void
+  onToggleNotifications: () => void
 }) {
   const { t } = useTranslation()
   const [showNotifSettings, setShowNotifSettings] = useState(false)
   const [showDayPicker, setShowDayPicker] = useState(false)
+
+  function handleExpandNotifSettings() {
+    setShowNotifSettings((v) => !v)
+    // Interacting with any notification-related setting should prime the OS
+    // permission prompt the first time — safe to call every time, it's a
+    // no-op once the user has already granted or denied it.
+    void requestNotificationPermission()
+  }
 
   return (
     <div className="scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
@@ -2235,7 +2262,7 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
       )}
       <span className="caption-eyebrow block" style={{ marginBottom: 8, marginTop: 20 }}>{t('settings.sectionConfig')}</span>
       <div className="card-white overflow-hidden">
-        <button type="button" onClick={() => setShowNotifSettings((v) => !v)} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+        <button type="button" onClick={handleExpandNotifSettings} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
           <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>{t('settings.notificationPreferences')}</span>
           <span style={{ color: '#111', transform: showNotifSettings ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}><IconChevronRight size={16} /></span>
         </button>
@@ -2255,7 +2282,7 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
         )}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
           <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>{t('settings.wateringReminders')}</span>
-          <Toggle on={settings.pushNotifications} onChange={(v) => onSave({ ...settings, pushNotifications: v })} />
+          <Toggle on={settings.pushNotifications} onChange={onToggleNotifications} />
         </div>
         <button type="button" onClick={() => setShowDayPicker(true)} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
           <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>{t('settings.wateringDay')}</span>
@@ -3066,6 +3093,22 @@ export default function App() {
     }))
   }
 
+  /**
+   * Turns watering reminders on/off from any notification-related entry point
+   * (bell icon, Settings toggle). Requesting permission on every call is safe —
+   * requestNotificationPermission() only prompts the OS once; after that it's
+   * an instant no-op that just reports the already-decided status.
+   */
+  async function handleToggleNotifications() {
+    const next = !settings.pushNotifications
+    if (!next) {
+      setSettings((s) => ({ ...s, pushNotifications: false }))
+      return
+    }
+    const granted = await requestNotificationPermission()
+    setSettings((s) => ({ ...s, pushNotifications: granted }))
+  }
+
   function handleSaveHealthLog(plantId: string, log: PlantHealthLog) {
     setPlants((prev) => prev.map((p) => (p.id === plantId ? { ...p, healthLogs: [log, ...p.healthLogs] } : p)))
     setSettings((s) => ({ ...s, healthScansUsed: s.healthScansUsed + 1 }))
@@ -3399,6 +3442,8 @@ export default function App() {
           showProPreviewBanner={!user.isPro && !settings.proPreviewUsedAt && !settings.proPreviewBannerDismissed}
           onDismissProPreviewBanner={() => setSettings((s) => ({ ...s, proPreviewBannerDismissed: true }))}
           onTryProPreview={handleTryProPreview}
+          notificationsEnabled={settings.pushNotifications}
+          onToggleNotifications={() => void handleToggleNotifications()}
         />
       )
     } else if (tab === 'days') {
@@ -3437,6 +3482,7 @@ export default function App() {
                 : { ...p, wateringDays: batchedWateringDays(p.waterNeed, day), scheduleDays: batchedWateringDays(p.waterNeed, day).map((i) => DAYS[i]) }
             )))
           }}
+          onToggleNotifications={() => void handleToggleNotifications()}
         />
       )
     }

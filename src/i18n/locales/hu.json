@@ -97,7 +97,9 @@
     "waterToday": "Ma öntözendő",
     "nextWaterTomorrow": "Következő öntözés: Holnap",
     "nextWaterOn": "Következő öntözés: {{day}}",
-    "noSchedule": "Nincs beütemezve"
+    "noSchedule": "Nincs beütemezve",
+    "notificationsOn": "Értesítések be",
+    "notificationsOff": "Értesítések ki"
   },
   "days": {
     "groupedSummary_one": "A rendszer {{count}} növényedet {{days}} nap{{daysPlural}}ra csoportosította.",

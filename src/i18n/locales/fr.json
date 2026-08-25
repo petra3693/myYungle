@@ -97,7 +97,9 @@
     "waterToday": "À arroser aujourd'hui",
     "nextWaterTomorrow": "Prochain arrosage : Demain",
     "nextWaterOn": "Prochain arrosage : {{day}}",
-    "noSchedule": "Aucun calendrier"
+    "noSchedule": "Aucun calendrier",
+    "notificationsOn": "Notifications activées",
+    "notificationsOff": "Notifications désactivées"
   },
   "days": {
     "groupedSummary_one": "Le système a réparti votre {{count}} plante sur {{days}} jour{{daysPlural}}.",

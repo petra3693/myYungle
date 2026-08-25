@@ -97,7 +97,9 @@
     "waterToday": "Heute gießen",
     "nextWaterTomorrow": "Nächstes Gießen: Morgen",
     "nextWaterOn": "Nächstes Gießen: {{day}}",
-    "noSchedule": "Kein Zeitplan"
+    "noSchedule": "Kein Zeitplan",
+    "notificationsOn": "Benachrichtigungen an",
+    "notificationsOff": "Benachrichtigungen aus"
   },
   "days": {
     "groupedSummary_one": "Das System hat deine {{count}} Pflanze auf {{days}} Tag{{daysPlural}} verteilt.",

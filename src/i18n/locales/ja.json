@@ -97,7 +97,9 @@
     "waterToday": "今日水やり",
     "nextWaterTomorrow": "次の水やり：明日",
     "nextWaterOn": "次の水やり：{{day}}",
-    "noSchedule": "スケジュールなし"
+    "noSchedule": "スケジュールなし",
+    "notificationsOn": "通知オン",
+    "notificationsOff": "通知オフ"
   },
   "days": {
     "groupedSummary_one": "{{count}}件の植物を{{days}}日にグループ化しました。",

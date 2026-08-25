@@ -97,7 +97,9 @@
     "waterToday": "Regar hoy",
     "nextWaterTomorrow": "Próximo riego: Mañana",
     "nextWaterOn": "Próximo riego: {{day}}",
-    "noSchedule": "Sin calendario"
+    "noSchedule": "Sin calendario",
+    "notificationsOn": "Notificaciones activadas",
+    "notificationsOff": "Notificaciones desactivadas"
   },
   "days": {
     "groupedSummary_one": "El sistema agrupó tu {{count}} planta en {{days}} día{{daysPlural}}.",

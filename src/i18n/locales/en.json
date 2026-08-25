@@ -97,7 +97,9 @@
     "waterToday": "Water today",
     "nextWaterTomorrow": "Next water: Tomorrow",
     "nextWaterOn": "Next water: {{day}}",
-    "noSchedule": "No schedule"
+    "noSchedule": "No schedule",
+    "notificationsOn": "Notifications on",
+    "notificationsOff": "Notifications off"
   },
   "days": {
     "groupedSummary_one": "The system grouped your {{count}} plant into {{days}} day{{daysPlural}}.",

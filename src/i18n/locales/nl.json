@@ -97,7 +97,9 @@
     "waterToday": "Vandaag water geven",
     "nextWaterTomorrow": "Volgende keer water geven: Morgen",
     "nextWaterOn": "Volgende keer water geven: {{day}}",
-    "noSchedule": "Geen schema"
+    "noSchedule": "Geen schema",
+    "notificationsOn": "Meldingen aan",
+    "notificationsOff": "Meldingen uit"
   },
   "days": {
     "groupedSummary_one": "We hebben je {{count}} plant gegroepeerd in {{days}} dag{{daysPlural}}.",

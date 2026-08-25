@@ -97,7 +97,9 @@
     "waterToday": "今天浇水",
     "nextWaterTomorrow": "下次浇水：明天",
     "nextWaterOn": "下次浇水：{{day}}",
-    "noSchedule": "无日程安排"
+    "noSchedule": "无日程安排",
+    "notificationsOn": "通知已开启",
+    "notificationsOff": "通知已关闭"
   },
   "days": {
     "groupedSummary_one": "我们已将你的 {{count}} 株植物分为 {{days}} 天。",

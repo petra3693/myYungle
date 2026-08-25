@@ -97,7 +97,9 @@
     "waterToday": "Da annaffiare oggi",
     "nextWaterTomorrow": "Prossima irrigazione: Domani",
     "nextWaterOn": "Prossima irrigazione: {{day}}",
-    "noSchedule": "Nessun calendario"
+    "noSchedule": "Nessun calendario",
+    "notificationsOn": "Notifiche attive",
+    "notificationsOff": "Notifiche disattivate"
   },
   "days": {
     "groupedSummary_one": "Il sistema ha raggruppato la tua {{count}} pianta in {{days}} giorno{{daysPlural}}.",
