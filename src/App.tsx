@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n/i18n'
 import { Capacitor } from '@capacitor/core'
@@ -1267,7 +1268,7 @@ function PlantDetailScreen({
           </button>
         </div>
       </div>
-      {showActions && (
+      {showActions && createPortal(
         <>
           <div className="sheet-backdrop is-open" onClick={() => setShowActions(false)} />
           <div className="fixed left-0 right-0 bottom-0 z-[70]">
@@ -1290,7 +1291,8 @@ function PlantDetailScreen({
               </button>
             </div>
           </div>
-        </>
+        </>,
+        document.body,
       )}
       {showDelete && (
         <ConfirmSheet
@@ -1313,7 +1315,7 @@ function ConfirmSheet({ title, body, confirmLabel, danger, onCancel, onConfirm }
   const [open, setOpen] = useState(false)
   useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
   function close(action: () => void) { setOpen(false); setTimeout(action, 180) }
-  return (
+  return createPortal(
     <>
       <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onCancel)} />
       <div className="fixed left-4 right-4 z-[70]" style={{ top: '50%', transform: 'translateY(-50%)' }}>
@@ -1333,7 +1335,8 @@ function ConfirmSheet({ title, body, confirmLabel, danger, onCancel, onConfirm }
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 
