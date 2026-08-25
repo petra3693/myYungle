@@ -154,18 +154,18 @@ export interface PaywallCopy {
   subtitle: string
 }
 
-export function paywallCopyForSource(source: PaywallSource | null): PaywallCopy {
+export function paywallCopyForSource(source: PaywallSource | null, t: (key: string) => string): PaywallCopy {
   switch (source) {
     case 'health_scan':
-      return { headline: "FIND OUT WHAT'S WRONG WITH YOUR PLANT", subtitle: 'AI health scans and disease diagnosis, unlocked.' }
+      return { headline: t('paywall.headlineHealthScan'), subtitle: t('paywall.subtitleHealthScan') }
     case 'plant_limit':
-      return { headline: 'ROOM FOR EVERY PLANT', subtitle: 'Add unlimited plants to your jungle.' }
+      return { headline: t('paywall.headlinePlantLimit'), subtitle: t('paywall.subtitlePlantLimit') }
     case 'growth_tab':
-      return { headline: "SEE YOUR PLANT'S FULL JOURNEY", subtitle: 'Unlock photo timelines and growth stats.' }
+      return { headline: t('paywall.headlineGrowthTab'), subtitle: t('paywall.subtitleGrowthTab') }
     case 'preview_expired':
-      return { headline: 'YOUR FREE PREVIEW HAS ENDED', subtitle: 'Keep unlimited access by going Pro.' }
+      return { headline: t('paywall.headlinePreviewExpired'), subtitle: t('paywall.subtitlePreviewExpired') }
     default:
-      return { headline: 'UNLIMITED GROWTH', subtitle: 'Unlock the full care experience, no limits.' }
+      return { headline: t('paywall.headlineDefault'), subtitle: t('paywall.subtitleDefault') }
   }
 }
 
@@ -173,10 +173,10 @@ export function paywallCopyForSource(source: PaywallSource | null): PaywallCopy 
 // "2 months free" etc., derived from real monthly/annual prices — never
 // hardcoded. Returns null when a label can't be sensibly computed.
 
-export function computeAnnualDiscountLabel(monthlyPrice: number, annualPrice: number): string | null {
+export function computeAnnualDiscountLabel(monthlyPrice: number, annualPrice: number, t: (key: string, opts?: Record<string, unknown>) => string): string | null {
   if (!(monthlyPrice > 0) || !(annualPrice > 0)) return null
   const equivalentMonths = annualPrice / monthlyPrice
   const monthsFree = Math.round(12 - equivalentMonths)
   if (monthsFree < 1) return null
-  return `${monthsFree} month${monthsFree > 1 ? 's' : ''} free`
+  return t('paywall.monthsFree', { count: monthsFree })
 }

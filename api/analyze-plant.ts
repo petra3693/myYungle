@@ -41,7 +41,16 @@ interface AnalyzePlantPayload {
 // ---------------------------------------------------------------------------
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash'
-const GEMINI_GENERATE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+/** Tried in order if the primary model is overloaded/unavailable/rate-limited. */
+const FALLBACK_GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash']
+/** Retries per model (not counting the initial attempt) before falling back to the next model. */
+const MAX_RETRIES_PER_MODEL = 2
+const RETRY_DELAY_MS = 1500
+
+function geminiGenerateUrl(model: string): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+}
+
 const MAX_INLINE_BASE64_CHARS = 5_500_000
 const BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/
 
@@ -578,38 +587,77 @@ function extractGeminiCandidateText(data: unknown): string {
   return typeof text === 'string' ? text.trim() : ''
 }
 
+/** Thrown for Gemini failures that are worth retrying (transient overload/rate-limit/network), carrying the HTTP status when known. */
+class GeminiRetryableError extends Error {
+  status?: number
+  constructor(message: string, status?: number) {
+    super(message)
+    this.name = 'GeminiRetryableError'
+    this.status = status
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** 4xx other than 429 means our request was wrong — retrying it won't help. Everything else (5xx, 429, unknown) is worth a retry. */
+function isRetryableStatus(status: number | undefined): boolean {
+  if (status === undefined) return true
+  if (status >= 400 && status < 500 && status !== 429) return false
+  return true
+}
+
+function isOverloadMessage(message: string): boolean {
+  const lower = message.toLowerCase()
+  return (
+    lower.includes('overload') ||
+    lower.includes('high demand') ||
+    lower.includes('unavailable') ||
+    lower.includes('rate limit') ||
+    lower.includes('quota')
+  )
+}
+
 async function generatePlantAnalysis(
   apiKey: string,
+  model: string,
   prompt: string,
   imagePart: { inlineData: { data: string; mimeType: string } },
 ): Promise<string> {
-  const url = `${GEMINI_GENERATE_URL}?key=${encodeURIComponent(apiKey)}`
+  const url = `${geminiGenerateUrl(model)}?key=${encodeURIComponent(apiKey)}`
   const base64ImageData = stripDataUrlPrefix(imagePart.inlineData.data)
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            { text: prompt },
-            {
-              inline_data: {
-                mime_type: imagePart.inlineData.mimeType,
-                data: base64ImageData,
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema,
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    }),
-  })
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: imagePart.inlineData.mimeType,
+                  data: base64ImageData,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema,
+        },
+      }),
+    })
+  } catch (err) {
+    // Network-level failure (DNS, timeout, connection reset) — always worth a retry.
+    throw new GeminiRetryableError(errorMessage(err))
+  }
 
   const data: unknown = await response.json()
   if (!response.ok) {
@@ -617,14 +665,55 @@ async function generatePlantAnalysis(
       data && typeof data === 'object' && 'error' in data
         ? String((data as { error?: { message?: string } }).error?.message ?? '')
         : ''
-    throw new Error(message || `Gemini request failed (${response.status}).`)
+    throw new GeminiRetryableError(message || `Gemini request failed (${response.status}).`, response.status)
   }
 
   const text = extractGeminiCandidateText(data)
   if (!text) {
-    throw new Error('Gemini returned an empty response.')
+    // An empty candidate on a 200 response is usually a flaky generation — retry it too.
+    throw new GeminiRetryableError('Gemini returned an empty response.')
   }
   return text
+}
+
+/**
+ * Wraps generatePlantAnalysis with model fallback + per-model retries:
+ * tries the primary model, retrying up to MAX_RETRIES_PER_MODEL times on
+ * transient errors (overload, 429/5xx, network) with a short delay between
+ * attempts; if a model is still failing after its retries, moves on to the
+ * next fallback model. Non-retryable errors (bad request, bad API key) fail
+ * immediately without burning retries or fallbacks.
+ */
+async function generatePlantAnalysisResilient(
+  apiKey: string,
+  prompt: string,
+  imagePart: { inlineData: { data: string; mimeType: string } },
+): Promise<string> {
+  const models = [GEMINI_MODEL, ...FALLBACK_GEMINI_MODELS.filter((m) => m !== GEMINI_MODEL)]
+  let lastError: unknown = null
+
+  for (const model of models) {
+    for (let attempt = 0; attempt <= MAX_RETRIES_PER_MODEL; attempt++) {
+      try {
+        return await generatePlantAnalysis(apiKey, model, prompt, imagePart)
+      } catch (err) {
+        lastError = err
+        const retryable = err instanceof GeminiRetryableError && isRetryableStatus(err.status)
+        if (!retryable) throw err
+
+        const attemptsLeft = MAX_RETRIES_PER_MODEL - attempt
+        console.warn(
+          `[myJungle] Gemini model "${model}" failed (attempt ${attempt + 1}/${MAX_RETRIES_PER_MODEL + 1}): ${errorMessage(err)}`,
+        )
+        if (attemptsLeft > 0) {
+          await sleep(RETRY_DELAY_MS)
+        }
+      }
+    }
+    console.warn(`[myJungle] Exhausted retries for Gemini model "${model}"${model !== models[models.length - 1] ? ', falling back to the next model.' : '.'}`)
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Gemini request failed after all retries and fallback models.')
 }
 
 // ---------------------------------------------------------------------------
@@ -654,12 +743,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const imagePart = toGeminiInlineDataPart(imageBase64, mimeType)
     const prompt = buildAnalyzePrompt(preferredDays, language)
-    const text = await generatePlantAnalysis(apiKey, prompt, imagePart)
+    const text = await generatePlantAnalysisResilient(apiKey, prompt, imagePart)
     const result = parseGeminiPlantAnalysisText(text, preferredDays, language)
 
     return res.status(200).json({ success: true, ...result })
   } catch (err) {
     console.error('analyze-plant error:', err)
+    if (err instanceof GeminiRetryableError && isOverloadMessage(err.message)) {
+      // All models and retries are exhausted and it's still an overload/rate-limit — say so plainly
+      // rather than falling through to the generic "failed to analyze" message.
+      return res.status(503).json({
+        success: false,
+        error: 'Our AI plant identification service is experiencing high demand right now. Please try again in a moment.',
+      })
+    }
     const fallback = 'Failed to analyze plant image. Please try another photo.'
     const message = friendlyGeminiError(err, fallback)
     const status = isImagePayloadError(err) ? 400 : 500
