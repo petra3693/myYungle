@@ -70,15 +70,6 @@
     "addMore": "添加更多"
   },
   "analysisResult": {
-    "plantsAdded_one": "已添加 {{count}} 株植物",
-    "plantsAdded_other": "已添加 {{count}} 株植物",
-    "subtitleAllOk": "我们正在将你的植物分组到尽可能少的天数中。",
-    "subtitlePartial": "AI 已完成 {{total}} 个档案中的 {{ok}} 个。点击标记项进行修正。",
-    "nameIt": "为它命名",
-    "checkThisOne": "需要检查",
-    "wateringDay": "浇水日：{{day}}",
-    "change": "更改",
-    "goToHome": "前往首页",
     "proPreviewTitle": "7 天 Pro 体验",
     "proPreviewBody": "免费体验 7 天无限次 AI 扫描和生长监测，无需绑卡。",
     "proPreviewActivated": "Pro 体验已激活！",
@@ -86,16 +77,6 @@
     "proPreviewTryFree": "免费试用",
     "proPreviewError": "无法激活 Pro 体验，请重试。",
     "proPreviewMobileOnly": "Pro 体验需要在移动应用中使用。"
-  },
-  "draftEdit": {
-    "aiFailed": "AI 未能识别这株植物{{reason}}。请为它命名或重试。",
-    "lowConfidence": "AI 对此结果不太确定 — 请检查是否正确。",
-    "plantName": "植物名称",
-    "plantNamePlaceholder": "例如：龟背竹",
-    "room": "房间",
-    "roomPlaceholder": "例如：客厅",
-    "retryAi": "重新使用 AI 识别",
-    "retrying": "重试中…"
   },
   "dayPicker": {
     "title": "浇水日"

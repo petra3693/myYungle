@@ -70,15 +70,6 @@
     "addMore": "Aggiungi altre"
   },
   "analysisResult": {
-    "plantsAdded_one": "{{count}} pianta aggiunta",
-    "plantsAdded_other": "{{count}} piante aggiunte",
-    "subtitleAllOk": "Raggruppiamo le tue piante nel minor numero di giorni possibile.",
-    "subtitlePartial": "L'IA ha compilato {{ok}} profili su {{total}}. Tocca quelli segnalati per correggerli.",
-    "nameIt": "Dalle un nome",
-    "checkThisOne": "Da controllare",
-    "wateringDay": "Giorno di irrigazione: {{day}}",
-    "change": "Cambia",
-    "goToHome": "Vai alla home",
     "proPreviewTitle": "Anteprima Pro di 7 giorni",
     "proPreviewBody": "Prova scansioni IA e monitoraggio della crescita illimitati gratis per 7 giorni. Nessuna carta richiesta.",
     "proPreviewActivated": "Anteprima Pro attivata!",
@@ -86,16 +77,6 @@
     "proPreviewTryFree": "Prova gratis",
     "proPreviewError": "Impossibile attivare l'anteprima Pro. Riprova.",
     "proPreviewMobileOnly": "L'anteprima Pro richiede l'app mobile."
-  },
-  "draftEdit": {
-    "aiFailed": "L'IA non è riuscita a identificare questa pianta{{reason}}. Dalle un nome o riprova.",
-    "lowConfidence": "L'IA non era molto sicura di questa — controlla che sia corretta.",
-    "plantName": "Nome della pianta",
-    "plantNamePlaceholder": "es. Monstera",
-    "room": "Stanza",
-    "roomPlaceholder": "es. Soggiorno",
-    "retryAi": "Riprova con l'IA",
-    "retrying": "Nuovo tentativo…"
   },
   "dayPicker": {
     "title": "Giorno di irrigazione"

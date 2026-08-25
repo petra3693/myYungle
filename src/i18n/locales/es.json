@@ -70,15 +70,6 @@
     "addMore": "Añadir más"
   },
   "analysisResult": {
-    "plantsAdded_one": "{{count}} planta añadida",
-    "plantsAdded_other": "{{count}} plantas añadidas",
-    "subtitleAllOk": "Agrupamos tus plantas en el menor número de días posible.",
-    "subtitlePartial": "La IA completó {{ok}} de {{total}} perfiles. Toca los marcados para corregirlos.",
-    "nameIt": "Ponle nombre",
-    "checkThisOne": "Revisa esta",
-    "wateringDay": "Día de riego: {{day}}",
-    "change": "Cambiar",
-    "goToHome": "Ir al inicio",
     "proPreviewTitle": "Vista previa Pro de 7 días",
     "proPreviewBody": "Prueba escaneos de IA y seguimiento de crecimiento ilimitados gratis durante 7 días. Sin tarjeta.",
     "proPreviewActivated": "¡Vista previa Pro activada!",
@@ -86,16 +77,6 @@
     "proPreviewTryFree": "Probar gratis",
     "proPreviewError": "No se pudo activar la vista previa Pro. Inténtalo de nuevo.",
     "proPreviewMobileOnly": "La vista previa Pro requiere la aplicación móvil."
-  },
-  "draftEdit": {
-    "aiFailed": "La IA no pudo identificar esta planta{{reason}}. Ponle un nombre o inténtalo de nuevo.",
-    "lowConfidence": "La IA no estaba muy segura de esta — comprueba que sea correcta.",
-    "plantName": "Nombre de la planta",
-    "plantNamePlaceholder": "p. ej. Monstera",
-    "room": "Habitación",
-    "roomPlaceholder": "p. ej. Salón",
-    "retryAi": "Reintentar con IA",
-    "retrying": "Reintentando…"
   },
   "dayPicker": {
     "title": "Día de riego"

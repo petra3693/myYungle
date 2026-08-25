@@ -72,20 +72,19 @@ const DEFAULT_SETTINGS: AppSettings = {
   healthScansUsed: 0,
   proPreviewUsedAt: null,
   proPreviewExpiredPaywallShown: false,
+  proPreviewBannerDismissed: false,
 }
 
 type Screen =
   | 'splash'
   | 'onboardingWelcome'
   | 'onboardingCapture'
-  | 'onboardingResult'
   | 'main'
   | 'plantDetail'
   | 'manualAdd'
   | 'proUnlock'
   | 'lifetimeOffer'
   | 'bulkAdd'
-  | 'bulkResult'
   | 'healthFlow'
   | 'legal'
   | 'editPlant'
@@ -686,91 +685,6 @@ async function identifyPhoto(dataUrl: string, language: AppLanguage = 'en', prim
   }
 }
 
-function DraftEditSheet({ draft, existingRooms, retrying, onRetry, onCancel, onSave }: {
-  draft: DraftPlant; existingRooms: string[]; retrying: boolean; onRetry?: () => void; onCancel: () => void
-  onSave: (name: string, room: string) => void
-}) {
-  const { t } = useTranslation()
-  const [name, setName] = useState(draft.name === 'Unknown plant' ? '' : draft.name)
-  const [room, setRoom] = useState(draft.room === 'Unknown' ? '' : draft.room)
-  const [open, setOpen] = useState(false)
-  useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
-  function close(action: () => void) { setOpen(false); setTimeout(action, 180) }
-  return (
-    <>
-      <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onCancel)} />
-      <div className="fixed left-0 right-0 bottom-0 z-[70]">
-        <div className={`sheet-panel ${open ? 'is-open' : ''} p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-4`}>
-          {!draft.identified && (
-            <p className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>
-              {t('draftEdit.aiFailed', { reason: draft.error ? ` (${draft.error})` : '' })}
-            </p>
-          )}
-          {draft.identified && draft.confidence < 70 && (
-            <p className="font-body flex items-center gap-1.5" style={{ fontSize: 13, color: '#B8860B' }}>
-              <IconAlert size={14} /> {t('draftEdit.lowConfidence')}
-            </p>
-          )}
-          <label className="flex flex-col gap-1.5">
-            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>{t('draftEdit.plantName')}</span>
-            <input
-              type="text"
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('draftEdit.plantNamePlaceholder')}
-              className="font-heading px-4"
-              style={{ height: 48, fontSize: 16, color: '#111', background: '#f5f5f5', borderRadius: 14, border: 'none' }}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="font-body" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase' }}>{t('draftEdit.room')}</span>
-            <input
-              type="text"
-              value={room}
-              onChange={(e) => setRoom(e.target.value)}
-              placeholder={t('draftEdit.roomPlaceholder')}
-              className="font-heading px-4"
-              style={{ height: 48, fontSize: 16, color: '#111', background: '#f5f5f5', borderRadius: 14, border: 'none' }}
-            />
-            {existingRooms.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-1">
-                {existingRooms.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRoom(r)}
-                    className="font-body"
-                    style={{ fontSize: 13, padding: '5px 12px', borderRadius: 9999, background: r === room ? GREEN : '#f0f0f0', color: '#111' }}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            )}
-          </label>
-          <div className="flex gap-3">
-            {onRetry && (
-              <button type="button" onClick={onRetry} disabled={retrying} className="font-heading flex-1" style={{ height: 48, borderRadius: 9999, background: '#f0f0f0', color: '#111', opacity: retrying ? 0.6 : 1 }}>
-                {retrying ? t('draftEdit.retrying') : t('draftEdit.retryAi')}
-              </button>
-            )}
-            <button
-              type="button"
-              disabled={!name.trim()}
-              onClick={() => close(() => onSave(name.trim(), room.trim() || 'Unknown'))}
-              className="btn-fill flex-1"
-              style={{ height: 48 }}
-            >
-              {t('common.save')}
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
-
 function DayPickerSheet({ selected, onSelect, onClose }: { selected: number; onSelect: (day: number) => void; onClose: () => void }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -797,164 +711,6 @@ function DayPickerSheet({ selected, onSelect, onClose }: { selected: number; onS
         </div>
       </div>
     </>
-  )
-}
-
-function AnalysisResultScreen({ drafts: initialDrafts, language, primaryDay: initialPrimaryDay, existingRooms, onChangePrimaryDay, onDone, showProPreviewCta, onTryProPreview }: {
-  drafts: DraftPlant[]; language: AppLanguage; primaryDay: number; existingRooms: string[]; onChangePrimaryDay: (day: number) => void
-  onDone: (drafts: DraftPlant[]) => void
-  /** Only offered right after onboarding, never on the reused bulk-add result screen. */
-  showProPreviewCta?: boolean
-  onTryProPreview?: () => Promise<{ ok: boolean; error?: string }>
-}) {
-  const { t } = useTranslation()
-  const [drafts, setDrafts] = useState(initialDrafts)
-  const [primaryDay, setPrimaryDay] = useState(initialPrimaryDay)
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
-  const [retryingIndex, setRetryingIndex] = useState<number | null>(null)
-  const [showDayPicker, setShowDayPicker] = useState(false)
-  const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-  const [previewError, setPreviewError] = useState<string | null>(null)
-
-  async function handleTryPreview() {
-    if (!onTryProPreview) return
-    setPreviewState('loading')
-    setPreviewError(null)
-    const result = await onTryProPreview()
-    if (result.ok) {
-      setPreviewState('success')
-      setTimeout(() => onDone(drafts), 900)
-    } else {
-      setPreviewState('error')
-      setPreviewError(result.error ?? t('analysisResult.proPreviewError'))
-    }
-  }
-
-  const daySet = new Set<number>()
-  drafts.forEach((d) => d.wateringDays.forEach((i) => daySet.add(i)))
-  const dayLabel = Array.from(daySet)
-    .sort((a, b) => a - b)
-    .map((i) => shortDayName(t, i))
-    .join(', ')
-
-  const failedCount = drafts.filter((d) => !d.identified).length
-  const subtitle =
-    failedCount === 0
-      ? t('analysisResult.subtitleAllOk')
-      : t('analysisResult.subtitlePartial', { ok: drafts.length - failedCount, total: drafts.length })
-
-  async function retry(i: number) {
-    setRetryingIndex(i)
-    try {
-      const updated = await identifyPhoto(drafts[i].photo, language, primaryDay)
-      setDrafts((prev) => prev.map((d, idx) => (idx === i ? updated : d)))
-    } finally {
-      setRetryingIndex(null)
-    }
-  }
-
-  function changePrimaryDay(day: number) {
-    setPrimaryDay(day)
-    setDrafts((prev) => prev.map((d) => ({ ...d, wateringDays: batchedWateringDays(d.waterNeed, day) })))
-    onChangePrimaryDay(day)
-  }
-
-  return (
-    <div className="app-shell-light fixed inset-0 flex flex-col">
-      <div className="px-5 pt-[calc(2rem+env(safe-area-inset-top,0px))] pb-4 shrink-0">
-        <h1 className="font-heading flex items-center gap-2" style={{ fontSize: 26, color: '#000' }}>
-          {t('analysisResult.plantsAdded', { count: drafts.length })} <span style={{ color: GREEN }}><IconCheck size={22} /></span>
-        </h1>
-        <p className="font-body" style={{ fontSize: 14, color: '#666', marginTop: 6 }}>{subtitle}</p>
-      </div>
-      <div className="scroll-y flex-1 px-5 flex flex-col gap-3 pb-4">
-        {drafts.map((d, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setEditingIndex(i)}
-            className="flex items-center gap-3 text-left w-full"
-            style={{ background: d.identified ? '#f0f0ec' : '#fbeed9', borderRadius: 9999, padding: '16px', minHeight: 88 }}
-          >
-            <img src={d.photo} alt="" className="rounded-full object-cover shrink-0" style={{ width: 56, height: 56 }} />
-            <span className="font-heading flex-1 min-w-0 truncate" style={{ fontSize: 18, color: '#111' }}>{d.name}</span>
-            {!d.identified ? (
-              <span className="flex items-center gap-1.5" style={{ color: '#B8860B' }}>
-                <IconAlert size={16} />
-                <span className="font-body" style={{ fontSize: 13 }}>{t('analysisResult.nameIt')}</span>
-              </span>
-            ) : d.confidence < 70 ? (
-              <span className="flex items-center gap-1.5" style={{ color: '#B8860B' }}>
-                <span style={{ width: 7, height: 7, borderRadius: 9999, background: '#B8860B', flexShrink: 0 }} />
-                <span className="font-body" style={{ fontSize: 13 }}>{t('analysisResult.checkThisOne')}</span>
-              </span>
-            ) : (
-              <span className="font-heading" style={{ fontSize: 18, color: '#8E8E93' }}>{d.confidence}%</span>
-            )}
-          </button>
-        ))}
-      </div>
-      {dayLabel && (
-        <div className="px-5 pb-3 shrink-0">
-          <div className="rounded-full px-4 py-3 flex items-center justify-center gap-2" style={{ background: '#000' }}>
-            <div style={{ color: GREEN }}><IconCalendarSmall size={16} /></div>
-            <span className="font-heading" style={{ fontSize: 14, color: GREEN }}>{t('analysisResult.wateringDay', { day: dayLabel })}</span>
-          </div>
-          <button type="button" onClick={() => setShowDayPicker(true)} className="font-body w-full text-center mt-2" style={{ fontSize: 13, color: '#666', textDecoration: 'underline' }}>
-            {t('analysisResult.change')}
-          </button>
-        </div>
-      )}
-      <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
-        {showProPreviewCta && (
-          <div className="rounded-2xl p-4 mb-3" style={{ background: '#000' }}>
-            <div className="flex items-center gap-2 mb-1">
-              <div style={{ color: GREEN }}><IconSparkles size={16} /></div>
-              <span className="font-heading" style={{ fontSize: 14, color: '#fff', textTransform: 'uppercase' }}>{t('analysisResult.proPreviewTitle')}</span>
-            </div>
-            <p className="font-body" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>
-              {t('analysisResult.proPreviewBody')}
-            </p>
-            {previewState === 'success' ? (
-              <p className="font-heading text-center" style={{ fontSize: 13, color: GREEN, textTransform: 'uppercase' }}>{t('analysisResult.proPreviewActivated')}</p>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void handleTryPreview()}
-                disabled={previewState === 'loading'}
-                className="btn-fill w-full"
-                style={{ height: 44, fontSize: 13 }}
-              >
-                {previewState === 'loading' ? t('analysisResult.proPreviewActivating') : t('analysisResult.proPreviewTryFree')}
-              </button>
-            )}
-            {previewState === 'error' && previewError && (
-              <p className="font-body text-center mt-2" style={{ fontSize: 11, color: '#ff8a8a' }}>{previewError}</p>
-            )}
-          </div>
-        )}
-        <button type="button" onClick={() => onDone(drafts)} className="btn-fill btn-forward w-full" style={{ height: 56, fontSize: 15 }}>
-          {t('analysisResult.goToHome')}
-          <span className="btn-forward__arrow"><IconChevronRight size={20} /></span>
-        </button>
-      </div>
-      {editingIndex !== null && (
-        <DraftEditSheet
-          draft={drafts[editingIndex]}
-          existingRooms={existingRooms}
-          retrying={retryingIndex === editingIndex}
-          onRetry={drafts[editingIndex].identified ? undefined : () => void retry(editingIndex)}
-          onCancel={() => setEditingIndex(null)}
-          onSave={(name, room) => {
-            setDrafts((prev) => prev.map((d, idx) => (idx === editingIndex ? { ...d, name, room } : d)))
-            setEditingIndex(null)
-          }}
-        />
-      )}
-      {showDayPicker && (
-        <DayPickerSheet selected={primaryDay} onClose={() => setShowDayPicker(false)} onSelect={changePrimaryDay} />
-      )}
-    </div>
   )
 }
 
@@ -1025,14 +781,34 @@ function nextWaterStatus(plant: Plant, todayIdx: number, t: (key: string, opts?:
   return { label: t('home.noSchedule'), dotColor: '#8E8E93' }
 }
 
-function HomeScreen({ plants, todayIdx, onOpenPlant, showHabitCard, onDismissHabitCard, onShowHabitPro }: {
+function HomeScreen({
+  plants, todayIdx, onOpenPlant, showHabitCard, onDismissHabitCard, onShowHabitPro,
+  showProPreviewBanner, onDismissProPreviewBanner, onTryProPreview,
+}: {
   plants: Plant[]; todayIdx: number; onOpenPlant: (p: Plant) => void
   showHabitCard: boolean; onDismissHabitCard: () => void; onShowHabitPro: () => void
+  showProPreviewBanner: boolean; onDismissProPreviewBanner: () => void
+  onTryProPreview: () => Promise<{ ok: boolean; error?: string }>
 }) {
   const { t } = useTranslation()
+  const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [previewError, setPreviewError] = useState<string | null>(null)
   const thirsty = plants.filter((p) => isPlantDueToday(p, todayIdx) && !p.isWateredToday).length
   const healthScores = plants.map((p) => computeHealthStatus(p, todayIdx, t).score)
   const avgHealth = healthScores.length > 0 ? Math.round(healthScores.reduce((a, b) => a + b, 0) / healthScores.length) : 0
+
+  async function handleTryPreview() {
+    setPreviewState('loading')
+    setPreviewError(null)
+    const result = await onTryProPreview()
+    if (result.ok) {
+      setPreviewState('success')
+    } else {
+      setPreviewState('error')
+      setPreviewError(result.error ?? t('analysisResult.proPreviewError'))
+    }
+  }
+
   return (
     <div className="app-shell-light scroll-y h-full px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-28">
       <div className="flex items-center justify-between mb-5">
@@ -1055,6 +831,46 @@ function HomeScreen({ plants, todayIdx, onOpenPlant, showHabitCard, onDismissHab
           <span className="stat-pill__label">{t('home.wateringRhythm')}</span>
         </div>
       </div>
+      {showProPreviewBanner && previewState !== 'success' && (
+        <div className="rounded-2xl p-4 mb-6 relative" style={{ background: '#000' }}>
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label={t('common.dismiss')}
+            onClick={onDismissProPreviewBanner}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onDismissProPreviewBanner() }}
+            className="absolute flex items-center justify-center rounded-full"
+            style={{ top: 12, right: 12, width: 24, height: 24, color: 'rgba(255,255,255,0.5)' }}
+          >
+            <IconX size={14} />
+          </div>
+          <div className="flex items-center gap-2 mb-1 pr-6">
+            <div style={{ color: GREEN }}><IconSparkles size={16} /></div>
+            <span className="font-heading" style={{ fontSize: 14, color: '#fff', textTransform: 'uppercase' }}>{t('analysisResult.proPreviewTitle')}</span>
+          </div>
+          <p className="font-body" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>
+            {t('analysisResult.proPreviewBody')}
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleTryPreview()}
+            disabled={previewState === 'loading'}
+            className="btn-fill w-full"
+            style={{ height: 44, fontSize: 13 }}
+          >
+            {previewState === 'loading' ? t('analysisResult.proPreviewActivating') : t('analysisResult.proPreviewTryFree')}
+          </button>
+          {previewState === 'error' && previewError && (
+            <p className="font-body text-center mt-2" style={{ fontSize: 11, color: '#ff8a8a' }}>{previewError}</p>
+          )}
+        </div>
+      )}
+      {previewState === 'success' && (
+        <div className="rounded-2xl p-4 mb-6 flex items-center gap-2 justify-center" style={{ background: '#000' }}>
+          <div style={{ color: GREEN }}><IconSparkles size={16} /></div>
+          <span className="font-heading" style={{ fontSize: 13, color: GREEN, textTransform: 'uppercase' }}>{t('analysisResult.proPreviewActivated')}</span>
+        </div>
+      )}
       {showHabitCard && (
         <button
           type="button"
@@ -2603,7 +2419,10 @@ type SelectablePlan = 'monthly' | 'annual' | 'lifetime'
 // overrides a real RevenueCat price. Matches the configured store products.
 const FALLBACK_PREVIEW_PRICES = { monthly: 1.99, annual: 19.99, lifetime: 49.99 }
 
-function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchased, onOpenLegal, onRetryOfferings, onSimulateWebPurchase }: {
+function ProUnlockScreen({
+  source, offering, offeringsStatus, onClose, onPurchased, onOpenLegal, onRetryOfferings, onSimulateWebPurchase,
+  showProPreview, onTryProPreview, onProPreviewGranted,
+}: {
   source: PaywallSource | null
   offering: PurchasesOffering | null
   offeringsStatus: OfferingsStatus
@@ -2612,12 +2431,17 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
   onOpenLegal: (doc: LegalDoc) => void
   onRetryOfferings: () => void
   onSimulateWebPurchase: (plan: SelectablePlan) => void
+  showProPreview: boolean
+  onTryProPreview: () => Promise<{ ok: boolean; error?: string }>
+  /** Called after the Pro Preview trial is granted — separate from onClose so it never triggers the lifetime win-back offer. */
+  onProPreviewGranted: () => void
 }) {
   const { t } = useTranslation()
   const [selected, setSelected] = useState<SelectablePlan>('annual')
   const [purchasing, setPurchasing] = useState(false)
   const [restoring, setRestoring] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'error'>('idle')
   const copy = paywallCopyForSource(source, t)
   // RevenueCat's SDK is native-only — anything outside iOS/Android is web/dev preview.
   const isWebPreview = !Capacitor.isNativePlatform()
@@ -2676,6 +2500,17 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
       }
     } finally {
       setPurchasing(false)
+    }
+  }
+
+  async function handleTryPreview() {
+    setPreviewState('loading')
+    const result = await onTryProPreview()
+    if (result.ok) {
+      onProPreviewGranted()
+    } else {
+      setPreviewState('error')
+      showToast(result.error ?? t('analysisResult.proPreviewError'))
     }
   }
 
@@ -2800,6 +2635,27 @@ function ProUnlockScreen({ source, offering, offeringsStatus, onClose, onPurchas
             </div>
           ))}
         </div>
+
+        {showProPreview && !isWebPreview && (
+          <div className="rounded-2xl p-4 mt-5" style={{ background: '#000' }}>
+            <div className="flex items-center gap-2 mb-1">
+              <div style={{ color: GREEN }}><IconSparkles size={16} /></div>
+              <span className="font-heading" style={{ fontSize: 14, color: '#fff', textTransform: 'uppercase' }}>{t('analysisResult.proPreviewTitle')}</span>
+            </div>
+            <p className="font-body" style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>
+              {t('analysisResult.proPreviewBody')}
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleTryPreview()}
+              disabled={previewState === 'loading'}
+              className="font-heading w-full"
+              style={{ height: 44, borderRadius: 9999, background: 'transparent', border: `1.5px solid ${GREEN}`, color: GREEN, textTransform: 'uppercase', fontSize: 13 }}
+            >
+              {previewState === 'loading' ? t('analysisResult.proPreviewActivating') : t('analysisResult.proPreviewTryFree')}
+            </button>
+          </div>
+        )}
 
         {offeringsFailed && (
           <div className="rounded-2xl px-4 py-3 mt-4 flex items-center justify-between gap-2" style={{ background: '#fdecec' }}>
@@ -3016,7 +2872,6 @@ export default function App() {
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null)
   const [storageError, setStorageError] = useState<string | null>(null)
   const [showLimitSheet, setShowLimitSheet] = useState(false)
-  const [pendingDrafts, setPendingDrafts] = useState<DraftPlant[]>([])
   const [aiThinkingLabel, setAiThinkingLabel] = useState<string | null>(null)
   const [healthFlowConfig, setHealthFlowConfig] = useState<{ mode: 'new' | 'existing'; presetPlant: Plant | null } | null>(null)
   const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null)
@@ -3364,34 +3219,17 @@ export default function App() {
         onDone={(photos) => {
           setAiThinkingLabel(t('onboarding.identifying', { count: photos.length }))
           void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl, language, settings.primaryWateringDay))), 900).then((drafts) => {
-            setPendingDrafts(drafts)
+            setPlants((prev) => [...prev, ...drafts.map(draftToPlant)])
+            logEvent('plant_added', { count: plants.length + drafts.length })
             setAiThinkingLabel(null)
-            setScreen('onboardingResult')
+            setSettings((s) => ({ ...s, hasCompletedOnboarding: true, onboardingCompletedAt: s.onboardingCompletedAt ?? todayISO() }))
+            if (settings.pushNotifications) void requestNotificationPermission()
+            setScreen('main')
+            setTab('home')
           })
         }}
         onSkip={() => {
           setSettings((s) => ({ ...s, hasCompletedOnboarding: true, onboardingCompletedAt: s.onboardingCompletedAt ?? todayISO() }))
-          setScreen('main')
-          setTab('home')
-        }}
-      />
-    )
-  } else if (screen === 'onboardingResult') {
-    content = (
-      <AnalysisResultScreen
-        drafts={pendingDrafts}
-        language={language}
-        primaryDay={settings.primaryWateringDay}
-        existingRooms={Array.from(new Set(plants.map((p) => p.room).filter((r) => r && r !== 'Unknown')))}
-        onChangePrimaryDay={(day) => setSettings((s) => ({ ...s, primaryWateringDay: day }))}
-        showProPreviewCta={!user.isPro && !settings.proPreviewUsedAt}
-        onTryProPreview={handleTryProPreview}
-        onDone={(finalDrafts) => {
-          setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
-          logEvent('plant_added', { count: plants.length + finalDrafts.length })
-          setPendingDrafts([])
-          setSettings((s) => ({ ...s, hasCompletedOnboarding: true, onboardingCompletedAt: s.onboardingCompletedAt ?? todayISO() }))
-          if (settings.pushNotifications) void requestNotificationPermission()
           setScreen('main')
           setTab('home')
         }}
@@ -3463,6 +3301,9 @@ export default function App() {
           simulateWebPurchase(plan)
           setScreen(paywallSource === 'plant_limit' ? 'bulkAdd' : 'main')
         }}
+        showProPreview={!user.isPro && !settings.proPreviewUsedAt}
+        onTryProPreview={handleTryProPreview}
+        onProPreviewGranted={() => { setScreen('main'); setTab('home') }}
       />
     )
   } else if (screen === 'lifetimeOffer') {
@@ -3487,27 +3328,12 @@ export default function App() {
         onDone={(photos) => {
           setAiThinkingLabel(t('onboarding.identifying', { count: photos.length }))
           void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl, language, settings.primaryWateringDay))), 900).then((drafts) => {
-            setPendingDrafts(drafts)
+            setPlants((prev) => [...prev, ...drafts.map(draftToPlant)])
+            logEvent('plant_added', { count: plants.length + drafts.length })
             setAiThinkingLabel(null)
-            setScreen('bulkResult')
+            setScreen('main')
+            setTab('home')
           })
-        }}
-      />
-    )
-  } else if (screen === 'bulkResult') {
-    content = (
-      <AnalysisResultScreen
-        drafts={pendingDrafts}
-        language={language}
-        primaryDay={settings.primaryWateringDay}
-        existingRooms={Array.from(new Set(plants.map((p) => p.room).filter((r) => r && r !== 'Unknown')))}
-        onChangePrimaryDay={(day) => setSettings((s) => ({ ...s, primaryWateringDay: day }))}
-        onDone={(finalDrafts) => {
-          setPlants((prev) => [...prev, ...finalDrafts.map(draftToPlant)])
-          logEvent('plant_added', { count: plants.length + finalDrafts.length })
-          setPendingDrafts([])
-          setScreen('main')
-          setTab('home')
         }}
       />
     )
@@ -3570,6 +3396,9 @@ export default function App() {
           showHabitCard={showHabitCard}
           onDismissHabitCard={() => setSettings((s) => ({ ...s, habitUpsellShown: true }))}
           onShowHabitPro={() => { setSettings((s) => ({ ...s, habitUpsellShown: true })); openPaywall('habit_card') }}
+          showProPreviewBanner={!user.isPro && !settings.proPreviewUsedAt && !settings.proPreviewBannerDismissed}
+          onDismissProPreviewBanner={() => setSettings((s) => ({ ...s, proPreviewBannerDismissed: true }))}
+          onTryProPreview={handleTryProPreview}
         />
       )
     } else if (tab === 'days') {

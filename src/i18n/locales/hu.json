@@ -70,15 +70,6 @@
     "addMore": "Több hozzáadása"
   },
   "analysisResult": {
-    "plantsAdded_one": "{{count}} növény hozzáadva",
-    "plantsAdded_other": "{{count}} növény hozzáadva",
-    "subtitleAllOk": "A növényeidet a lehető legkevesebb napra csoportosítjuk.",
-    "subtitlePartial": "Az AI {{ok}}/{{total}} profilt töltött ki. Koppints a megjelöltekre a javításhoz.",
-    "nameIt": "Nevezd el",
-    "checkThisOne": "Ezt ellenőrizd",
-    "wateringDay": "Öntözési nap: {{day}}",
-    "change": "Módosítás",
-    "goToHome": "Kezdőlapra",
     "proPreviewTitle": "7 napos Pro előnézet",
     "proPreviewBody": "Próbáld ki a korlátlan AI-szkennelést és növekedéskövetést 7 napig ingyen. Bankkártya nem szükséges.",
     "proPreviewActivated": "Pro előnézet aktiválva!",
@@ -86,16 +77,6 @@
     "proPreviewTryFree": "Ingyenes kipróbálás",
     "proPreviewError": "Nem sikerült aktiválni a Pro előnézetet. Kérjük, próbáld újra.",
     "proPreviewMobileOnly": "A Pro előnézethez a mobilalkalmazás szükséges."
-  },
-  "draftEdit": {
-    "aiFailed": "Az AI nem tudta azonosítani ezt a növényt{{reason}}. Adj neki nevet, vagy próbáld újra.",
-    "lowConfidence": "Az AI nem volt biztos ebben — ellenőrizd, hogy helyes-e.",
-    "plantName": "Növény neve",
-    "plantNamePlaceholder": "pl. Monstera",
-    "room": "Szoba",
-    "roomPlaceholder": "pl. Nappali",
-    "retryAi": "AI újra",
-    "retrying": "Újrapróbálkozás…"
   },
   "dayPicker": {
     "title": "Öntözési nap"

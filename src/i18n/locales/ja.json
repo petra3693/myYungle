@@ -70,15 +70,6 @@
     "addMore": "さらに追加"
   },
   "analysisResult": {
-    "plantsAdded_one": "{{count}}件の植物を追加しました",
-    "plantsAdded_other": "{{count}}件の植物を追加しました",
-    "subtitleAllOk": "できるだけ少ない曜日にまとめてグループ化しています。",
-    "subtitlePartial": "AIが{{total}}件中{{ok}}件のプロフィールを作成しました。マークされた項目をタップして修正してください。",
-    "nameIt": "名前を付ける",
-    "checkThisOne": "確認が必要",
-    "wateringDay": "水やりの曜日：{{day}}",
-    "change": "変更",
-    "goToHome": "ホームへ",
     "proPreviewTitle": "7日間のPro体験版",
     "proPreviewBody": "AIスキャンと成長モニタリングを7日間無料・無制限でお試しいただけます。カード登録は不要です。",
     "proPreviewActivated": "Pro体験版が有効になりました！",
@@ -86,16 +77,6 @@
     "proPreviewTryFree": "無料で試す",
     "proPreviewError": "Pro体験版を有効化できませんでした。もう一度お試しください。",
     "proPreviewMobileOnly": "Pro体験版にはモバイルアプリが必要です。"
-  },
-  "draftEdit": {
-    "aiFailed": "AIはこの植物を識別できませんでした{{reason}}。名前を付けるか、もう一度お試しください。",
-    "lowConfidence": "AIはあまり自信がありませんでした — 正しいか確認してください。",
-    "plantName": "植物の名前",
-    "plantNamePlaceholder": "例：モンステラ",
-    "room": "部屋",
-    "roomPlaceholder": "例：リビング",
-    "retryAi": "AIで再試行",
-    "retrying": "再試行中…"
   },
   "dayPicker": {
     "title": "水やりの曜日"

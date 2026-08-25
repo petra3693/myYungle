@@ -70,15 +70,6 @@
     "addMore": "Adicionar mais"
   },
   "analysisResult": {
-    "plantsAdded_one": "{{count}} planta adicionada",
-    "plantsAdded_other": "{{count}} plantas adicionadas",
-    "subtitleAllOk": "Estamos a agrupar as suas plantas no menor número de dias possível.",
-    "subtitlePartial": "A IA preencheu {{ok}} de {{total}} perfis. Toque nos assinalados para corrigir.",
-    "nameIt": "Dê-lhe um nome",
-    "checkThisOne": "Verificar esta",
-    "wateringDay": "Dia de rega: {{day}}",
-    "change": "Alterar",
-    "goToHome": "Ir para o início",
     "proPreviewTitle": "Pré-visualização Pro de 7 dias",
     "proPreviewBody": "Experimente scans de IA e monitorização de crescimento ilimitados grátis durante 7 dias. Sem cartão necessário.",
     "proPreviewActivated": "Pré-visualização Pro ativada!",
@@ -86,16 +77,6 @@
     "proPreviewTryFree": "Experimentar grátis",
     "proPreviewError": "Não foi possível ativar a pré-visualização Pro. Tente novamente.",
     "proPreviewMobileOnly": "A pré-visualização Pro requer a aplicação móvel."
-  },
-  "draftEdit": {
-    "aiFailed": "A IA não conseguiu identificar esta planta{{reason}}. Dê-lhe um nome ou tente novamente.",
-    "lowConfidence": "A IA não tinha muita certeza sobre esta — verifique se está correta.",
-    "plantName": "Nome da planta",
-    "plantNamePlaceholder": "ex. Monstera",
-    "room": "Divisão",
-    "roomPlaceholder": "ex. Sala de estar",
-    "retryAi": "Tentar novamente com IA",
-    "retrying": "A tentar novamente…"
   },
   "dayPicker": {
     "title": "Dia de rega"

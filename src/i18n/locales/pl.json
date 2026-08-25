@@ -70,15 +70,6 @@
     "addMore": "Dodaj więcej"
   },
   "analysisResult": {
-    "plantsAdded_one": "Dodano {{count}} roślinę",
-    "plantsAdded_other": "Dodano {{count}} roślin",
-    "subtitleAllOk": "Grupujemy Twoje rośliny w jak najmniejszą liczbę dni.",
-    "subtitlePartial": "AI uzupełniło {{ok}} z {{total}} profili. Dotknij oznaczonych, aby poprawić.",
-    "nameIt": "Nadaj nazwę",
-    "checkThisOne": "Sprawdź tę",
-    "wateringDay": "Dzień podlewania: {{day}}",
-    "change": "Zmień",
-    "goToHome": "Przejdź do strony głównej",
     "proPreviewTitle": "7-dniowa wersja próbna Pro",
     "proPreviewBody": "Wypróbuj nieograniczone skany AI i monitorowanie wzrostu za darmo przez 7 dni. Karta nie jest wymagana.",
     "proPreviewActivated": "Wersja próbna Pro aktywowana!",
@@ -86,16 +77,6 @@
     "proPreviewTryFree": "Wypróbuj za darmo",
     "proPreviewError": "Nie udało się aktywować wersji próbnej Pro. Spróbuj ponownie.",
     "proPreviewMobileOnly": "Wersja próbna Pro wymaga aplikacji mobilnej."
-  },
-  "draftEdit": {
-    "aiFailed": "AI nie rozpoznało tej rośliny{{reason}}. Nadaj nazwę lub spróbuj ponownie.",
-    "lowConfidence": "AI nie było tego pewne — sprawdź, czy to poprawne.",
-    "plantName": "Nazwa rośliny",
-    "plantNamePlaceholder": "np. Monstera",
-    "room": "Pomieszczenie",
-    "roomPlaceholder": "np. Salon",
-    "retryAi": "Spróbuj ponownie z AI",
-    "retrying": "Ponawianie…"
   },
   "dayPicker": {
     "title": "Dzień podlewania"

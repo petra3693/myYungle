@@ -70,15 +70,6 @@
     "addMore": "Add more"
   },
   "analysisResult": {
-    "plantsAdded_one": "{{count}} plant added",
-    "plantsAdded_other": "{{count}} plants added",
-    "subtitleAllOk": "We group your plants onto as few days as possible.",
-    "subtitlePartial": "AI filled {{ok}} of {{total}} profiles. Tap the flagged ones to fix them.",
-    "nameIt": "Name it",
-    "checkThisOne": "Check this one",
-    "wateringDay": "Watering day: {{day}}",
-    "change": "Change",
-    "goToHome": "Go to home",
     "proPreviewTitle": "7-day Pro Preview",
     "proPreviewBody": "Try unlimited AI scans and growth tracking free for 7 days. No card needed.",
     "proPreviewActivated": "Pro Preview activated!",
@@ -86,16 +77,6 @@
     "proPreviewTryFree": "Try it free",
     "proPreviewError": "Could not activate Pro Preview. Please try again.",
     "proPreviewMobileOnly": "Pro Preview requires the mobile app."
-  },
-  "draftEdit": {
-    "aiFailed": "AI couldn't identify this plant{{reason}}. Give it a name, or try again.",
-    "lowConfidence": "AI wasn't very confident about this one — check it's right.",
-    "plantName": "Plant name",
-    "plantNamePlaceholder": "e.g. Monstera",
-    "room": "Room",
-    "roomPlaceholder": "e.g. Living room",
-    "retryAi": "Retry AI",
-    "retrying": "Retrying…"
   },
   "dayPicker": {
     "title": "Watering day"

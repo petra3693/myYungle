@@ -99,4 +99,6 @@ export interface AppSettings {
   proPreviewUsedAt: string | null
   /** Whether the forced full-screen paywall has already been shown for this Pro Preview expiry. */
   proPreviewExpiredPaywallShown: boolean
+  /** Whether the user dismissed the Home-screen Pro Preview banner — it then only reappears on the paywall. */
+  proPreviewBannerDismissed: boolean
 }

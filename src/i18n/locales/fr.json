@@ -70,15 +70,6 @@
     "addMore": "Ajouter plus"
   },
   "analysisResult": {
-    "plantsAdded_one": "{{count}} plante ajoutée",
-    "plantsAdded_other": "{{count}} plantes ajoutées",
-    "subtitleAllOk": "Nous regroupons vos plantes sur le moins de jours possible.",
-    "subtitlePartial": "L'IA a rempli {{ok}} profils sur {{total}}. Touchez ceux signalés pour les corriger.",
-    "nameIt": "Nommez-la",
-    "checkThisOne": "À vérifier",
-    "wateringDay": "Jour d'arrosage : {{day}}",
-    "change": "Modifier",
-    "goToHome": "Aller à l'accueil",
     "proPreviewTitle": "Aperçu Pro de 7 jours",
     "proPreviewBody": "Essayez les scans IA et le suivi de croissance illimités gratuitement pendant 7 jours. Aucune carte requise.",
     "proPreviewActivated": "Aperçu Pro activé !",
@@ -86,16 +77,6 @@
     "proPreviewTryFree": "Essayer gratuitement",
     "proPreviewError": "Impossible d'activer l'aperçu Pro. Veuillez réessayer.",
     "proPreviewMobileOnly": "L'aperçu Pro nécessite l'application mobile."
-  },
-  "draftEdit": {
-    "aiFailed": "L'IA n'a pas pu identifier cette plante{{reason}}. Donnez-lui un nom ou réessayez.",
-    "lowConfidence": "L'IA n'était pas très sûre pour celle-ci — vérifiez qu'elle est correcte.",
-    "plantName": "Nom de la plante",
-    "plantNamePlaceholder": "ex. Monstera",
-    "room": "Pièce",
-    "roomPlaceholder": "ex. Salon",
-    "retryAi": "Relancer l'IA",
-    "retrying": "Nouvelle tentative…"
   },
   "dayPicker": {
     "title": "Jour d'arrosage"

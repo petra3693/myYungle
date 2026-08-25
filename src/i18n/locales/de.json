@@ -70,15 +70,6 @@
     "addMore": "Mehr hinzufügen"
   },
   "analysisResult": {
-    "plantsAdded_one": "{{count}} Pflanze hinzugefügt",
-    "plantsAdded_other": "{{count}} Pflanzen hinzugefügt",
-    "subtitleAllOk": "Wir gruppieren deine Pflanzen auf so wenige Tage wie möglich.",
-    "subtitlePartial": "KI hat {{ok}} von {{total}} Profilen ausgefüllt. Tippe die markierten an, um sie zu korrigieren.",
-    "nameIt": "Benennen",
-    "checkThisOne": "Bitte prüfen",
-    "wateringDay": "Gießtag: {{day}}",
-    "change": "Ändern",
-    "goToHome": "Zum Start",
     "proPreviewTitle": "7 Tage Pro-Vorschau",
     "proPreviewBody": "Teste unbegrenzte KI-Scans und Wachstumsverfolgung 7 Tage kostenlos. Keine Karte nötig.",
     "proPreviewActivated": "Pro-Vorschau aktiviert!",
@@ -86,16 +77,6 @@
     "proPreviewTryFree": "Kostenlos testen",
     "proPreviewError": "Pro-Vorschau konnte nicht aktiviert werden. Bitte versuche es erneut.",
     "proPreviewMobileOnly": "Die Pro-Vorschau erfordert die mobile App."
-  },
-  "draftEdit": {
-    "aiFailed": "KI konnte diese Pflanze nicht identifizieren{{reason}}. Gib ihr einen Namen oder versuche es erneut.",
-    "lowConfidence": "KI war sich hier nicht sehr sicher — bitte prüfen.",
-    "plantName": "Pflanzenname",
-    "plantNamePlaceholder": "z. B. Monstera",
-    "room": "Raum",
-    "roomPlaceholder": "z. B. Wohnzimmer",
-    "retryAi": "KI erneut versuchen",
-    "retrying": "Wird erneut versucht…"
   },
   "dayPicker": {
     "title": "Gießtag"

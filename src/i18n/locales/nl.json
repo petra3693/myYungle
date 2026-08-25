@@ -70,15 +70,6 @@
     "addMore": "Meer toevoegen"
   },
   "analysisResult": {
-    "plantsAdded_one": "{{count}} plant toegevoegd",
-    "plantsAdded_other": "{{count}} planten toegevoegd",
-    "subtitleAllOk": "We groeperen je planten in zo min mogelijk dagen.",
-    "subtitlePartial": "AI heeft {{ok}} van {{total}} profielen ingevuld. Tik op de gemarkeerde items om te corrigeren.",
-    "nameIt": "Geef een naam",
-    "checkThisOne": "Controleer deze",
-    "wateringDay": "Giet dag: {{day}}",
-    "change": "Wijzigen",
-    "goToHome": "Naar start",
     "proPreviewTitle": "7 dagen Pro-preview",
     "proPreviewBody": "Probeer 7 dagen gratis onbeperkte AI-scans en groeimonitoring. Geen creditcard nodig.",
     "proPreviewActivated": "Pro-preview geactiveerd!",
@@ -86,16 +77,6 @@
     "proPreviewTryFree": "Gratis proberen",
     "proPreviewError": "Kon Pro-preview niet activeren. Probeer het opnieuw.",
     "proPreviewMobileOnly": "Pro-preview vereist de mobiele app."
-  },
-  "draftEdit": {
-    "aiFailed": "AI kon deze plant niet identificeren{{reason}}. Geef een naam of probeer opnieuw.",
-    "lowConfidence": "AI was hier niet erg zeker van — controleer of dit klopt.",
-    "plantName": "Plantnaam",
-    "plantNamePlaceholder": "bijv. Monstera",
-    "room": "Kamer",
-    "roomPlaceholder": "bijv. Woonkamer",
-    "retryAi": "AI opnieuw proberen",
-    "retrying": "Opnieuw proberen…"
   },
   "dayPicker": {
     "title": "Giet dag"
