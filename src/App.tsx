@@ -19,7 +19,12 @@ import { loadPlantsFromStorage, readAndCompressPhotoFile, savePlantsToStorage, t
 import { LAST_ACTIVE_DATE_KEY, localDateString, rolloverWateredState } from '@/lib/dailyRollover'
 import { batchedWateringDays, frequencyForWaterNeed, frequencyLabel, secondaryWateringDay } from '@/lib/wateringBatch'
 import { clearAllPhotos, deletePlantPhotos } from '@/lib/photoStore'
-import { requestCameraPermission, requestNotificationPermission } from '@/lib/permissions'
+import {
+  checkNotificationPermissionStatus,
+  requestCameraPermission,
+  requestNotificationPermission,
+  type NotificationPermissionStatus,
+} from '@/lib/permissions'
 import {
   FREE_PLANT_LIMIT,
   FREE_HEALTH_SCANS,
@@ -777,13 +782,13 @@ function nextWaterStatus(plant: Plant, todayIdx: number, t: (key: string, opts?:
 function HomeScreen({
   plants, todayIdx, onOpenPlant, showHabitCard, onDismissHabitCard, onShowHabitPro,
   showProPreviewBanner, onDismissProPreviewBanner, onTryProPreview,
-  notificationsEnabled, onToggleNotifications,
+  notificationsEnabled, onOpenNotificationSettings,
 }: {
   plants: Plant[]; todayIdx: number; onOpenPlant: (p: Plant) => void
   showHabitCard: boolean; onDismissHabitCard: () => void; onShowHabitPro: () => void
   showProPreviewBanner: boolean; onDismissProPreviewBanner: () => void
   onTryProPreview: () => Promise<{ ok: boolean; error?: string }>
-  notificationsEnabled: boolean; onToggleNotifications: () => void
+  notificationsEnabled: boolean; onOpenNotificationSettings: () => void
 }) {
   const { t } = useTranslation()
   const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -810,10 +815,10 @@ function HomeScreen({
         <h1 className="font-heading" style={{ fontSize: 22, color: '#000' }}>{t('home.title')}</h1>
         <button
           type="button"
-          onClick={onToggleNotifications}
+          onClick={onOpenNotificationSettings}
           className="icon-circle"
           style={{ background: notificationsEnabled ? '#000' : '#e5e5e0' }}
-          aria-label={notificationsEnabled ? t('home.notificationsOn') : t('home.notificationsOff')}
+          aria-label={t('notificationSettings.title')}
         >
           <div style={{ color: notificationsEnabled ? '#fff' : '#8E8E93' }}>
             {notificationsEnabled ? <IconBell size={18} /> : <IconBellOff size={18} />}
@@ -1355,6 +1360,100 @@ function LanguagePickerSheet({ current, onSelect, onClose }: { current: AppLangu
               {opt.code === current && <IconCheck size={18} />}
             </button>
           ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function NotificationSettingsSheet({ pushNotifications, reminderTime, onToggle, onChangeReminderTime, onClose }: {
+  pushNotifications: boolean
+  reminderTime: string
+  /** Flips the preference and, when turning on, requests OS permission — resolves once settled. */
+  onToggle: () => Promise<void>
+  onChangeReminderTime: (time: string) => void
+  onClose: () => void
+}) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const [permissionStatus, setPermissionStatus] = useState<NotificationPermissionStatus | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const f = requestAnimationFrame(() => setOpen(true))
+    void checkNotificationPermissionStatus().then(setPermissionStatus)
+    return () => cancelAnimationFrame(f)
+  }, [])
+
+  function close(action?: () => void) { setOpen(false); setTimeout(() => action?.(), 180) }
+
+  async function handleToggle() {
+    setBusy(true)
+    try {
+      await onToggle()
+      setPermissionStatus(await checkNotificationPermissionStatus())
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const statusLabel = permissionStatus === 'granted' ? t('notificationSettings.permissionGranted')
+    : permissionStatus === 'denied' ? t('notificationSettings.permissionDenied')
+    : permissionStatus === 'prompt' ? t('notificationSettings.permissionPrompt')
+    : t('notificationSettings.permissionUnavailable')
+  const statusColor = permissionStatus === 'granted' ? '#0a8f3f' : permissionStatus === 'denied' ? '#FF3B30' : '#8E8E93'
+
+  return (
+    <>
+      <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onClose)} />
+      <div className="fixed left-0 right-0 bottom-0 z-[70]">
+        <div className={`sheet-panel ${open ? 'is-open' : ''} p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-4`}>
+          <div className="flex items-center justify-between">
+            <span className="font-heading" style={{ fontSize: 18 }}>{t('notificationSettings.title')}</span>
+            <IconCircleBtn onClick={() => close(onClose)} label={t('common.close')}><IconX size={16} /></IconCircleBtn>
+          </div>
+          <p className="font-body" style={{ fontSize: 13, color: '#8E8E93' }}>{t('notificationSettings.description')}</p>
+
+          {permissionStatus !== null && permissionStatus !== 'unavailable' && (
+            <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: '#f5f5f5' }}>
+              <span style={{ width: 8, height: 8, borderRadius: 9999, background: statusColor, flexShrink: 0 }} />
+              <span className="font-body" style={{ fontSize: 13, color: '#444' }}>{statusLabel}</span>
+            </div>
+          )}
+          {permissionStatus === 'denied' && (
+            <p className="font-body" style={{ fontSize: 12, color: '#8E8E93', marginTop: -8 }}>
+              {t('notificationSettings.deniedHint')}
+            </p>
+          )}
+
+          <div className="rounded-2xl overflow-hidden" style={{ background: '#f5f5f5' }}>
+            <div className="flex items-center justify-between px-4 py-3.5" style={{ borderBottom: '1px solid #eee' }}>
+              <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{t('settings.wateringReminders')}</span>
+              <Toggle on={pushNotifications} onChange={() => void handleToggle()} />
+            </div>
+            <div className="flex items-center justify-between px-4 py-3.5">
+              <span className="font-body" style={{ fontSize: 14, color: '#111' }}>{t('settings.reminderTime')}</span>
+              <input
+                type="time"
+                value={reminderTime}
+                onChange={(e) => onChangeReminderTime(e.target.value)}
+                className="font-body"
+                style={{ fontSize: 14, border: 'none', borderRadius: 8, padding: '4px 8px', background: '#fff', color: '#111' }}
+              />
+            </div>
+          </div>
+
+          {!pushNotifications && (
+            <button
+              type="button"
+              onClick={() => void handleToggle()}
+              disabled={busy}
+              className="btn-fill w-full"
+              style={{ height: 52, fontSize: 15, opacity: busy ? 0.7 : 1 }}
+            >
+              {t('notificationSettings.enableButton')}
+            </button>
+          )}
         </div>
       </div>
     </>
@@ -2905,6 +3004,7 @@ export default function App() {
   const [growthFlowPlant, setGrowthFlowPlant] = useState<Plant | null>(null)
   const [language, setLanguage] = useState<AppLanguage>(loadLanguage)
   const [showLanguagePicker, setShowLanguagePicker] = useState(false)
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false)
   const [paywallSource, setPaywallSource] = useState<PaywallSource | null>(null)
   const [offering, setOffering] = useState<PurchasesOffering | null>(null)
   const [offeringsStatus, setOfferingsStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading')
@@ -3443,7 +3543,7 @@ export default function App() {
           onDismissProPreviewBanner={() => setSettings((s) => ({ ...s, proPreviewBannerDismissed: true }))}
           onTryProPreview={handleTryProPreview}
           notificationsEnabled={settings.pushNotifications}
-          onToggleNotifications={() => void handleToggleNotifications()}
+          onOpenNotificationSettings={() => setShowNotificationSettings(true)}
         />
       )
     } else if (tab === 'days') {
@@ -3517,6 +3617,15 @@ export default function App() {
           current={language}
           onClose={() => setShowLanguagePicker(false)}
           onSelect={(l) => { setLanguage(l); saveLanguage(l); void i18n.changeLanguage(l); setShowLanguagePicker(false) }}
+        />
+      )}
+      {showNotificationSettings && (
+        <NotificationSettingsSheet
+          pushNotifications={settings.pushNotifications}
+          reminderTime={settings.reminderTime}
+          onToggle={handleToggleNotifications}
+          onChangeReminderTime={(time) => setSettings((s) => ({ ...s, reminderTime: time }))}
+          onClose={() => setShowNotificationSettings(false)}
         />
       )}
     </div>

@@ -2,6 +2,26 @@ import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { Camera } from '@capacitor/camera'
 
+export type NotificationPermissionStatus = 'granted' | 'denied' | 'prompt' | 'unavailable'
+
+/**
+ * Reports the current OS notification-permission state without prompting.
+ * `'unavailable'` on web — this app has no web-push feature, so there's no
+ * meaningful permission to reflect there.
+ */
+export async function checkNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
+  if (!Capacitor.isNativePlatform()) return 'unavailable'
+  try {
+    const status = await LocalNotifications.checkPermissions()
+    if (status.display === 'granted') return 'granted'
+    if (status.display === 'denied') return 'denied'
+    return 'prompt'
+  } catch (error) {
+    console.error('[myJungle] checking notification permission failed:', error)
+    return 'prompt'
+  }
+}
+
 /**
  * Asks the OS for local-notification permission. Safe to call on every
  * notification-related interaction (bell icon, reminder toggle, notification

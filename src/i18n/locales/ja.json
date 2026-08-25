@@ -97,9 +97,7 @@
     "waterToday": "今日水やり",
     "nextWaterTomorrow": "次の水やり：明日",
     "nextWaterOn": "次の水やり：{{day}}",
-    "noSchedule": "スケジュールなし",
-    "notificationsOn": "通知オン",
-    "notificationsOff": "通知オフ"
+    "noSchedule": "スケジュールなし"
   },
   "days": {
     "groupedSummary_one": "{{count}}件の植物を{{days}}日にグループ化しました。",
@@ -339,5 +337,15 @@
     "good": "良好",
     "fair": "普通",
     "needsAttention": "要注意"
+  },
+  "notificationSettings": {
+    "title": "通知設定",
+    "description": "植物に水やりが必要なときにお知らせします。",
+    "permissionGranted": "許可済み",
+    "permissionDenied": "拒否されました",
+    "permissionPrompt": "まだリクエストしていません",
+    "permissionUnavailable": "アプリが管理します（Webプレビュー）",
+    "deniedHint": "デバイスの設定で通知がオフになっています。水やりのリマインダーを受け取るには、そこで通知をオンにしてください。",
+    "enableButton": "通知を有効にする"
   }
 }

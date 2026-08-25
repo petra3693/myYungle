@@ -97,9 +97,7 @@
     "waterToday": "今天浇水",
     "nextWaterTomorrow": "下次浇水：明天",
     "nextWaterOn": "下次浇水：{{day}}",
-    "noSchedule": "无日程安排",
-    "notificationsOn": "通知已开启",
-    "notificationsOff": "通知已关闭"
+    "noSchedule": "无日程安排"
   },
   "days": {
     "groupedSummary_one": "我们已将你的 {{count}} 株植物分为 {{days}} 天。",
@@ -339,5 +337,15 @@
     "good": "良好",
     "fair": "一般",
     "needsAttention": "需要注意"
+  },
+  "notificationSettings": {
+    "title": "通知设置",
+    "description": "在需要给植物浇水时收到提醒。",
+    "permissionGranted": "已授权",
+    "permissionDenied": "已拒绝",
+    "permissionPrompt": "尚未请求",
+    "permissionUnavailable": "由应用管理（网页预览）",
+    "deniedHint": "通知在您的设备设置中已关闭。请在那里开启通知以接收浇水提醒。",
+    "enableButton": "开启通知"
   }
 }

@@ -97,9 +97,7 @@
     "waterToday": "Ma öntözendő",
     "nextWaterTomorrow": "Következő öntözés: Holnap",
     "nextWaterOn": "Következő öntözés: {{day}}",
-    "noSchedule": "Nincs beütemezve",
-    "notificationsOn": "Értesítések be",
-    "notificationsOff": "Értesítések ki"
+    "noSchedule": "Nincs beütemezve"
   },
   "days": {
     "groupedSummary_one": "A rendszer {{count}} növényedet {{days}} nap{{daysPlural}}ra csoportosította.",
@@ -339,5 +337,15 @@
     "good": "Jó",
     "fair": "Közepes",
     "needsAttention": "Figyelmet igényel"
+  },
+  "notificationSettings": {
+    "title": "Értesítési beállítások",
+    "description": "Kapj emlékeztetőt, amikor itt az ideje megöntözni a növényeidet.",
+    "permissionGranted": "Engedélyezve",
+    "permissionDenied": "Elutasítva",
+    "permissionPrompt": "Még nem kérted",
+    "permissionUnavailable": "Az alkalmazás kezeli (webes előnézet)",
+    "deniedHint": "Az értesítések ki vannak kapcsolva a készüléked beállításaiban. Kapcsold be őket az öntözési emlékeztetők fogadásához.",
+    "enableButton": "Értesítések engedélyezése"
   }
 }

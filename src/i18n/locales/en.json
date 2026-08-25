@@ -97,9 +97,7 @@
     "waterToday": "Water today",
     "nextWaterTomorrow": "Next water: Tomorrow",
     "nextWaterOn": "Next water: {{day}}",
-    "noSchedule": "No schedule",
-    "notificationsOn": "Notifications on",
-    "notificationsOff": "Notifications off"
+    "noSchedule": "No schedule"
   },
   "days": {
     "groupedSummary_one": "The system grouped your {{count}} plant into {{days}} day{{daysPlural}}.",
@@ -339,5 +337,15 @@
     "good": "Good",
     "fair": "Fair",
     "needsAttention": "Needs attention"
+  },
+  "notificationSettings": {
+    "title": "Notification settings",
+    "description": "Get reminded when it's time to water your plants.",
+    "permissionGranted": "Permission granted",
+    "permissionDenied": "Permission denied",
+    "permissionPrompt": "Not yet requested",
+    "permissionUnavailable": "Managed by the app (web preview)",
+    "deniedHint": "Notifications are turned off in your device settings. Enable them there to receive watering reminders.",
+    "enableButton": "Enable Notifications"
   }
 }

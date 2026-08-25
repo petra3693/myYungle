@@ -97,9 +97,7 @@
     "waterToday": "Vandaag water geven",
     "nextWaterTomorrow": "Volgende keer water geven: Morgen",
     "nextWaterOn": "Volgende keer water geven: {{day}}",
-    "noSchedule": "Geen schema",
-    "notificationsOn": "Meldingen aan",
-    "notificationsOff": "Meldingen uit"
+    "noSchedule": "Geen schema"
   },
   "days": {
     "groupedSummary_one": "We hebben je {{count}} plant gegroepeerd in {{days}} dag{{daysPlural}}.",
@@ -339,5 +337,15 @@
     "good": "Goed",
     "fair": "Redelijk",
     "needsAttention": "Heeft aandacht nodig"
+  },
+  "notificationSettings": {
+    "title": "Meldingsinstellingen",
+    "description": "Ontvang een herinnering wanneer het tijd is om je planten water te geven.",
+    "permissionGranted": "Toestemming verleend",
+    "permissionDenied": "Toestemming geweigerd",
+    "permissionPrompt": "Nog niet gevraagd",
+    "permissionUnavailable": "Wordt beheerd door de app (webpreview)",
+    "deniedHint": "Meldingen staan uit in je apparaatinstellingen. Zet ze daar aan om giet-herinneringen te ontvangen.",
+    "enableButton": "Meldingen inschakelen"
   }
 }

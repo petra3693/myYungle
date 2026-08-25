@@ -97,9 +97,7 @@
     "waterToday": "Da annaffiare oggi",
     "nextWaterTomorrow": "Prossima irrigazione: Domani",
     "nextWaterOn": "Prossima irrigazione: {{day}}",
-    "noSchedule": "Nessun calendario",
-    "notificationsOn": "Notifiche attive",
-    "notificationsOff": "Notifiche disattivate"
+    "noSchedule": "Nessun calendario"
   },
   "days": {
     "groupedSummary_one": "Il sistema ha raggruppato la tua {{count}} pianta in {{days}} giorno{{daysPlural}}.",
@@ -339,5 +337,15 @@
     "good": "Buona",
     "fair": "Discreta",
     "needsAttention": "Richiede attenzione"
+  },
+  "notificationSettings": {
+    "title": "Impostazioni notifiche",
+    "description": "Ricevi un promemoria quando è ora di annaffiare le tue piante.",
+    "permissionGranted": "Autorizzazione concessa",
+    "permissionDenied": "Autorizzazione negata",
+    "permissionPrompt": "Non ancora richiesta",
+    "permissionUnavailable": "Gestito dall'app (anteprima web)",
+    "deniedHint": "Le notifiche sono disattivate nelle impostazioni del dispositivo. Attivale per ricevere i promemoria di irrigazione.",
+    "enableButton": "Attiva notifiche"
   }
 }

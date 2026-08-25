@@ -97,9 +97,7 @@
     "waterToday": "Heute gießen",
     "nextWaterTomorrow": "Nächstes Gießen: Morgen",
     "nextWaterOn": "Nächstes Gießen: {{day}}",
-    "noSchedule": "Kein Zeitplan",
-    "notificationsOn": "Benachrichtigungen an",
-    "notificationsOff": "Benachrichtigungen aus"
+    "noSchedule": "Kein Zeitplan"
   },
   "days": {
     "groupedSummary_one": "Das System hat deine {{count}} Pflanze auf {{days}} Tag{{daysPlural}} verteilt.",
@@ -339,5 +337,15 @@
     "good": "Gut",
     "fair": "Mittelmäßig",
     "needsAttention": "Braucht Aufmerksamkeit"
+  },
+  "notificationSettings": {
+    "title": "Benachrichtigungseinstellungen",
+    "description": "Lass dich erinnern, wenn es Zeit ist, deine Pflanzen zu gießen.",
+    "permissionGranted": "Berechtigung erteilt",
+    "permissionDenied": "Berechtigung verweigert",
+    "permissionPrompt": "Noch nicht angefragt",
+    "permissionUnavailable": "Wird von der App verwaltet (Web-Vorschau)",
+    "deniedHint": "Benachrichtigungen sind in deinen Geräteeinstellungen deaktiviert. Aktiviere sie dort, um Gieß-Erinnerungen zu erhalten.",
+    "enableButton": "Benachrichtigungen aktivieren"
   }
 }

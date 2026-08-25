@@ -97,9 +97,7 @@
     "waterToday": "Regar hoje",
     "nextWaterTomorrow": "Próxima rega: Amanhã",
     "nextWaterOn": "Próxima rega: {{day}}",
-    "noSchedule": "Sem calendário",
-    "notificationsOn": "Notificações ativadas",
-    "notificationsOff": "Notificações desativadas"
+    "noSchedule": "Sem calendário"
   },
   "days": {
     "groupedSummary_one": "Agrupámos a sua {{count}} planta em {{days}} dia{{daysPlural}}.",
@@ -339,5 +337,15 @@
     "good": "Boa",
     "fair": "Razoável",
     "needsAttention": "Necessita de atenção"
+  },
+  "notificationSettings": {
+    "title": "Configurações de notificação",
+    "description": "Receba um lembrete quando for hora de regar as suas plantas.",
+    "permissionGranted": "Permissão concedida",
+    "permissionDenied": "Permissão negada",
+    "permissionPrompt": "Ainda não solicitada",
+    "permissionUnavailable": "Gerido pela aplicação (pré-visualização web)",
+    "deniedHint": "As notificações estão desativadas nas definições do seu dispositivo. Ative-as para receber lembretes de rega.",
+    "enableButton": "Ativar notificações"
   }
 }

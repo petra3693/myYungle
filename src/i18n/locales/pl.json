@@ -97,9 +97,7 @@
     "waterToday": "Podlej dzisiaj",
     "nextWaterTomorrow": "Następne podlewanie: Jutro",
     "nextWaterOn": "Następne podlewanie: {{day}}",
-    "noSchedule": "Brak harmonogramu",
-    "notificationsOn": "Powiadomienia włączone",
-    "notificationsOff": "Powiadomienia wyłączone"
+    "noSchedule": "Brak harmonogramu"
   },
   "days": {
     "groupedSummary_one": "Pogrupowaliśmy Twoją {{count}} roślinę w {{days}} dzień/dni.",
@@ -339,5 +337,15 @@
     "good": "Dobra",
     "fair": "Przeciętna",
     "needsAttention": "Wymaga uwagi"
+  },
+  "notificationSettings": {
+    "title": "Ustawienia powiadomień",
+    "description": "Otrzymuj przypomnienie, gdy nadejdzie czas podlania roślin.",
+    "permissionGranted": "Uprawnienie przyznane",
+    "permissionDenied": "Uprawnienie odrzucone",
+    "permissionPrompt": "Jeszcze nie poproszono",
+    "permissionUnavailable": "Zarządzane przez aplikację (podgląd web)",
+    "deniedHint": "Powiadomienia są wyłączone w ustawieniach urządzenia. Włącz je tam, aby otrzymywać przypomnienia o podlewaniu.",
+    "enableButton": "Włącz powiadomienia"
   }
 }

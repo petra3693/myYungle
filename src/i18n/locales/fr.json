@@ -97,9 +97,7 @@
     "waterToday": "À arroser aujourd'hui",
     "nextWaterTomorrow": "Prochain arrosage : Demain",
     "nextWaterOn": "Prochain arrosage : {{day}}",
-    "noSchedule": "Aucun calendrier",
-    "notificationsOn": "Notifications activées",
-    "notificationsOff": "Notifications désactivées"
+    "noSchedule": "Aucun calendrier"
   },
   "days": {
     "groupedSummary_one": "Le système a réparti votre {{count}} plante sur {{days}} jour{{daysPlural}}.",
@@ -339,5 +337,15 @@
     "good": "Bon",
     "fair": "Moyen",
     "needsAttention": "Nécessite attention"
+  },
+  "notificationSettings": {
+    "title": "Paramètres de notification",
+    "description": "Recevez un rappel quand il est temps d'arroser vos plantes.",
+    "permissionGranted": "Autorisation accordée",
+    "permissionDenied": "Autorisation refusée",
+    "permissionPrompt": "Pas encore demandée",
+    "permissionUnavailable": "Géré par l'application (aperçu web)",
+    "deniedHint": "Les notifications sont désactivées dans les paramètres de votre appareil. Activez-les pour recevoir les rappels d'arrosage.",
+    "enableButton": "Activer les notifications"
   }
 }
