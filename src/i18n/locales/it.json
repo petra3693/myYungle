@@ -67,7 +67,9 @@
     "bulkAddSubtitle": "Fotografa tutte le piante rimanenti per completare.",
     "bulkAddDone": "Aggiungi tutte con un tocco",
     "tapToCapture": "Tocca per scattare o scegliere foto",
-    "addMore": "Aggiungi altre"
+    "addMore": "Aggiungi altre",
+    "identifyPartialError_one": "Impossibile analizzare {{count}} foto — modifica manualmente i dettagli di quella pianta.",
+    "identifyPartialError_other": "Impossibile analizzare {{count}} foto — modifica manualmente i dettagli di quelle piante."
   },
   "analysisResult": {
     "proPreviewTitle": "Anteprima Pro di 7 giorni",

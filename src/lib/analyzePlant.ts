@@ -61,15 +61,19 @@ export async function analyzePlantImage(
   language: AppLanguage = 'en',
 ): Promise<{ ok: true; data: AnalyzePlantApiResponse } | { ok: false; error: string }> {
   try {
+    console.log('[myJungle] analyzePlantImage: compressing image for Gemini...')
     // Re-encode to JPEG ≤1024px so Gemini always gets clean, supported bytes.
     const preparedSource = isInlinePhoto(imageSource)
       ? await compressImageForGemini(imageSource)
       : imageSource
     const { imageBase64 } = parseImageDataUrl(preparedSource)
     if (!imageBase64) {
+      console.error('[myJungle] analyzePlantImage: no base64 image data after compression')
       return { ok: false, error: 'No image provided. Please take or choose a photo first.' }
     }
+    console.log(`[myJungle] analyzePlantImage: image ready (${imageBase64.length} base64 chars)`)
     if (imageBase64.length > MAX_CLIENT_BASE64_CHARS) {
+      console.error(`[myJungle] analyzePlantImage: image too large after compression (${imageBase64.length} chars)`)
       return {
         ok: false,
         error: 'Image is too large after compression. Please try a smaller photo or retake the picture.',
@@ -78,6 +82,7 @@ export async function analyzePlantImage(
 
     let response: Response
     try {
+      console.log('[myJungle] analyzePlantImage: dispatching fetch to /api/analyze-plant...')
       response = await fetch('/api/analyze-plant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,6 +93,7 @@ export async function analyzePlantImage(
           language,
         }),
       })
+      console.log(`[myJungle] analyzePlantImage: fetch resolved with status ${response.status}`)
     } catch (error) {
       console.error('[myJungle] analyze-plant network error:', error)
       return {

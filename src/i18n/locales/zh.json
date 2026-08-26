@@ -67,7 +67,9 @@
     "bulkAddSubtitle": "拍摄你所有剩余的植物以填满名额。",
     "bulkAddDone": "一键添加全部",
     "tapToCapture": "点击拍摄或选择照片",
-    "addMore": "添加更多"
+    "addMore": "添加更多",
+    "identifyPartialError_one": "有 {{count}} 张照片无法分析 — 请手动编辑该植物的详情。",
+    "identifyPartialError_other": "有 {{count}} 张照片无法分析 — 请手动编辑这些植物的详情。"
   },
   "analysisResult": {
     "proPreviewTitle": "7 天 Pro 体验",

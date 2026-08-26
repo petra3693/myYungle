@@ -67,7 +67,9 @@
     "bulkAddSubtitle": "Sfotografuj wszystkie pozostałe rośliny, aby uzupełnić.",
     "bulkAddDone": "Dodaj wszystkie jednym dotknięciem",
     "tapToCapture": "Dotknij, aby zrobić lub wybrać zdjęcia",
-    "addMore": "Dodaj więcej"
+    "addMore": "Dodaj więcej",
+    "identifyPartialError_one": "Nie udało się przeanalizować {{count}} zdjęcia — edytuj dane tej rośliny ręcznie.",
+    "identifyPartialError_other": "Nie udało się przeanalizować {{count}} zdjęć — edytuj dane tych roślin ręcznie."
   },
   "analysisResult": {
     "proPreviewTitle": "7-dniowa wersja próbna Pro",

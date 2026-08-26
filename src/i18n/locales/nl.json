@@ -67,7 +67,9 @@
     "bulkAddSubtitle": "Fotografeer al je overige planten om aan te vullen.",
     "bulkAddDone": "Alles in één tik toevoegen",
     "tapToCapture": "Tik om foto's te maken of te kiezen",
-    "addMore": "Meer toevoegen"
+    "addMore": "Meer toevoegen",
+    "identifyPartialError_one": "{{count}} foto kon niet worden geanalyseerd — bewerk de gegevens van die plant handmatig.",
+    "identifyPartialError_other": "{{count}} foto's konden niet worden geanalyseerd — bewerk de gegevens van die planten handmatig."
   },
   "analysisResult": {
     "proPreviewTitle": "7 dagen Pro-preview",

@@ -67,7 +67,9 @@
     "bulkAddSubtitle": "Capture all your remaining plants to fill up.",
     "bulkAddDone": "Add all in one tap",
     "tapToCapture": "Tap to take or choose photos",
-    "addMore": "Add more"
+    "addMore": "Add more",
+    "identifyPartialError_one": "{{count}} photo couldn't be analyzed — edit that plant's details manually.",
+    "identifyPartialError_other": "{{count}} photos couldn't be analyzed — edit those plants' details manually."
   },
   "analysisResult": {
     "proPreviewTitle": "7-day Pro Preview",

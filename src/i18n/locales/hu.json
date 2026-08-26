@@ -67,7 +67,9 @@
     "bulkAddSubtitle": "Fotózd le az összes megmaradt növényedet, hogy feltöltsd a helyeket.",
     "bulkAddDone": "Mindet egy koppintással",
     "tapToCapture": "Koppints fotók készítéséhez vagy kiválasztásához",
-    "addMore": "Több hozzáadása"
+    "addMore": "Több hozzáadása",
+    "identifyPartialError_one": "{{count}} fotót nem sikerült elemezni — szerkeszd manuálisan az adott növény adatait.",
+    "identifyPartialError_other": "{{count}} fotót nem sikerült elemezni — szerkeszd manuálisan az adott növények adatait."
   },
   "analysisResult": {
     "proPreviewTitle": "7 napos Pro előnézet",

@@ -67,7 +67,9 @@
     "bulkAddSubtitle": "Fotografiere alle restlichen Pflanzen, um aufzufüllen.",
     "bulkAddDone": "Alle mit einem Tipp hinzufügen",
     "tapToCapture": "Tippen, um Fotos aufzunehmen oder auszuwählen",
-    "addMore": "Mehr hinzufügen"
+    "addMore": "Mehr hinzufügen",
+    "identifyPartialError_one": "{{count}} Foto konnte nicht analysiert werden — bearbeite die Details dieser Pflanze manuell.",
+    "identifyPartialError_other": "{{count}} Fotos konnten nicht analysiert werden — bearbeite die Details dieser Pflanzen manuell."
   },
   "analysisResult": {
     "proPreviewTitle": "7 Tage Pro-Vorschau",

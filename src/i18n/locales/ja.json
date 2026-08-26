@@ -67,7 +67,9 @@
     "bulkAddSubtitle": "残りのすべての植物を撮影して満たしましょう。",
     "bulkAddDone": "ワンタップですべて追加",
     "tapToCapture": "タップして写真を撮影または選択",
-    "addMore": "さらに追加"
+    "addMore": "さらに追加",
+    "identifyPartialError_one": "{{count}}枚の写真を分析できませんでした。その植物の詳細は手動で編集してください。",
+    "identifyPartialError_other": "{{count}}枚の写真を分析できませんでした。それらの植物の詳細は手動で編集してください。"
   },
   "analysisResult": {
     "proPreviewTitle": "7日間のPro体験版",

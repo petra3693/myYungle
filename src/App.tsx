@@ -451,28 +451,50 @@ function BatchCaptureScreen({
   const [busy, setBusy] = useState(false)
   // Set while the picker is open to replace one existing photo rather than append new ones.
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const limit = freeSlots ?? Infinity
   const atLimit = photos.length >= limit
 
+  function showToast(message: string) {
+    setToast(message)
+    setTimeout(() => setToast(null), 3000)
+  }
+
   async function handleFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return
+    console.log(`[myJungle] BatchCapture: reading ${fileList.length} file(s)...`)
     setBusy(true)
     try {
       if (replaceTargetId) {
         const file = fileList[0]
         if (file) {
-          const dataUrl = await readAndCompressPhotoFile(file)
-          setPhotos((prev) => prev.map((p) => (p.id === replaceTargetId ? { ...p, dataUrl } : p)))
+          try {
+            const dataUrl = await readAndCompressPhotoFile(file)
+            setPhotos((prev) => prev.map((p) => (p.id === replaceTargetId ? { ...p, dataUrl } : p)))
+          } catch (error) {
+            console.error('[myJungle] BatchCapture: replace photo failed:', error)
+            showToast(error instanceof Error ? error.message : t('common.couldNotAnalyzePhoto'))
+          }
         }
       } else {
         const remaining = limit - photos.length
         const files = Array.from(fileList).slice(0, Math.max(0, remaining))
-        const compressed = await Promise.all(files.map((f) => readAndCompressPhotoFile(f)))
-        setPhotos((prev) => [...prev, ...compressed.map((dataUrl) => ({ id: `${Date.now()}-${Math.random()}`, dataUrl }))])
+        const results = await Promise.allSettled(files.map((f) => readAndCompressPhotoFile(f)))
+        const succeeded = results.filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
+        const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+        if (succeeded.length > 0) {
+          setPhotos((prev) => [...prev, ...succeeded.map((r) => ({ id: `${Date.now()}-${Math.random()}`, dataUrl: r.value }))])
+        }
+        if (failed.length > 0) {
+          console.error(`[myJungle] BatchCapture: ${failed.length}/${files.length} photo(s) failed to process:`, failed.map((r) => r.reason))
+          const firstError = failed[0]?.reason
+          showToast(firstError instanceof Error ? firstError.message : t('common.couldNotAnalyzePhoto'))
+        }
       }
     } catch (error) {
       console.error('[myJungle] batch capture failed:', error)
+      showToast(error instanceof Error ? error.message : t('common.couldNotAnalyzePhoto'))
     } finally {
       setBusy(false)
       setReplaceTargetId(null)
@@ -613,6 +635,13 @@ function BatchCaptureScreen({
           </button>
         )}
       </div>
+      {toast && (
+        <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(24px + env(safe-area-inset-bottom,0px))' }}>
+          <div className="rounded-2xl px-4 py-3 text-center" style={{ background: '#000' }}>
+            <span className="font-body" style={{ fontSize: 13, color: '#fff' }}>{toast}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1663,19 +1692,32 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
   const [draft, setDraft] = useState<DraftPlant | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [remindersOn, setRemindersOn] = useState(true)
+  const [toast, setToast] = useState<string | null>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
+  function showToast(message: string) {
+    setToast(message)
+    setTimeout(() => setToast(null), 3000)
+  }
+
   async function handleFile(file: File) {
+    console.log(`[myJungle] ManualAdd: handling picked file "${file.name}"...`)
     try {
       const compressed = await readAndCompressPhotoFile(file)
       setPhoto(compressed)
       setDraft(null)
       setAnalyzing(true)
+      console.log('[myJungle] ManualAdd: sending photo for identification...')
       const result = await withMinDelay(identifyPhoto(compressed, language, primaryDay), 700)
       setDraft(result)
+      if (result.error) {
+        console.warn('[myJungle] ManualAdd: identification failed, showing fallback draft:', result.error)
+        showToast(result.error)
+      }
     } catch (error) {
       console.error('[myJungle] manual add analyze failed:', error)
+      showToast(error instanceof Error ? error.message : t('common.couldNotAnalyzePhoto'))
     } finally {
       setAnalyzing(false)
     }
@@ -1797,6 +1839,13 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
           <button type="button" disabled={!draft} onClick={() => draft && onAdd(draft)} className="btn-fill w-full" style={{ height: 52 }}>{t('manualAdd.addToJungle')}</button>
         </div>
       </div>
+      {toast && (
+        <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(24px + env(safe-area-inset-bottom,0px))' }}>
+          <div className="rounded-2xl px-4 py-3 text-center" style={{ background: '#000' }}>
+            <span className="font-body" style={{ fontSize: 13, color: '#fff' }}>{toast}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -3099,6 +3148,7 @@ export default function App() {
   const [storageError, setStorageError] = useState<string | null>(null)
   const [showLimitSheet, setShowLimitSheet] = useState(false)
   const [aiThinkingLabel, setAiThinkingLabel] = useState<string | null>(null)
+  const [appToast, setAppToast] = useState<string | null>(null)
   const [healthFlowConfig, setHealthFlowConfig] = useState<{ mode: 'new' | 'existing'; presetPlant: Plant | null } | null>(null)
   const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null)
   const [growthFlowPlant, setGrowthFlowPlant] = useState<Plant | null>(null)
@@ -3121,6 +3171,11 @@ export default function App() {
   function openPaywall(sourceId: PaywallSource) {
     setPaywallSource(sourceId)
     setScreen('proUnlock')
+  }
+
+  function showAppToast(message: string) {
+    setAppToast(message)
+    setTimeout(() => setAppToast(null), 3500)
   }
 
   function handleClosePaywall() {
@@ -3488,11 +3543,17 @@ export default function App() {
         freeSlots={FREE_PLANT_LIMIT}
         doneLabel={t('onboarding.captureDone')}
         onDone={(photos) => {
+          console.log(`[myJungle] onboardingCapture: identifying ${photos.length} photo(s)...`)
           setAiThinkingLabel(t('onboarding.identifying', { count: photos.length }))
           void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl, language, settings.primaryWateringDay))), 900).then((drafts) => {
             setPlants((prev) => [...prev, ...drafts.map(draftToPlant)])
             logEvent('plant_added', { count: plants.length + drafts.length })
             setAiThinkingLabel(null)
+            const failedCount = drafts.filter((d) => d.error).length
+            if (failedCount > 0) {
+              console.warn(`[myJungle] onboardingCapture: ${failedCount}/${drafts.length} photo(s) could not be identified`)
+              showAppToast(t('onboarding.identifyPartialError', { count: failedCount }))
+            }
             setSettings((s) => ({ ...s, hasCompletedOnboarding: true, onboardingCompletedAt: s.onboardingCompletedAt ?? todayISO() }))
             if (settings.pushNotifications) void requestNotificationPermission()
             setScreen('main')
@@ -3597,11 +3658,17 @@ export default function App() {
         doneLabel={t('onboarding.bulkAddDone')}
         onBack={() => { setScreen('main'); setTab('home') }}
         onDone={(photos) => {
+          console.log(`[myJungle] bulkAdd: identifying ${photos.length} photo(s)...`)
           setAiThinkingLabel(t('onboarding.identifying', { count: photos.length }))
           void withMinDelay(Promise.all(photos.map((p) => identifyPhoto(p.dataUrl, language, settings.primaryWateringDay))), 900).then((drafts) => {
             setPlants((prev) => [...prev, ...drafts.map(draftToPlant)])
             logEvent('plant_added', { count: plants.length + drafts.length })
             setAiThinkingLabel(null)
+            const failedCount = drafts.filter((d) => d.error).length
+            if (failedCount > 0) {
+              console.warn(`[myJungle] bulkAdd: ${failedCount}/${drafts.length} photo(s) could not be identified`)
+              showAppToast(t('onboarding.identifyPartialError', { count: failedCount }))
+            }
             setScreen('main')
             setTab('home')
           })
@@ -3765,6 +3832,13 @@ export default function App() {
           onRecalculateAll={handleRecalculateAllSchedules}
           onClose={() => setShowScheduleSettings(false)}
         />
+      )}
+      {appToast && (
+        <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(24px + env(safe-area-inset-bottom,0px))' }}>
+          <div className="rounded-2xl px-4 py-3 text-center" style={{ background: '#000' }}>
+            <span className="font-body" style={{ fontSize: 13, color: '#fff' }}>{appToast}</span>
+          </div>
+        </div>
       )}
     </div>
   )
