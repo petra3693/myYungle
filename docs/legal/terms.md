@@ -11,7 +11,7 @@
 
 # Terms of Use
 
-Last updated: August 26, 2026
+Last updated: August 27, 2026
 
 By using myJungle (“the App”), you agree to use it for its intended purpose: tracking and caring for your houseplants. These Terms form an agreement between you and Petra Szakacs (operating as Lumen Studio) (“we”, “us”, “the operator”), the operator of the App.
 
