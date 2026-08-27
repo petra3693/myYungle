@@ -305,6 +305,7 @@
     cursor: pointer;
   }
   .plant-tile__photo {
+    position: relative;
     aspect-ratio: 1 / 1;
     border-radius: 1.5rem;
     overflow: hidden;

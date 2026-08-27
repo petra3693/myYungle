@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { CHOSEN_APP_NAME } from '@/appConfig'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -35,7 +36,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
         style={{ background: '#0D0D0D', fontFamily: 'Inter, sans-serif' }}
       >
         <p style={{ fontFamily: "'Baloo 2', sans-serif", fontWeight: 700, fontSize: 20, color: '#fff' }}>
-          my Jungle hit a snag
+          {CHOSEN_APP_NAME} hit a snag
         </p>
         <p style={{ fontWeight: 500, fontSize: 14, color: '#8E8E93', maxWidth: 320, lineHeight: 1.5 }}>
           {this.state.message}

@@ -1,8 +1,9 @@
 import type { AppSettings, UserState } from '@/types/plant'
 
 // ─── Products & entitlement ────────────────────────────────────────────────
-// Configure these exact identifiers in the RevenueCat dashboard (and the
-// underlying App Store Connect / Play Console products) before shipping.
+// These identifiers must match the RevenueCat dashboard configuration
+// (and the underlying App Store Connect / Play Console products) EXACTLY —
+// a mismatch here silently breaks entitlement checks, not a build error.
 
 /** Exact RevenueCat entitlement identifier — note the literal space, matching the dashboard config. */
 export const ENTITLEMENT_PRO = 'myJungle Pro'
@@ -16,7 +17,12 @@ export const PRODUCT_LEGACY_ONETIME = 'myjungle_pro_onetime'
 /** Free-tier plant cap. Single tunable spot — see §1 of the monetization spec. */
 export const FREE_PLANT_LIMIT = 5
 
-/** 7 days by default; flip to 14 for the A/B variant via remote config once wired. */
+/**
+ * Fallback trial length shown only when the real StoreKit/Play intro offer
+ * hasn't loaded yet (or on web preview, which never has real product data) —
+ * see trialLengthFromIntroPrice below. Never used once the real offering
+ * data is in.
+ */
 export const TRIAL_DAYS = 7
 
 /** Show the lifetime win-back offer at most this often. */
@@ -128,20 +134,47 @@ export function canShowHabitUpsellCard(input: { alreadyShown: boolean; onboardin
 }
 
 // ─── Trial length (§8) ──────────────────────────────────────────────────────
-// Ships at 7 days. A 14-day A/B variant can be flipped on without a release by
-// writing an override to localStorage — no experiment framework needed yet.
+// The trial length shown on the paywall comes from the annual package's real
+// StoreKit/Play Billing intro offer — never a local constant a user could
+// override. If a product has no intro offer, no trial messaging is shown at
+// all (see trialLengthFromIntroPrice's null case).
 
-const TRIAL_DAYS_OVERRIDE_KEY = 'mj_trial_days_override'
+export type TrialPeriodUnit = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR'
 
-export function getTrialDays(): number {
-  try {
-    const raw = localStorage.getItem(TRIAL_DAYS_OVERRIDE_KEY)
-    const parsed = raw ? parseInt(raw, 10) : NaN
-    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 30) return parsed
-  } catch {
-    // Fall through to the default below.
+export interface TrialLength {
+  count: number
+  unit: TrialPeriodUnit
+}
+
+/** Maps an intro-price period unit to its i18n plural-key base (…_one/…_other). */
+export function trialUnitI18nKey(unit: TrialPeriodUnit): string {
+  switch (unit) {
+    case 'WEEK':
+      return 'paywall.trialUnitWeek'
+    case 'MONTH':
+      return 'paywall.trialUnitMonth'
+    case 'YEAR':
+      return 'paywall.trialUnitYear'
+    default:
+      return 'paywall.trialUnitDay'
   }
-  return TRIAL_DAYS
+}
+
+/**
+ * Derives the trial length from a product's real intro offer
+ * (RevenueCat's `PurchasesIntroPrice.periodNumberOfUnits`/`periodUnit`).
+ * Returns null when there is no intro offer — callers must not show any
+ * trial messaging in that case, not even a fabricated default.
+ */
+export function trialLengthFromIntroPrice(
+  introPrice: { periodNumberOfUnits: number; periodUnit: string } | null | undefined,
+): TrialLength | null {
+  if (!introPrice) return null
+  const unit: TrialPeriodUnit =
+    introPrice.periodUnit === 'WEEK' || introPrice.periodUnit === 'MONTH' || introPrice.periodUnit === 'YEAR'
+      ? introPrice.periodUnit
+      : 'DAY'
+  return { count: introPrice.periodNumberOfUnits, unit }
 }
 
 // ─── Paywall copy per trigger (§6) ──────────────────────────────────────────

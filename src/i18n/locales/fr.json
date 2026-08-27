@@ -87,7 +87,7 @@
     "title": "Langue"
   },
   "home": {
-    "title": "my Jungle",
+    "title": "myJungle",
     "totalPlants": "Total des plantes",
     "thirstyPlants": "Plantes assoiffées",
     "wateringRhythm": "Rythme d'arrosage",
@@ -145,7 +145,10 @@
     "editPlant": "Modifier la plante",
     "deletePlant": "Supprimer la plante",
     "deleteTitle": "Supprimer la plante ?",
-    "deleteBody": "Voulez-vous vraiment supprimer {{name}} ? Cette action est irréversible."
+    "deleteBody": "Voulez-vous vraiment supprimer {{name}} ? Cette action est irréversible.",
+    "toxicityUnknown": "Nous ne pouvons pas confirmer si cette plante est toxique pour les animaux. Vérifiez le nom de la plante pour une réponse plus précise.",
+    "verifyName": "Vérifier le nom",
+    "lowConfidenceHint": "Correspondance peu fiable — vérifiez le nom de la plante."
   },
   "growthHistory": {
     "title": "Historique de croissance",
@@ -249,7 +252,7 @@
     "termsOfUse": "Conditions d'utilisation",
     "privacyPolicy": "Politique de confidentialité",
     "impressum": "Mentions légales",
-    "footer": "Parent de plantes depuis {{year}} · my Jungle v{{version}}",
+    "footer": "Parent de plantes depuis {{year}} · myJungle v{{version}}",
     "resetConfirm": "Cela supprimera définitivement toutes vos plantes et vos réglages. Continuer ?"
   },
   "limitReached": {
@@ -274,7 +277,7 @@
     "annual": "Annuel",
     "popular": "Populaire",
     "bestValue": "Meilleure offre",
-    "trialThenPrice": "{{days}} jours gratuits, puis {{price}}",
+    "trialThenPrice": "Essai gratuit de {{length}}, puis {{price}}",
     "lifetime": "À vie",
     "lifetimeDesc": "Paiement unique — à vous pour toujours",
     "featuresUnlocked": "Fonctionnalités débloquées",
@@ -282,10 +285,10 @@
     "retry": "Réessayer",
     "loadingPrices": "Chargement des prix…",
     "pricingUnavailable": "Prix indisponibles",
-    "startTrial": "Démarrer l'essai gratuit de {{days}} jours",
+    "startTrial": "Démarrer l'essai gratuit ({{length}})",
     "getLifetimeAccess": "Obtenir un accès à vie",
     "subscribe": "S'abonner",
-    "trialLegal": "Gratuit pendant {{days}} jours, puis {{price}}/an. Annulable à tout moment avant la fin de l'essai.",
+    "trialLegal": "Gratuit pendant {{length}}, puis {{price}}/an. Annulable à tout moment avant la fin de l'essai.",
     "lifetimeLegal": "Paiement unique. À vous pour toujours — sans renouvellement.",
     "annualLegal": "Se renouvelle chaque année à {{price}}. Annulable à tout moment.",
     "monthlyLegal": "Se renouvelle chaque mois à {{price}}. Annulable à tout moment.",
@@ -314,7 +317,15 @@
     "subtitleDefault": "Débloquez l'expérience de soin complète, sans limites.",
     "monthsFree_one": "{{count}} mois gratuit",
     "monthsFree_other": "{{count}} mois gratuits",
-    "thePlanPrice": "le prix du forfait"
+    "thePlanPrice": "le prix du forfait",
+    "trialUnitDay_one": "{{count}} jour",
+    "trialUnitDay_other": "{{count}} jours",
+    "trialUnitWeek_one": "{{count}} semaine",
+    "trialUnitWeek_other": "{{count}} semaines",
+    "trialUnitMonth_one": "{{count}} mois",
+    "trialUnitMonth_other": "{{count}} mois",
+    "trialUnitYear_one": "{{count}} an",
+    "trialUnitYear_other": "{{count}} ans"
   },
   "weekday": {
     "mon": "Lundi",
@@ -361,5 +372,80 @@
     "customScheduleNote_other": "{{count}} plantes ont un calendrier personnalisé qui ne changera pas automatiquement.",
     "recalculateButton": "Recalculer tous les calendriers",
     "upToDateLabel": "Tous les calendriers à jour"
+  },
+  "legal": {
+    "terms": {
+      "lastUpdated": "Last updated: August 26, 2026",
+      "intro": "By using myJungle (“the App”), you agree to use it for its intended purpose: tracking and caring for your houseplants. These Terms form an agreement between you and Petra Szakacs (operating as Lumen Studio) (“we”, “us”, “the operator”), the operator of the App.",
+      "aiDisclaimer": "AI-generated plant identification, health diagnosis, and care guidance are provided for informational purposes only. They are generated automatically and may not always be accurate or complete. Always use your own judgment before acting on this guidance, especially where plant or pet safety is concerned — for example, toxicity warnings should never be treated as a substitute for veterinary or poison-control advice.",
+      "subscriptionsHeading": "Subscriptions",
+      "subscriptionsIntro": "myJungle Pro is offered as an auto-renewing subscription (Monthly or Annual) or as a one-time Lifetime purchase.",
+      "subscriptionsBilling": "Payment is charged to your Apple ID account at confirmation of purchase. The exact price and billing period for each plan are shown in the App before you confirm a purchase.",
+      "subscriptionsAutoRenew": "Subscriptions automatically renew for the same price and duration unless auto-renewal is turned off at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period.",
+      "subscriptionsManage": "You can manage your subscription, view its terms, and turn off auto-renewal at any time in your device's Account Settings after purchase. Deleting the App does not cancel your subscription.",
+      "subscriptionsTrial": "If the App offers a free trial, any unused portion of that trial is forfeited when you purchase a subscription during the trial period.",
+      "subscriptionsLifetime": "myJungle Pro Lifetime is a one-time, non-renewing purchase. It is not a subscription and does not auto-renew or expire; it grants permanent Pro access tied to the Apple ID / Google account that purchased it.",
+      "subscriptionsLegacy": "Users who previously purchased the legacy one-time “Pro unlock” keep permanent Pro access at no additional cost — this grandfathering is honored indefinitely and is not affected by later changes to pricing or plans.",
+      "disclaimerHeading": "Disclaimer of warranty",
+      "disclaimerBody": "The App and its AI-generated content are provided “as is”, without warranties of any kind, to the maximum extent permitted by applicable law. We do not guarantee that plant identification, watering schedules, or health/growth assessments will be accurate, complete, or suitable for your specific plants or circumstances.",
+      "changesHeading": "Changes to these Terms",
+      "changesBody": "We may update these Terms from time to time to reflect changes to the App, applicable law, or our operations. Continued use of the App after changes take effect constitutes your acceptance of the revised Terms. Material changes will be highlighted in the App where practical.",
+      "governingLawHeading": "Governing law",
+      "governingLawBody": "These Terms are governed by the laws of Germany, without regard to its conflict-of-law provisions, except where mandatory consumer-protection law in your country of residence provides otherwise.",
+      "contactHeading": "Contact",
+      "contactBody": "Questions about these Terms can be sent via the in-app feedback form, or to raving.pascal@gmail.com. Operator details are listed in the Impressum."
+    },
+    "privacy": {
+      "lastUpdated": "Last updated: August 26, 2026",
+      "intro": "myJungle (“the App”) helps you track plant watering schedules and plant care. This policy explains what data the App keeps on your device, what it sends elsewhere, who processes it, how long it is kept, and how you can delete it.",
+      "deviceDataHeading": "What stays on your device",
+      "deviceDataBody": "Your plant profiles (names, photos, watering schedules, care notes, health and growth history) and your app settings (language, notification preferences, subscription status cache) are stored locally on your device, in the App's local storage. This data is not uploaded to our own servers and is not visible to us.",
+      "sentDataHeading": "What we send elsewhere, and why",
+      "sentDataBody": "When you photograph a plant for identification, health diagnosis, or growth tracking, that photo is sent to our AI provider, Google (Gemini API), solely to generate the requested result (plant species, care profile, health assessment, or growth comparison). The photo and prompt are transmitted for that single request; we do not retain a copy of your photos on our own servers beyond what is needed to relay the request and return the result to your device.",
+      "feedbackDataBody": "If you submit feedback through the in-app feedback form, its text (and any photo you choose to attach) is delivered to us via our feedback-delivery provider so we can read and respond to it.",
+      "processorsHeading": "Who processes data on our behalf",
+      "processorsGoogle": "Google (Gemini API) — processes plant photos you submit for AI identification, health, and growth analysis. Google's own privacy policy governs how it handles that request data; we do not control Google's retention practices for API traffic.",
+      "processorsRevenueCat": "RevenueCat — manages subscriptions and purchase entitlements on our behalf. RevenueCat receives your purchase and subscription status from the App Store / Play Store so the App can unlock Pro features; it does not receive your payment card details.",
+      "processorsVercel": "Vercel — hosts the App's backend (serverless functions) that relay AI analysis requests and feedback submissions. Vercel processes this traffic as our hosting infrastructure provider.",
+      "noSelling": "We do not sell your personal data, and we do not use your plant photos to train our own models.",
+      "retentionHeading": "How long we keep data",
+      "retentionBody": "Data stored locally on your device (plants, photos, settings, history) is kept for as long as the App is installed, or until you delete it yourself. We do not keep a server-side copy of your plant data. Purchase and subscription records are retained by RevenueCat and the App Store / Play Store per their own retention policies, for as long as needed to support your subscription, provide refunds, and meet accounting/legal obligations.",
+      "deletionHeading": "How to delete your data",
+      "deletionBody": "You can permanently delete all locally stored plant data, photos, and settings at any time from Settings → Reset data inside the App. This action is immediate and cannot be undone. To also request deletion of purchase history held by Apple, Google, or RevenueCat, contact them directly, or contact us at the address below and we will forward a deletion request on your behalf where we are able to.",
+      "childrenHeading": "Children's privacy",
+      "childrenBody": "The App is not directed at children under 13 (or the minimum age required by your local law), and we do not knowingly collect personal data from children.",
+      "contactHeading": "Contact",
+      "contactBody": "For privacy questions or data deletion requests, use the in-app feedback form or contact us at raving.pascal@gmail.com. Operator details are listed in the Impressum.",
+      "changesHeading": "Changes to this policy",
+      "changesBody": "We may update this Privacy Policy from time to time to reflect changes to the App or applicable law. Continued use of the App after changes take effect constitutes your acceptance of the revised policy."
+    },
+    "impressum": {
+      "intro": "Information provided according to applicable imprint / provider identification requirements.",
+      "serviceHeading": "Service",
+      "serviceName": "myJungle Plant Watering Tracker",
+      "serviceWeb": "Web: https://www.lumenapp.studio/",
+      "operatorHeading": "Operator",
+      "operatorCompanyName": "Company / sole trader name: Petra Szakacs (operating as Lumen Studio)",
+      "operatorAddress": "Address: Einbecker Straße 64A, 10315 Berlin, Germany",
+      "operatorEmail": "Contact e-mail: raving.pascal@gmail.com",
+      "responsibleHeading": "Responsible for content",
+      "responsibleName": "Petra Szakacs",
+      "contactHeading": "Contact",
+      "contactBody": "Use the in-app feedback form for product questions, or the contact e-mail above for legal matters."
+    }
+  },
+  "notifications": {
+    "channelName": "Rappels d'arrosage",
+    "reminderTitle": "myJungle",
+    "reminderBody_one": "{{name}} attend de l'eau aujourd'hui",
+    "reminderBody_other": "{{count}} plantes attendent de l'eau aujourd'hui"
+  },
+  "privacyHint": {
+    "captureLine": "Les photos sont envoyées à Google Gemini pour l'analyse IA — jamais stockées sur nos serveurs ni utilisées à des fins publicitaires.",
+    "detailsLink": "Détails",
+    "introTitle": "Vos photos, traitées avec soin"
+  },
+  "aiDisclaimer": {
+    "line": "Estimation de l'IA à titre informatif, pas un avis vétérinaire ou professionnel."
   }
 }

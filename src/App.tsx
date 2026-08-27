@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n/i18n'
+import { CHOSEN_APP_NAME } from '@/appConfig'
 import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
 import { Purchases, LOG_LEVEL, type CustomerInfo, type PurchasesOffering, type PurchasesError } from '@revenuecat/purchases-capacitor'
 import Spline from '@splinetool/react-spline'
 import PlantPhoto from '@/components/PlantPhoto'
@@ -41,13 +43,19 @@ import {
   isFoundingMember,
   canShowLifetimeOffer,
   canShowHabitUpsellCard,
-  getTrialDays,
+  TRIAL_DAYS,
+  trialLengthFromIntroPrice,
+  trialUnitI18nKey,
   paywallCopyForSource,
   computeAnnualDiscountLabel,
   type PaywallSource,
+  type TrialLength,
 } from '@/lib/monetization'
 import { requestProPreview } from '@/lib/revenueCatPreview'
 import { logEvent } from '@/lib/analytics'
+import { LEGAL_BLOCKS, LEGAL_TITLE_KEYS, type LegalDoc } from '@/legal/legalContent'
+import { getDeviceTimezone, syncWateringNotifications } from '@/lib/notifications'
+import { captureNativePhoto, CameraSource, CaptureCancelledError } from '@/lib/cameraCapture'
 import { useUserState } from '@/hooks/useUserState'
 import { LANGUAGE_OPTIONS, LANGUAGE_STORAGE_KEY, normalizeAppLanguage, type AppLanguage } from '@/i18n/languages'
 import type { AppSettings, DayCode, HistoryEntry, LightNeed, Plant, PlantHealthLog, UserState, WaterNeed, WateringFrequency } from '@/types/plant'
@@ -62,7 +70,7 @@ const APP_VERSION = '1.0.0'
 const DEFAULT_SETTINGS: AppSettings = {
   hasCompletedOnboarding: false,
   onboardingCompletedAt: null,
-  pushNotifications: true,
+  pushNotifications: false,
   reminderTime: '09:00',
   timezone: 'UTC',
   isPro: false,
@@ -80,6 +88,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   proPreviewUsedAt: null,
   proPreviewExpiredPaywallShown: false,
   proPreviewBannerDismissed: false,
+  privacyIntroCardDismissed: false,
 }
 
 type Screen =
@@ -184,6 +193,12 @@ function confidenceLabel(value: 'low' | 'medium' | 'high'): number {
   if (value === 'high') return 95
   if (value === 'medium') return 80
   return 55
+}
+
+/** Below this, an AI species match is uncertain enough to prompt the user to double-check the name. */
+const LOW_CONFIDENCE_THRESHOLD = 70
+function isLowConfidence(confidence?: number): boolean {
+  return typeof confidence === 'number' && confidence < LOW_CONFIDENCE_THRESHOLD
 }
 
 // ─── Icons (thin stroke, rounded) ──────────────────────────────────────────────
@@ -370,7 +385,7 @@ function SplashScreen({ onNext }: { onNext: () => void }) {
         </svg>
       </div>
       <div className="text-animate text-center">
-        <div className="font-heading" style={{ fontSize: 26, color: '#000' }}>MYJUNGLE</div>
+        <div className="font-heading" style={{ fontSize: 26, color: '#000' }}>{CHOSEN_APP_NAME.toUpperCase()}</div>
         <div className="font-body" style={{ fontSize: 13, color: '#000', opacity: 0.6, marginTop: 4 }}>{t('splash.version', { version: APP_VERSION })}</div>
       </div>
     </div>
@@ -435,7 +450,7 @@ function OnboardingWelcome({ onNext, language, onPickLanguage }: { onNext: () =>
 interface CapturedPhoto { id: string; dataUrl: string }
 
 function BatchCaptureScreen({
-  title, subtitle, freeSlots, onBack, onDone, doneLabel, onSkip,
+  title, subtitle, freeSlots, onBack, onDone, doneLabel, onSkip, showPrivacyIntroCard, onDismissPrivacyIntroCard,
 }: {
   title: string
   subtitle: string
@@ -445,9 +460,13 @@ function BatchCaptureScreen({
   doneLabel: string
   /** Only passed for onboarding's own capture step — bulk-add has no "skip", there's nothing to skip past. */
   onSkip?: () => void
+  /** Shown once, ever — only the onboarding capture step passes this (not bulk-add). */
+  showPrivacyIntroCard?: boolean
+  onDismissPrivacyIntroCard?: () => void
 }) {
   const { t } = useTranslation()
   const [photos, setPhotos] = useState<CapturedPhoto[]>([])
+  const [showPrivacyDetails, setShowPrivacyDetails] = useState(false)
   const [busy, setBusy] = useState(false)
   // Set while the picker is open to replace one existing photo rather than append new ones.
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null)
@@ -505,6 +524,24 @@ function BatchCaptureScreen({
   async function openPicker(replaceId?: string) {
     const granted = await requestCameraPermission()
     if (!granted) return
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const dataUrl = await captureNativePhoto()
+        if (replaceId) {
+          setPhotos((prev) => prev.map((p) => (p.id === replaceId ? { ...p, dataUrl } : p)))
+        } else if (photos.length < limit) {
+          setPhotos((prev) => [...prev, { id: `${Date.now()}-${Math.random()}`, dataUrl }])
+        }
+      } catch (error) {
+        if (!(error instanceof CaptureCancelledError)) {
+          console.error('[myJungle] BatchCapture: native capture failed:', error)
+          showToast(error instanceof Error ? error.message : t('common.couldNotAnalyzePhoto'))
+        }
+      }
+      return
+    }
+
     setReplaceTargetId(replaceId ?? null)
     const input = fileInputRef.current
     if (!input) return
@@ -531,6 +568,33 @@ function BatchCaptureScreen({
       <div className="flex items-center px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-4 shrink-0">
         {onBack ? <IconCircleBtn onClick={onBack} label={t('common.back')}><IconChevronLeft /></IconCircleBtn> : <div style={{ width: 44 }} />}
       </div>
+      {showPrivacyIntroCard && (
+        <div className="px-5 shrink-0">
+          <div className="rounded-2xl p-4 mb-4 relative" style={{ background: '#E6E6E6' }}>
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label={t('common.dismiss')}
+              onClick={onDismissPrivacyIntroCard}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onDismissPrivacyIntroCard?.() }}
+              className="absolute flex items-center justify-center rounded-full"
+              style={{ top: 10, right: 10, width: 24, height: 24, color: '#8E8E93' }}
+            >
+              <IconX size={14} />
+            </div>
+            <div className="flex items-center gap-2 mb-1 pr-6">
+              <div style={{ color: '#111' }}><IconLock size={16} /></div>
+              <span className="font-heading" style={{ fontSize: 13, color: '#111', textTransform: 'uppercase' }}>{t('privacyHint.introTitle')}</span>
+            </div>
+            <p className="font-body" style={{ fontSize: 12, color: '#666', lineHeight: 1.4 }}>
+              {t('privacyHint.captureLine')}{' '}
+              <button type="button" onClick={() => setShowPrivacyDetails(true)} className="font-body" style={{ fontSize: 12, color: '#666', textDecoration: 'underline' }}>
+                {t('privacyHint.detailsLink')}
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
       <div className="px-5 shrink-0">
         <p className="font-body" style={{ fontSize: 14, color: '#666' }}>{subtitle}</p>
         {freeSlots !== null && (
@@ -629,6 +693,9 @@ function BatchCaptureScreen({
           {doneLabel}
           <span className="btn-forward__arrow"><IconChevronRight size={20} /></span>
         </button>
+        <div className="mt-3">
+          <PrivacyHintLine onShowDetails={() => setShowPrivacyDetails(true)} />
+        </div>
         {onSkip && (
           <button type="button" onClick={onSkip} className="font-body w-full text-center mt-3" style={{ fontSize: 13, color: '#8E8E93', textDecoration: 'underline' }}>
             {t('onboarding.skipForNow')}
@@ -642,6 +709,7 @@ function BatchCaptureScreen({
           </div>
         </div>
       )}
+      {showPrivacyDetails && <PrivacyDetailsSheet onClose={() => setShowPrivacyDetails(false)} />}
     </div>
   )
 }
@@ -811,11 +879,11 @@ function nextWaterStatus(plant: Plant, todayIdx: number, t: (key: string, opts?:
 }
 
 function HomeScreen({
-  plants, todayIdx, onOpenPlant, showHabitCard, onDismissHabitCard, onShowHabitPro,
+  plants, todayIdx, onOpenPlant, onEditPlant, showHabitCard, onDismissHabitCard, onShowHabitPro,
   showProPreviewBanner, onDismissProPreviewBanner, onTryProPreview,
   notificationsEnabled, onOpenNotificationSettings,
 }: {
-  plants: Plant[]; todayIdx: number; onOpenPlant: (p: Plant) => void
+  plants: Plant[]; todayIdx: number; onOpenPlant: (p: Plant) => void; onEditPlant: (p: Plant) => void
   showHabitCard: boolean; onDismissHabitCard: () => void; onShowHabitPro: () => void
   showProPreviewBanner: boolean; onDismissProPreviewBanner: () => void
   onTryProPreview: () => Promise<{ ok: boolean; error?: string }>
@@ -945,10 +1013,32 @@ function HomeScreen({
         <div className="grid grid-cols-2 gap-3">
           {plants.map((p) => {
             const status = nextWaterStatus(p, todayIdx, t)
+            const lowConfidenceId = isLowConfidence(p.confidence)
             return (
-              <button key={p.id} type="button" onClick={() => onOpenPlant(p)} className="plant-tile text-left">
+              <div
+                key={p.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onOpenPlant(p)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpenPlant(p) }}
+                className="plant-tile text-left"
+              >
                 <div className="plant-tile__photo">
                   <PlantPhoto photo={p.photo} alt={p.name} className="w-full h-full object-cover block" />
+                  {lowConfidenceId && (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      aria-label={t('plantDetail.lowConfidenceHint')}
+                      title={t('plantDetail.lowConfidenceHint')}
+                      onClick={(e) => { e.stopPropagation(); onEditPlant(p) }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onEditPlant(p) } }}
+                      className="plant-tile__badge flex items-center gap-1"
+                    >
+                      <IconAlert size={11} />
+                      {t('plantDetail.verifyName')}
+                    </div>
+                  )}
                 </div>
                 <div className="plant-tile__label">
                   <div className="font-heading truncate" style={{ fontSize: 15, color: '#111' }}>{p.name}</div>
@@ -957,7 +1047,7 @@ function HomeScreen({
                     <span className="font-body truncate" style={{ fontSize: 11, color: '#8E8E93' }}>{status.label}</span>
                   </div>
                 </div>
-              </button>
+              </div>
             )
           })}
         </div>
@@ -1054,6 +1144,8 @@ function PlantDetailScreen({
   const hasAccess = canAccessProFeatures(user)
   const wateringFrequencyLabel = frequencyLabel(plant.wateringFrequency, plant.wateringDays.length)
   const health = computeHealthStatus(plant, todayIdx, t)
+  const lowConfidenceId = isLowConfidence(plant.confidence)
+  const toxicityUncertain = plant.isToxicToPets === null || lowConfidenceId
 
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
@@ -1080,13 +1172,36 @@ function PlantDetailScreen({
               <span className="badge-pro-dark shrink-0" style={{ fontSize: 10, padding: '3px 10px' }}>PRO</span>
             )}
           </div>
-          {plant.isToxicToPets === true && (
+          {lowConfidenceId && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="flex items-center gap-1.5 self-start"
+              style={{ color: '#8E8E93' }}
+            >
+              <IconAlert size={13} />
+              <span className="font-body" style={{ fontSize: 12, textDecoration: 'underline' }}>{t('plantDetail.verifyName')}</span>
+            </button>
+          )}
+          {toxicityUncertain ? (
+            <div className="flex items-center gap-2 rounded-full px-4 py-3" style={{ background: '#f3ecec' }}>
+              <IconAlert size={18} />
+              <span className="font-body font-medium flex-1 min-w-0" style={{ fontSize: 13 }}>{t('plantDetail.toxicityUnknown')}</span>
+              <button
+                type="button"
+                onClick={onEdit}
+                className="font-body font-medium shrink-0"
+                style={{ fontSize: 12, textDecoration: 'underline' }}
+              >
+                {t('plantDetail.verifyName')}
+              </button>
+            </div>
+          ) : plant.isToxicToPets === true ? (
             <div className="flex items-center gap-2 rounded-full px-4 py-3" style={{ background: '#f3ecec' }}>
               <IconAlert size={18} />
               <span className="font-body font-medium" style={{ fontSize: 13 }}>{t('plantDetail.toxicToPets')}</span>
             </div>
-          )}
-          {plant.isToxicToPets === false && (
+          ) : (
             <div className="flex items-center gap-2 rounded-full px-4 py-3" style={{ background: '#e8f9ee' }}>
               <IconPaw size={18} />
               <span className="font-body font-medium" style={{ fontSize: 13 }}>{t('plantDetail.petSafe')}</span>
@@ -1108,6 +1223,9 @@ function PlantDetailScreen({
                 <div className="flex items-center justify-between mt-3">
                   <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>{t('plantDetail.wateringRhythm')}</span>
                   <span className="font-body" style={{ fontSize: 12, color: '#8E8E93' }}>{health.score}% {health.label}</span>
+                </div>
+                <div className="mt-2">
+                  <AiDisclaimerLine />
                 </div>
               </>
             ) : (
@@ -1693,6 +1811,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
   const [analyzing, setAnalyzing] = useState(false)
   const [remindersOn, setRemindersOn] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
+  const [showPrivacyDetails, setShowPrivacyDetails] = useState(false)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
@@ -1701,10 +1820,8 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
     setTimeout(() => setToast(null), 3000)
   }
 
-  async function handleFile(file: File) {
-    console.log(`[myJungle] ManualAdd: handling picked file "${file.name}"...`)
+  async function processPhotoDataUrl(compressed: string) {
     try {
-      const compressed = await readAndCompressPhotoFile(file)
       setPhoto(compressed)
       setDraft(null)
       setAnalyzing(true)
@@ -1723,9 +1840,39 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
     }
   }
 
+  async function handleFile(file: File) {
+    console.log(`[myJungle] ManualAdd: handling picked file "${file.name}"...`)
+    try {
+      const compressed = await readAndCompressPhotoFile(file)
+      await processPhotoDataUrl(compressed)
+    } catch (error) {
+      console.error('[myJungle] manual add compression failed:', error)
+      showToast(error instanceof Error ? error.message : t('common.couldNotAnalyzePhoto'))
+    }
+  }
+
+  async function handleNativeCapture(source: CameraSource) {
+    const granted = await requestCameraPermission()
+    if (!granted) return
+    try {
+      const dataUrl = await captureNativePhoto(source)
+      await processPhotoDataUrl(dataUrl)
+    } catch (error) {
+      if (error instanceof CaptureCancelledError) return
+      console.error('[myJungle] ManualAdd: native capture failed:', error)
+      showToast(error instanceof Error ? error.message : t('common.couldNotAnalyzePhoto'))
+    }
+  }
+
   async function openCamera() {
+    if (Capacitor.isNativePlatform()) { await handleNativeCapture(CameraSource.Camera); return }
     const granted = await requestCameraPermission()
     if (granted) cameraInputRef.current?.click()
+  }
+
+  function openGallery() {
+    if (Capacitor.isNativePlatform()) { void handleNativeCapture(CameraSource.Photos); return }
+    galleryInputRef.current?.click()
   }
 
   const wateringFrequencyLabel = draft ? frequencyLabel(draft.wateringFrequency, draft.wateringDays.length) : ''
@@ -1756,12 +1903,15 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
           <button type="button" onClick={() => void openCamera()} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>{t('manualAdd.takePhoto')}</button>
           <button
             type="button"
-            onClick={() => galleryInputRef.current?.click()}
+            onClick={openGallery}
             className="btn-outline-ink w-full mt-3"
             style={{ height: 52, fontSize: 15 }}
           >
             {t('manualAdd.fromGallery')}
           </button>
+          <div className="mt-3">
+            <PrivacyHintLine onShowDetails={() => setShowPrivacyDetails(true)} />
+          </div>
 
           {analyzing && (
             <div className="flex flex-col items-center gap-2 mt-4">
@@ -1784,6 +1934,9 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
                   className="font-heading px-4"
                   style={{ height: 48, fontSize: 16, color: '#111', background: '#E6E6E6', borderRadius: 14 }}
                 />
+                {isLowConfidence(draft.confidence) && (
+                  <span className="font-body" style={{ fontSize: 11, color: '#8E8E93' }}>{t('plantDetail.lowConfidenceHint')}</span>
+                )}
               </label>
 
               <label className="flex flex-col gap-1.5 mt-4">
@@ -1827,6 +1980,10 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
                 <Toggle on={remindersOn} onChange={setRemindersOn} />
               </div>
 
+              <div className="mt-3">
+                <AiDisclaimerLine />
+              </div>
+
               {!isPro && (
                 <p className="font-body text-center mt-4" style={{ fontSize: 12, color: '#8E8E93' }}>
                   {t('manualAdd.slotsUsed', { used: usedSlots, total: FREE_PLANT_LIMIT })}
@@ -1846,6 +2003,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
           </div>
         </div>
       )}
+      {showPrivacyDetails && <PrivacyDetailsSheet onClose={() => setShowPrivacyDetails(false)} />}
     </div>
   )
 }
@@ -1919,6 +2077,9 @@ function HealthReportCard({ photo, plantName, scannedAt, result }: {
             ))}
           </div>
         </div>
+      </div>
+      <div className="mt-3">
+        <AiDisclaimerLine />
       </div>
     </>
   )
@@ -2018,17 +2179,23 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
   const [scannedAt, setScannedAt] = useState<string | null>(null)
   const [showAttachPicker, setShowAttachPicker] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const [showPrivacyDetails, setShowPrivacyDetails] = useState(false)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
-  async function handleFile(file: File) {
+  function showToast(message: string) {
+    setToast(message)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  async function processPhotoDataUrl(compressed: string) {
+    setPhoto(compressed)
+    setResult(null)
+    setError(null)
+    setSaved(false)
+    setAnalyzing(true)
     try {
-      const compressed = await readAndCompressPhotoFile(file)
-      setPhoto(compressed)
-      setResult(null)
-      setError(null)
-      setSaved(false)
-      setAnalyzing(true)
       const outcome = await withMinDelay(analyzePlantHealthImage(compressed, language), 700)
       if (outcome.ok) {
         setResult(outcome.data)
@@ -2041,6 +2208,29 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
       setError(t('common.couldNotAnalyzePhoto'))
     } finally {
       setAnalyzing(false)
+    }
+  }
+
+  async function handleFile(file: File) {
+    try {
+      const compressed = await readAndCompressPhotoFile(file)
+      await processPhotoDataUrl(compressed)
+    } catch (error) {
+      console.error('[myJungle] health check compression failed:', error)
+      showToast(error instanceof Error ? error.message : t('common.couldNotAnalyzePhoto'))
+    }
+  }
+
+  async function handleNativeCapture(source: CameraSource) {
+    const granted = await requestCameraPermission()
+    if (!granted) return
+    try {
+      const dataUrl = await captureNativePhoto(source)
+      await processPhotoDataUrl(dataUrl)
+    } catch (error) {
+      if (error instanceof CaptureCancelledError) return
+      console.error('[myJungle] health check native capture failed:', error)
+      showToast(error instanceof Error ? error.message : t('common.couldNotAnalyzePhoto'))
     }
   }
 
@@ -2071,8 +2261,14 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
   }
 
   async function openCamera() {
+    if (Capacitor.isNativePlatform()) { await handleNativeCapture(CameraSource.Camera); return }
     const granted = await requestCameraPermission()
     if (granted) cameraInputRef.current?.click()
+  }
+
+  function openGallery() {
+    if (Capacitor.isNativePlatform()) { void handleNativeCapture(CameraSource.Photos); return }
+    galleryInputRef.current?.click()
   }
 
   if (step === 'picker') {
@@ -2107,18 +2303,21 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
       </div>
       <div className="scroll-y flex-1 px-5 pb-6">
         {!photo && (
-          <div className="dash-picker w-full flex flex-col items-center justify-center gap-4" style={{ height: 260 }}>
+          <div className="dash-picker w-full flex flex-col items-center justify-center gap-4" style={{ minHeight: 260 }}>
             <div style={{ color: GREEN }}><IconNavHealth size={30} /></div>
             <div className="flex gap-3 w-full px-6">
               <button type="button" onClick={() => void openCamera()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>{t('common.takePhoto')}</button>
               <button
                 type="button"
-                onClick={() => galleryInputRef.current?.click()}
+                onClick={openGallery}
                 className="font-heading flex-1"
                 style={{ height: 48, fontSize: 13, textTransform: 'uppercase', borderRadius: 9999, background: 'transparent', border: '1.5px solid #fff', color: '#fff' }}
               >
                 {t('common.fromGallery')}
               </button>
+            </div>
+            <div className="w-full px-6">
+              <PrivacyHintLine onShowDetails={() => setShowPrivacyDetails(true)} />
             </div>
           </div>
         )}
@@ -2192,6 +2391,14 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
           </div>
         </>
       )}
+      {toast && (
+        <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(24px + env(safe-area-inset-bottom,0px))' }}>
+          <div className="rounded-2xl px-4 py-3 text-center" style={{ background: '#000' }}>
+            <span className="font-body" style={{ fontSize: 13, color: '#fff' }}>{toast}</span>
+          </div>
+        </div>
+      )}
+      {showPrivacyDetails && <PrivacyDetailsSheet onClose={() => setShowPrivacyDetails(false)} />}
     </div>
   )
 }
@@ -2205,17 +2412,23 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<AnalyzePlantGrowthResult | null>(null)
   const [saved, setSaved] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const [showPrivacyDetails, setShowPrivacyDetails] = useState(false)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
-  async function handleFile(file: File) {
+  function showToast(message: string) {
+    setToast(message)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  async function processPhotoDataUrl(compressed: string) {
+    setPhoto(compressed)
+    setResult(null)
+    setError(null)
+    setSaved(false)
+    setAnalyzing(true)
     try {
-      const compressed = await readAndCompressPhotoFile(file)
-      setPhoto(compressed)
-      setResult(null)
-      setError(null)
-      setSaved(false)
-      setAnalyzing(true)
       const outcome = await withMinDelay(analyzePlantGrowthImage(compressed, language), 700)
       if (outcome.ok) {
         setResult(outcome.data)
@@ -2227,6 +2440,29 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
       setError(t('common.couldNotAnalyzePhoto'))
     } finally {
       setAnalyzing(false)
+    }
+  }
+
+  async function handleFile(file: File) {
+    try {
+      const compressed = await readAndCompressPhotoFile(file)
+      await processPhotoDataUrl(compressed)
+    } catch (error) {
+      console.error('[myJungle] growth check compression failed:', error)
+      showToast(error instanceof Error ? error.message : t('common.couldNotAnalyzePhoto'))
+    }
+  }
+
+  async function handleNativeCapture(source: CameraSource) {
+    const granted = await requestCameraPermission()
+    if (!granted) return
+    try {
+      const dataUrl = await captureNativePhoto(source)
+      await processPhotoDataUrl(dataUrl)
+    } catch (error) {
+      if (error instanceof CaptureCancelledError) return
+      console.error('[myJungle] growth check native capture failed:', error)
+      showToast(error instanceof Error ? error.message : t('common.couldNotAnalyzePhoto'))
     }
   }
 
@@ -2253,8 +2489,14 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
   }
 
   async function openCamera() {
+    if (Capacitor.isNativePlatform()) { await handleNativeCapture(CameraSource.Camera); return }
     const granted = await requestCameraPermission()
     if (granted) cameraInputRef.current?.click()
+  }
+
+  function openGallery() {
+    if (Capacitor.isNativePlatform()) { void handleNativeCapture(CameraSource.Photos); return }
+    galleryInputRef.current?.click()
   }
 
   return (
@@ -2277,13 +2519,14 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
               <button type="button" onClick={() => void openCamera()} className="btn-fill flex-1" style={{ height: 48, fontSize: 13 }}>{t('common.takePhoto')}</button>
               <button
                 type="button"
-                onClick={() => galleryInputRef.current?.click()}
+                onClick={openGallery}
                 className="font-heading flex-1"
                 style={{ height: 48, fontSize: 13, textTransform: 'uppercase', borderRadius: 9999, background: 'transparent', border: '1.5px solid #fff', color: '#fff' }}
               >
                 {t('common.fromGallery')}
               </button>
             </div>
+            <PrivacyHintLine onShowDetails={() => setShowPrivacyDetails(true)} />
           </div>
         )}
 
@@ -2339,6 +2582,9 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
                 <p className="font-body mt-1" style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>{result.summary}</p>
               </div>
             </div>
+            <div className="mt-3">
+              <AiDisclaimerLine />
+            </div>
           </>
         )}
       </div>
@@ -2359,6 +2605,14 @@ function GrowthCheckScreen({ plant, onBack, onSave, language }: {
           </button>
         </div>
       )}
+      {toast && (
+        <div className="fixed left-5 right-5 z-[80]" style={{ bottom: 'calc(24px + env(safe-area-inset-bottom,0px))' }}>
+          <div className="rounded-2xl px-4 py-3 text-center" style={{ background: '#000' }}>
+            <span className="font-body" style={{ fontSize: 13, color: '#fff' }}>{toast}</span>
+          </div>
+        </div>
+      )}
+      {showPrivacyDetails && <PrivacyDetailsSheet onClose={() => setShowPrivacyDetails(false)} />}
     </div>
   )
 }
@@ -2458,18 +2712,29 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
   settings: AppSettings; user: UserState; onSave: (s: AppSettings) => void
   onExport: () => void; onReset: () => void; onShowPro: () => void; onOpenLegal: (doc: LegalDoc) => void
   language: AppLanguage; onPickLanguage: () => void; onChangePrimaryWateringDay: (day: number) => void
-  onToggleNotifications: () => void
+  onToggleNotifications: () => Promise<void>
 }) {
   const { t } = useTranslation()
   const [showNotifSettings, setShowNotifSettings] = useState(false)
   const [showDayPicker, setShowDayPicker] = useState(false)
+  const [permissionStatus, setPermissionStatus] = useState<NotificationPermissionStatus>(
+    () => (Capacitor.isNativePlatform() ? 'prompt' : 'unavailable'),
+  )
+
+  useEffect(() => {
+    void checkNotificationPermissionStatus().then(setPermissionStatus)
+  }, [])
 
   function handleExpandNotifSettings() {
+    // Expanding this section is just revealing the reminder-time picker — it
+    // shouldn't prompt for OS permission on its own. Only actually turning the
+    // "Watering reminders" toggle on does that (see handleToggleWateringReminders).
     setShowNotifSettings((v) => !v)
-    // Interacting with any notification-related setting should prime the OS
-    // permission prompt the first time — safe to call every time, it's a
-    // no-op once the user has already granted or denied it.
-    void requestNotificationPermission()
+  }
+
+  async function handleToggleWateringReminders() {
+    await onToggleNotifications()
+    setPermissionStatus(await checkNotificationPermissionStatus())
   }
 
   return (
@@ -2528,9 +2793,16 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
             </div>
           </div>
         )}
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
-          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>{t('settings.wateringReminders')}</span>
-          <Toggle on={settings.pushNotifications} onChange={onToggleNotifications} />
+        <div style={{ borderBottom: '1px solid #eee' }}>
+          <div className="flex items-center justify-between px-5 py-4">
+            <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>{t('settings.wateringReminders')}</span>
+            <Toggle on={settings.pushNotifications} onChange={() => void handleToggleWateringReminders()} />
+          </div>
+          {!settings.pushNotifications && permissionStatus === 'denied' && (
+            <p className="font-body" style={{ fontSize: 12, color: '#8E8E93', padding: '0 20px 16px' }}>
+              {t('notificationSettings.deniedHint')}
+            </p>
+          )}
         </div>
         <button type="button" onClick={() => setShowDayPicker(true)} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
           <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>{t('settings.wateringDay')}</span>
@@ -2584,59 +2856,9 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
   )
 }
 
-type LegalDoc = 'terms' | 'privacy' | 'impressum'
-
-const LEGAL_TITLE_KEYS: Record<LegalDoc, string> = {
-  terms: 'settings.termsOfUse',
-  privacy: 'settings.privacyPolicy',
-  impressum: 'settings.impressum',
-}
-
-// Body text is a placeholder pending real legal copy, so it stays English-only
-// (translating throwaway text ahead of replacement isn't worth the effort).
-const LEGAL_CONTENT: Record<LegalDoc, { title: string; body: string }> = {
-  terms: {
-    title: 'Terms of Use',
-    body:
-      '[Placeholder — replace before publishing]\n\n' +
-      'By using myJungle, you agree to use the app for its intended purpose of tracking and caring for your houseplants. ' +
-      'AI-generated plant identification, health, and care guidance is provided for informational purposes only and may not always be accurate — always use your own judgment for plant and pet safety.\n\n' +
-      'Subscriptions. myJungle Pro Monthly and myJungle Pro Annual are auto-renewing subscriptions. ' +
-      'Payment is charged to your Apple ID account at confirmation of purchase. ' +
-      'Subscriptions automatically renew for the same price and duration unless auto-renew is turned off at least 24 hours before the end of the current period. ' +
-      'Your account will be charged for renewal within 24 hours prior to the end of the current period. ' +
-      'You can manage your subscription and turn off auto-renewal at any time in your device’s Account Settings after purchase. ' +
-      'Any unused portion of a free trial period will be forfeited when you purchase a subscription, where applicable. ' +
-      'myJungle Pro Lifetime is a one-time, non-renewing purchase that grants permanent Pro access on the account that bought it. ' +
-      'Users who bought the legacy one-time Pro unlock keep permanent Pro access at no extra cost.\n\n' +
-      'We may update these terms from time to time; continued use of the app after changes constitutes acceptance.',
-  },
-  privacy: {
-    title: 'Privacy Policy',
-    body:
-      '[Placeholder — replace before publishing]\n\n' +
-      'myJungle stores your plants, photos, and settings locally on your device. ' +
-      'Photos you capture are sent to our AI provider (Google Gemini) solely to identify plants and diagnose health issues, and are not stored by us beyond what your device retains. ' +
-      'Purchases and subscription status are processed by RevenueCat and the App Store on our behalf; we receive purchase and entitlement status, not your payment details. ' +
-      'We do not sell your personal data. ' +
-      'Contact us at [your-support-email@example.com] with any privacy questions or data deletion requests.',
-  },
-  impressum: {
-    title: 'Impressum',
-    body:
-      '[Placeholder — replace before publishing with your real legal details]\n\n' +
-      'Company name: [Your Company / Sole Trader Name]\n' +
-      'Address: [Street, City, Postal Code, Country]\n' +
-      'Contact: [email@example.com]\n' +
-      'Registration number (if applicable): [—]\n' +
-      'VAT ID (if applicable): [—]\n\n' +
-      'Responsible for content: [Your Name]',
-  },
-}
-
 function LegalScreen({ doc, onBack }: { doc: LegalDoc; onBack: () => void }) {
   const { t } = useTranslation()
-  const content = LEGAL_CONTENT[doc]
+  const blocks = LEGAL_BLOCKS[doc]
   return (
     <div className="app-shell fixed inset-0 flex flex-col">
       <div className="flex items-center justify-between px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 shrink-0">
@@ -2644,10 +2866,85 @@ function LegalScreen({ doc, onBack }: { doc: LegalDoc; onBack: () => void }) {
         <span className="font-heading" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>{t(LEGAL_TITLE_KEYS[doc])}</span>
         <div style={{ width: 44 }} />
       </div>
-      <div className="scroll-y flex-1 px-5 pb-6">
-        <p className="font-body" style={{ fontSize: 14, color: '#ccc', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{content.body}</p>
+      <div className="scroll-y flex-1 px-5 pb-6 flex flex-col gap-3">
+        {blocks.map((block, i) =>
+          block.type === 'heading' ? (
+            <span key={i} className="font-heading" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', marginTop: i === 0 ? 0 : 8 }}>
+              {t(`legal.${doc}.${block.key}`)}
+            </span>
+          ) : (
+            <p key={i} className="font-body" style={{ fontSize: 14, color: '#ccc', lineHeight: 1.7 }}>
+              {t(`legal.${doc}.${block.key}`)}
+            </p>
+          ),
+        )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Bottom-sheet presentation of the same 'privacy' document LegalScreen shows
+ * full-screen — used from mid-flow capture screens (batch capture, manual
+ * add, health/growth scan) so opening it never unmounts the screen underneath
+ * and loses in-progress state (photos already picked, a scan already
+ * running). Same content source (LEGAL_BLOCKS.privacy + legal.privacy.* i18n
+ * keys) as LegalScreen, just re-themed for the light sheet-panel background
+ * instead of LegalScreen's dark app-shell.
+ */
+function PrivacyDetailsSheet({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
+  function close() { setOpen(false); setTimeout(onClose, 180) }
+  const blocks = LEGAL_BLOCKS.privacy
+  return (
+    <>
+      <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={close} />
+      <div className="fixed left-0 right-0 bottom-0 z-[70]">
+        <div className={`sheet-panel ${open ? 'is-open' : ''} p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3`} style={{ maxHeight: '80vh' }}>
+          <div className="flex items-center justify-between shrink-0">
+            <span className="font-heading" style={{ fontSize: 18 }}>{t(LEGAL_TITLE_KEYS.privacy)}</span>
+            <IconCircleBtn onClick={close} label={t('common.close')}><IconX size={16} /></IconCircleBtn>
+          </div>
+          <div className="scroll-y flex flex-col gap-3">
+            {blocks.map((block, i) =>
+              block.type === 'heading' ? (
+                <span key={i} className="font-heading" style={{ fontSize: 12, color: '#8E8E93', textTransform: 'uppercase', marginTop: i === 0 ? 0 : 8 }}>
+                  {t(`legal.privacy.${block.key}`)}
+                </span>
+              ) : (
+                <p key={i} className="font-body" style={{ fontSize: 13, color: '#444', lineHeight: 1.6 }}>
+                  {t(`legal.privacy.${block.key}`)}
+                </p>
+              ),
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+/** Quiet, one-line photo-privacy disclosure shown near every capture button, with a link to the full privacy sheet. */
+function AiDisclaimerLine({ color = '#8E8E93' }: { color?: string }) {
+  const { t } = useTranslation()
+  return (
+    <p className="font-body text-center" style={{ fontSize: 11, color, lineHeight: 1.4 }}>
+      {t('aiDisclaimer.line')}
+    </p>
+  )
+}
+
+function PrivacyHintLine({ onShowDetails, color = '#8E8E93' }: { onShowDetails: () => void; color?: string }) {
+  const { t } = useTranslation()
+  return (
+    <p className="font-body text-center" style={{ fontSize: 11, color, lineHeight: 1.4 }}>
+      {t('privacyHint.captureLine')}{' '}
+      <button type="button" onClick={onShowDetails} className="font-body" style={{ fontSize: 11, color, textDecoration: 'underline' }}>
+        {t('privacyHint.detailsLink')}
+      </button>
+    </p>
   )
 }
 
@@ -2727,10 +3024,17 @@ function ProUnlockScreen({
   const lifetimePkg = offering?.lifetime ?? null
   const selectedPkg = selected === 'annual' ? annualPkg : selected === 'monthly' ? monthlyPkg : lifetimePkg
   const ready = offeringsStatus === 'ready' && selectedPkg !== null
-  // Annual always carries the trial per §1 — when the real product data isn't
-  // available (web/dev preview), still show trial messaging using the
-  // fallback price so the UI can be reviewed end to end.
-  const hasTrial = selected === 'annual' && (annualPkg ? !!annualPkg.product.introPrice : isWebPreview)
+  // Trial length always comes from the annual package's real intro offer —
+  // when there isn't one, no trial messaging is shown at all. Web/dev preview
+  // never has a real product, so it falls back to TRIAL_DAYS purely so the
+  // UI can be reviewed end to end; that fallback never reaches a real device.
+  const trialLength: TrialLength | null = annualPkg
+    ? trialLengthFromIntroPrice(annualPkg.product.introPrice)
+    : isWebPreview
+      ? { count: TRIAL_DAYS, unit: 'DAY' }
+      : null
+  const hasTrial = selected === 'annual' && trialLength !== null
+  const trialLengthLabel = trialLength ? t(trialUnitI18nKey(trialLength.unit), { count: trialLength.count }) : null
   const discountLabel = annualPkg && monthlyPkg
     ? computeAnnualDiscountLabel(monthlyPkg.product.price, annualPkg.product.price, t)
     : isWebPreview
@@ -2739,7 +3043,7 @@ function ProUnlockScreen({
   const monthlyPriceLabel = monthlyPkg ? `${monthlyPkg.product.priceString}/mo` : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.monthly.toFixed(2)}/mo` : '—'
   const annualPriceLabel = annualPkg ? `${annualPkg.product.priceString}/yr` : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.annual.toFixed(2)}/yr` : '—'
   const lifetimePriceLabel = lifetimePkg ? lifetimePkg.product.priceString : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.lifetime.toFixed(2)}` : '—'
-  const annualTrialLabel = hasTrial ? t('paywall.trialThenPrice', { days: getTrialDays(), price: annualPriceLabel }) : null
+  const annualTrialLabel = hasTrial && trialLengthLabel ? t('paywall.trialThenPrice', { length: trialLengthLabel, price: annualPriceLabel }) : null
   const annualBasePriceLabel = annualPkg ? annualPkg.product.priceString : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.annual.toFixed(2)}` : t('paywall.thePlanPrice')
 
   useEffect(() => {
@@ -2952,15 +3256,15 @@ function ProUnlockScreen({
               ? t('paywall.loadingPrices')
               : !ready
                 ? t('paywall.pricingUnavailable')
-                : hasTrial
-                  ? t('paywall.startTrial', { days: getTrialDays() })
+                : hasTrial && trialLengthLabel
+                  ? t('paywall.startTrial', { length: trialLengthLabel })
                   : selected === 'lifetime'
                     ? t('paywall.getLifetimeAccess')
                     : t('paywall.subscribe')}
         </button>
         <p className="font-body text-center mt-3" style={{ fontSize: 11, color: '#8E8E93', lineHeight: 1.4 }}>
-          {hasTrial
-            ? t('paywall.trialLegal', { days: getTrialDays(), price: annualBasePriceLabel })
+          {hasTrial && trialLengthLabel
+            ? t('paywall.trialLegal', { length: trialLengthLabel, price: annualBasePriceLabel })
             : selected === 'lifetime'
               ? t('paywall.lifetimeLegal')
               : selected === 'annual'
@@ -2968,7 +3272,7 @@ function ProUnlockScreen({
                 : t('paywall.monthlyLegal', { price: monthlyPkg?.product.priceString ?? t('paywall.thePlanPrice') })}
         </p>
 
-        {isWebPreview && (
+        {import.meta.env.DEV && isWebPreview && (
           <button
             type="button"
             onClick={() => onSimulateWebPurchase(selected)}
@@ -3101,7 +3405,7 @@ function LifetimeOfferScreen({ offering, offeringsStatus, onDismiss, onPurchased
         <p className="font-body text-center mt-3" style={{ fontSize: 11, color: '#8E8E93', lineHeight: 1.4 }}>
           {t('paywall.lifetimeLegal')}
         </p>
-        {isWebPreview && (
+        {import.meta.env.DEV && isWebPreview && (
           <button
             type="button"
             onClick={onSimulateWebPurchase}
@@ -3259,8 +3563,20 @@ export default function App() {
         setOfferingsStatus('unavailable')
         return
       }
-      await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG })
-      await Purchases.configure({ apiKey: 'test_XsjuRyhMrzEQuaHZEwejrcVDtfL' })
+      const apiKey = platform === 'ios' ? import.meta.env.VITE_RC_KEY_IOS : import.meta.env.VITE_RC_KEY_ANDROID
+      const envVarName = platform === 'ios' ? 'VITE_RC_KEY_IOS' : 'VITE_RC_KEY_ANDROID'
+      if (!apiKey || apiKey.startsWith('test_')) {
+        // Never configure the SDK with a missing or placeholder test key in a
+        // real build — surface it as the paywall's existing "pricing load
+        // error" state (with its Retry button) instead of a white screen.
+        console.error(
+          `[myJungle] RevenueCat API key for "${platform}" is missing or is a placeholder test key. Set ${envVarName} in your environment before shipping.`,
+        )
+        setOfferingsStatus('unavailable')
+        return
+      }
+      await Purchases.setLogLevel({ level: import.meta.env.DEV ? LOG_LEVEL.DEBUG : LOG_LEVEL.ERROR })
+      await Purchases.configure({ apiKey })
       if (cancelled) return
 
       // Keeps Pro status and the UI in sync in real time for anything that
@@ -3322,6 +3638,39 @@ export default function App() {
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
+
+  // One-time correction of the hardcoded 'UTC' default to the device's real timezone.
+  useEffect(() => {
+    const real = getDeviceTimezone()
+    if (real && real !== settings.timezone) {
+      setSettings((s) => ({ ...s, timezone: real }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Re-syncs scheduled watering-reminder notifications whenever the inputs that
+  // affect them change. syncWateringNotifications cancels-then-reschedules every
+  // call, so re-running it on unrelated settings changes is harmless.
+  useEffect(() => {
+    void syncWateringNotifications(plants, settings)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plants, settings.reminderTime, settings.pushNotifications, settings.primaryWateringDay, settings.groupWateringDays])
+
+  // Also re-sync on every app foreground — the reminder text bakes in "today's"
+  // due-plant count/name at schedule time, so a day boundary crossed while
+  // backgrounded needs a fresh sync once the app is visible again.
+  const plantsRef = useRef(plants)
+  useEffect(() => { plantsRef.current = plants }, [plants])
+  const settingsRef = useRef(settings)
+  useEffect(() => { settingsRef.current = settings }, [settings])
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    let listenerHandle: { remove: () => void } | null = null
+    void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void syncWateringNotifications(plantsRef.current, settingsRef.current)
+    }).then((handle) => { listenerHandle = handle })
+    return () => { listenerHandle?.remove() }
   }, [])
 
   useEffect(() => {
@@ -3437,27 +3786,30 @@ export default function App() {
   /**
    * Web/dev-only test affordance: the RevenueCat SDK never runs on web (it's
    * native-only), so there's no real purchase to make when previewing the app
-   * at my-jungle-app.vercel.app. This grants Pro locally, entirely client-side
-   * — it never calls RevenueCat or any backend. Hard-gated on
-   * !Capacitor.isNativePlatform() here too (not just at the call sites) so it
-   * can never fire inside a real iOS/Android build even if a caller forgets
-   * the check.
+   * locally. This grants Pro locally, entirely client-side — it never calls
+   * RevenueCat or any backend. Gated on import.meta.env.DEV (not just
+   * !Capacitor.isNativePlatform()) so `vite build` statically replaces the
+   * check with `false` and the minifier drops the entire real implementation
+   * — this never ships to the deployed web build or a real iOS/Android app,
+   * not just "hidden behind a runtime check" that could be tampered with.
    */
-  function simulateWebPurchase(plan: SelectablePlan) {
-    if (Capacitor.isNativePlatform()) return
-    console.info('[myJungle] Simulated web purchase (test mode only):', plan)
-    const expiresAt =
-      plan === 'lifetime' ? null : new Date(Date.now() + (plan === 'annual' ? 365 : 30) * 86400000).toISOString()
-    setSettings((s) => ({
-      ...s,
-      isPro: true,
-      subscriptionPlan: plan,
-      subscriptionExpiresAt: expiresAt,
-      subscriptionWillRenew: plan !== 'lifetime',
-      subscriptionManagementUrl: null,
-      subscriptionPeriodType: 'NORMAL',
-    }))
-  }
+  const simulateWebPurchase: (plan: SelectablePlan) => void = import.meta.env.DEV
+    ? (plan) => {
+        if (Capacitor.isNativePlatform()) return
+        console.info('[myJungle] Simulated web purchase (test mode only):', plan)
+        const expiresAt =
+          plan === 'lifetime' ? null : new Date(Date.now() + (plan === 'annual' ? 365 : 30) * 86400000).toISOString()
+        setSettings((s) => ({
+          ...s,
+          isPro: true,
+          subscriptionPlan: plan,
+          subscriptionExpiresAt: expiresAt,
+          subscriptionWillRenew: plan !== 'lifetime',
+          subscriptionManagementUrl: null,
+          subscriptionPeriodType: 'NORMAL',
+        }))
+      }
+    : () => {}
 
   function draftToPlant(d: DraftPlant): Plant {
     return {
@@ -3565,6 +3917,8 @@ export default function App() {
           setScreen('main')
           setTab('home')
         }}
+        showPrivacyIntroCard={!settings.privacyIntroCardDismissed}
+        onDismissPrivacyIntroCard={() => setSettings((s) => ({ ...s, privacyIntroCardDismissed: true }))}
       />
     )
   } else if (screen === 'plantDetail' && selectedPlant) {
@@ -3731,6 +4085,7 @@ export default function App() {
           plants={plants}
           todayIdx={todayIdx}
           onOpenPlant={(p) => { setSelectedPlant(p); setScreen('plantDetail') }}
+          onEditPlant={(p) => { setSelectedPlant(p); setScreen('editPlant') }}
           showHabitCard={showHabitCard}
           onDismissHabitCard={() => setSettings((s) => ({ ...s, habitUpsellShown: true }))}
           onShowHabitPro={() => { setSettings((s) => ({ ...s, habitUpsellShown: true })); openPaywall('habit_card') }}
@@ -3776,7 +4131,7 @@ export default function App() {
           language={language}
           onPickLanguage={() => setShowLanguagePicker(true)}
           onChangePrimaryWateringDay={handleChangePrimaryWateringDay}
-          onToggleNotifications={() => void handleToggleNotifications()}
+          onToggleNotifications={handleToggleNotifications}
         />
       )
     }

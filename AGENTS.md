@@ -34,6 +34,13 @@ This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin con
 
 `src/main.tsx` imports `src/index.css`, so global font wiring belongs in `src/index.css`. Keep CSS `@import` statements first, then add any `@font-face` rules and font-family defaults there.
 
+## Environment variables
+
+- `VITE_RC_KEY_IOS` / `VITE_RC_KEY_ANDROID` — real per-platform RevenueCat public API keys (see `.env.example`). `src/App.tsx` picks the right one via `Capacitor.getPlatform()` when configuring the `Purchases` SDK.
+- If the key for the current platform is missing or still starts with `test_`, `Purchases.configure()` is never called — the paywall falls back to its existing "pricing load error" state (`offeringsStatus: 'unavailable'`) with a Retry button instead of crashing. Always set real keys before a release build.
+- `Purchases.setLogLevel` is `DEBUG` in local dev (`import.meta.env.DEV`) and `ERROR` in production builds.
+- `ENTITLEMENT_PRO` and the product identifiers (`PRODUCT_ANNUAL`, `PRODUCT_MONTHLY`, `PRODUCT_LIFETIME`, `PRODUCT_LEGACY_ONETIME`) live in `src/lib/monetization.ts` and must exactly match the RevenueCat dashboard configuration — they are not environment variables.
+
 ## Code quality
 
 - Use double quotes for strings containing apostrophes (`"We're here to help"`), or escape them in single-quoted strings. An unescaped apostrophe in a single-quoted string breaks the build.

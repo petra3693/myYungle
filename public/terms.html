@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>myJungle — Terms of Use</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Geist, system-ui, sans-serif;
+        background: #efefef;
+        color: #000;
+        line-height: 1.55;
+      }
+      .header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #fff;
+        border-bottom: 2px solid #000;
+        padding-top: env(safe-area-inset-top, 0px);
+      }
+      .header-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        min-height: 56px;
+        padding: 0.75rem 1rem;
+      }
+      .header h1 {
+        margin: 0;
+        font-family: Unbounded, system-ui, sans-serif;
+        font-size: 1rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        line-height: 1.2;
+        flex: 1;
+        min-width: 0;
+      }
+      .close-btn {
+        width: 38px;
+        height: 38px;
+        border: 2px solid #000;
+        border-radius: 9999px;
+        background: #000;
+        color: #fff;
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      main {
+        max-width: 40rem;
+        margin: 0 auto;
+        padding: 1.25rem 1.25rem calc(2rem + env(safe-area-inset-bottom, 0px));
+      }
+      h2 {
+        font-family: Unbounded, system-ui, sans-serif;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        margin-top: 1.75rem;
+      }
+      p { margin: 0.75rem 0; }
+      a { color: #000; }
+      mark {
+        background: #ffe08a;
+        color: #000;
+        padding: 0 0.2em;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-inner">
+        <h1>Terms of Use</h1>
+        <button type="button" class="close-btn" aria-label="Close" onclick="goBack()">✕</button>
+      </div>
+    </header>
+    <main>
+      <p>Last updated: August 26, 2026</p>
+      <p>
+        By using myJungle (“the App”), you agree to use it for its intended purpose: tracking and
+        caring for your houseplants. These Terms form an agreement between you and
+        Petra Szakacs (operating as Lumen Studio) (“we”, “us”, “the
+        operator”), the operator of the App.
+      </p>
+      <p>
+        AI-generated plant identification, health diagnosis, and care guidance are provided for
+        informational purposes only. They are generated automatically and may not always be
+        accurate or complete. Always use your own judgment before acting on this guidance,
+        especially where plant or pet safety is concerned — for example, toxicity warnings should
+        never be treated as a substitute for veterinary or poison-control advice.
+      </p>
+      <h2>Subscriptions</h2>
+      <p>
+        myJungle Pro is offered as an auto-renewing subscription (Monthly or Annual) or as a
+        one-time Lifetime purchase.
+      </p>
+      <p>
+        Payment is charged to your Apple ID account at confirmation of purchase. The exact price
+        and billing period for each plan are shown in the App before you confirm a purchase.
+      </p>
+      <p>
+        Subscriptions automatically renew for the same price and duration unless auto-renewal is
+        turned off at least 24 hours before the end of the current period. Your account will be
+        charged for renewal within 24 hours prior to the end of the current period.
+      </p>
+      <p>
+        You can manage your subscription, view its terms, and turn off auto-renewal at any time in
+        your device's Account Settings after purchase. Deleting the App does not cancel your
+        subscription.
+      </p>
+      <p>
+        If the App offers a free trial, any unused portion of that trial is forfeited when you
+        purchase a subscription during the trial period.
+      </p>
+      <p>
+        myJungle Pro Lifetime is a one-time, non-renewing purchase. It is not a subscription and
+        does not auto-renew or expire; it grants permanent Pro access tied to the Apple ID / Google
+        account that purchased it.
+      </p>
+      <p>
+        Users who previously purchased the legacy one-time “Pro unlock” keep permanent Pro access
+        at no additional cost — this grandfathering is honored indefinitely and is not affected by
+        later changes to pricing or plans.
+      </p>
+      <h2>Disclaimer of warranty</h2>
+      <p>
+        The App and its AI-generated content are provided “as is”, without warranties of any kind,
+        to the maximum extent permitted by applicable law. We do not guarantee that plant
+        identification, watering schedules, or health/growth assessments will be accurate,
+        complete, or suitable for your specific plants or circumstances.
+      </p>
+      <h2>Changes to these Terms</h2>
+      <p>
+        We may update these Terms from time to time to reflect changes to the App, applicable law,
+        or our operations. Continued use of the App after changes take effect constitutes your
+        acceptance of the revised Terms. Material changes will be highlighted in the App where
+        practical.
+      </p>
+      <h2>Governing law</h2>
+      <p>
+        These Terms are governed by the laws of Germany, without
+        regard to its conflict-of-law provisions, except where mandatory consumer-protection law in
+        your country of residence provides otherwise.
+      </p>
+      <h2>Contact</h2>
+      <p>
+        Questions about these Terms can be sent via the in-app feedback form, or to
+        <a href="mailto:raving.pascal@gmail.com">raving.pascal@gmail.com</a>. Operator details are listed in
+        the <a href="./impressum.html">Legal Notice &amp; Impressum</a>.
+      </p>
+    </main>
+    <script>
+      function goBack() {
+        if (window.history.length > 1) {
+          window.history.back();
+          return;
+        }
+        if (window.opener && !window.opener.closed) {
+          window.close();
+          return;
+        }
+        window.location.href = '/';
+      }
+    </script>
+  </body>
+</html>

@@ -68,6 +68,11 @@
       }
       p { margin: 0.75rem 0; }
       a { color: #000; }
+      mark {
+        background: #ffe08a;
+        color: #000;
+        padding: 0 0.2em;
+      }
     </style>
   </head>
   <body>
@@ -78,26 +83,86 @@
       </div>
     </header>
     <main>
-      <p>Last updated: August 2026</p>
+      <p>Last updated: August 26, 2026</p>
       <p>
-        myJungle (“the App”) helps you track plant watering schedules and related care data.
-        This page explains what information is processed when you use the App.
+        myJungle (“the App”) helps you track plant watering schedules and plant care. This policy
+        explains what data the App keeps on your device, what it sends elsewhere, who processes
+        it, how long it is kept, and how you can delete it.
       </p>
-      <h2>Data we store</h2>
+      <h2>What stays on your device</h2>
       <p>
-        Plant profiles, photos, schedules, settings, and optional feedback you submit are stored
-        on your device and/or transmitted only as needed to provide features you use
-        (for example AI analysis or feedback delivery).
+        Your plant profiles (names, photos, watering schedules, care notes, health and growth
+        history) and your app settings (language, notification preferences, subscription status
+        cache) are stored locally on your device, in the App's local storage. This data is not
+        uploaded to our own servers and is not visible to us.
       </p>
-      <h2>Your choices</h2>
+      <h2>What we send elsewhere, and why</h2>
       <p>
-        You can export or reset app data from Settings. You may also disable notifications
-        in Settings or through your device system preferences.
+        When you photograph a plant for identification, health diagnosis, or growth tracking, that
+        photo is sent to our AI provider, Google (Gemini API), solely to generate the requested
+        result (plant species, care profile, health assessment, or growth comparison). The photo
+        and prompt are transmitted for that single request; we do not retain a copy of your photos
+        on our own servers beyond what is needed to relay the request and return the result to
+        your device.
+      </p>
+      <p>
+        If you submit feedback through the in-app feedback form, its text (and any photo you
+        choose to attach) is delivered to us via our feedback-delivery provider so we can read and
+        respond to it.
+      </p>
+      <h2>Who processes data on our behalf</h2>
+      <p>
+        <strong>Google (Gemini API)</strong> — processes plant photos you submit for AI
+        identification, health, and growth analysis. Google's own privacy policy governs how it
+        handles that request data; we do not control Google's retention practices for API traffic.
+      </p>
+      <p>
+        <strong>RevenueCat</strong> — manages subscriptions and purchase entitlements on our
+        behalf. RevenueCat receives your purchase and subscription status from the App Store /
+        Play Store so the App can unlock Pro features; it does not receive your payment card
+        details.
+      </p>
+      <p>
+        <strong>Vercel</strong> — hosts the App's backend (serverless functions) that relay AI
+        analysis requests and feedback submissions. Vercel processes this traffic as our hosting
+        infrastructure provider.
+      </p>
+      <p>
+        We do not sell your personal data, and we do not use your plant photos to train our own
+        models.
+      </p>
+      <h2>How long we keep data</h2>
+      <p>
+        Data stored locally on your device (plants, photos, settings, history) is kept for as long
+        as the App is installed, or until you delete it yourself. We do not keep a server-side
+        copy of your plant data. Purchase and subscription records are retained by RevenueCat and
+        the App Store / Play Store per their own retention policies, for as long as needed to
+        support your subscription, provide refunds, and meet accounting/legal obligations.
+      </p>
+      <h2>How to delete your data</h2>
+      <p>
+        You can permanently delete all locally stored plant data, photos, and settings at any time
+        from <strong>Settings → Reset data</strong> inside the App. This action is immediate and
+        cannot be undone. To also request deletion of purchase history held by Apple, Google, or
+        RevenueCat, contact them directly, or contact us at the address below and we will forward
+        a deletion request on your behalf where we are able to.
+      </p>
+      <h2>Children's privacy</h2>
+      <p>
+        The App is not directed at children under 13 (or the minimum age required by your local
+        law), and we do not knowingly collect personal data from children.
       </p>
       <h2>Contact</h2>
       <p>
-        For privacy questions, use the in-app feedback form or contact the operator listed
-        in the <a href="./impressum.html">Legal Notice &amp; Impressum</a>.
+        For privacy questions or data deletion requests, use the in-app feedback form or contact
+        us at <a href="mailto:raving.pascal@gmail.com">raving.pascal@gmail.com</a>. Operator details are
+        listed in the <a href="./impressum.html">Legal Notice &amp; Impressum</a>.
+      </p>
+      <h2>Changes to this policy</h2>
+      <p>
+        We may update this Privacy Policy from time to time to reflect changes to the App or
+        applicable law. Continued use of the App after changes take effect constitutes your
+        acceptance of the revised policy.
       </p>
     </main>
     <script>

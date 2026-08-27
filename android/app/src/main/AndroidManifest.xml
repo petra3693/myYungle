@@ -30,9 +30,16 @@
     </application>
 
     <!-- Permissions -->
-
+    <!--
+      READ_MEDIA_IMAGES intentionally omitted: @capacitor/camera's
+      chooseFromGallery/getPhoto only ever requests READ_EXTERNAL_STORAGE, and
+      only below Android 10 (SDK < 29) — see IonCameraFlow.kt in the plugin.
+      On Android 10+ (all real devices this app targets), gallery picking
+      goes through an implicit ACTION_GET_CONTENT/ACTION_PICK intent to the
+      system photo picker, which needs no media permission at all. Re-add
+      only if something starts calling MediaStore/ContentResolver directly.
+    -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

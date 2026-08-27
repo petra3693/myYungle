@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv, type HtmlTagDescriptor, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type ConfigEnv, type HtmlTagDescriptor, type Plugin, type UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url'
 import siteConfiguration from './.figma/make/site.json' with { type: 'json' }
 
 // Vite config — https://vitejs.dev/config/
-export default defineConfig(async ({ mode }) => {
+export default defineConfig(async ({ mode }: ConfigEnv): Promise<UserConfig> => {
   // Anchor on the invocation cwd, not __dirname/import.meta.url: Vite's native
   // config loader evaluates a copy of this file from node_modules/.vite-temp/,
   // so any path derived from this file's own location resolves to that temp

@@ -8,6 +8,8 @@ import {
   canStartHealthScan,
   userStateFromSettings,
   computeAnnualDiscountLabel,
+  trialLengthFromIntroPrice,
+  trialUnitI18nKey,
   PRODUCT_LEGACY_ONETIME,
   FREE_PLANT_LIMIT,
   FREE_HEALTH_SCANS,
@@ -181,5 +183,32 @@ describe('canStartHealthScan — first scan is free, then Pro-gated', () => {
 
   it('never blocks a Pro user regardless of scan count', () => {
     expect(canStartHealthScan(50, proUser)).toBe(true)
+  })
+})
+
+describe('trialLengthFromIntroPrice — real StoreKit/Play intro offer, never a fabricated default', () => {
+  it('returns null when the product has no intro offer', () => {
+    expect(trialLengthFromIntroPrice(null)).toBe(null)
+    expect(trialLengthFromIntroPrice(undefined)).toBe(null)
+  })
+
+  it('reads the count and unit straight from the intro price', () => {
+    expect(trialLengthFromIntroPrice({ periodNumberOfUnits: 7, periodUnit: 'DAY' })).toEqual({ count: 7, unit: 'DAY' })
+    expect(trialLengthFromIntroPrice({ periodNumberOfUnits: 1, periodUnit: 'WEEK' })).toEqual({ count: 1, unit: 'WEEK' })
+    expect(trialLengthFromIntroPrice({ periodNumberOfUnits: 1, periodUnit: 'MONTH' })).toEqual({ count: 1, unit: 'MONTH' })
+    expect(trialLengthFromIntroPrice({ periodNumberOfUnits: 1, periodUnit: 'YEAR' })).toEqual({ count: 1, unit: 'YEAR' })
+  })
+
+  it('falls back to DAY for an unrecognized period unit rather than throwing', () => {
+    expect(trialLengthFromIntroPrice({ periodNumberOfUnits: 3, periodUnit: 'FORTNIGHT' })).toEqual({ count: 3, unit: 'DAY' })
+  })
+})
+
+describe('trialUnitI18nKey — maps a period unit to its i18n plural-key base', () => {
+  it('maps every known unit to a distinct key', () => {
+    expect(trialUnitI18nKey('DAY')).toBe('paywall.trialUnitDay')
+    expect(trialUnitI18nKey('WEEK')).toBe('paywall.trialUnitWeek')
+    expect(trialUnitI18nKey('MONTH')).toBe('paywall.trialUnitMonth')
+    expect(trialUnitI18nKey('YEAR')).toBe('paywall.trialUnitYear')
   })
 })
