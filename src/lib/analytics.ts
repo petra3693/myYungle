@@ -1,11 +1,22 @@
 import type { PaywallSource, SubscriptionPlanId } from '@/lib/monetization'
+import { sendToAnalyticsProvider } from '@/lib/analyticsProvider'
 
 /**
- * Minimal analytics abstraction — no real backend is wired up yet.
- * Events are logged to the console and kept in a capped localStorage ring
- * buffer (inspectable via `localStorage.getItem('mj_analytics_log')`) so the
- * event shape and call sites can be verified end to end before a real
- * provider (Amplitude/Mixpanel/PostHog/etc.) is connected here.
+ * Analytics abstraction — call sites everywhere else in the app just call
+ * logEvent() and never know or care whether a real provider is connected.
+ *
+ * Every event is still logged to the console and kept in a capped
+ * localStorage ring buffer (inspectable via
+ * `localStorage.getItem('mj_analytics_log')`), same as before — that never
+ * changes, key or no key. When VITE_POSTHOG_KEY is set, the same event is
+ * also forwarded to PostHog via analyticsProvider.ts; with no key configured
+ * (local dev, CI, before a project exists), it's a no-op and behavior is
+ * exactly what it was before PostHog was wired in.
+ *
+ * IMPORTANT: shipping this with a real key means the app now sends event
+ * data to a third party. Apple's App Privacy "nutrition label" (App Store
+ * Connect) and Google Play's Data Safety form both need to be updated to
+ * declare this — see docs/deploy.md for exactly what changed and why.
  */
 
 export type AnalyticsEventName =
@@ -48,4 +59,5 @@ export function logEvent(name: AnalyticsEventName, props: AnalyticsEventProps = 
   } catch {
     // Best-effort only — never let analytics logging break the app.
   }
+  sendToAnalyticsProvider(name, props as Record<string, unknown>)
 }
