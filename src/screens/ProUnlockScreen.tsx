@@ -59,8 +59,8 @@ function ProUnlockScreen({
     : isWebPreview
       ? computeAnnualDiscountLabel(FALLBACK_PREVIEW_PRICES.monthly, FALLBACK_PREVIEW_PRICES.annual, t)
       : null
-  const monthlyPriceLabel = monthlyPkg ? `${monthlyPkg.product.priceString}/mo` : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.monthly.toFixed(2)}/mo` : '—'
-  const annualPriceLabel = annualPkg ? `${annualPkg.product.priceString}/yr` : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.annual.toFixed(2)}/yr` : '—'
+  const monthlyPriceLabel = monthlyPkg ? `${monthlyPkg.product.priceString}${t('paywall.perMonthSuffix')}` : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.monthly.toFixed(2)}${t('paywall.perMonthSuffix')}` : '—'
+  const annualPriceLabel = annualPkg ? `${annualPkg.product.priceString}${t('paywall.perYearSuffix')}` : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.annual.toFixed(2)}${t('paywall.perYearSuffix')}` : '—'
   const lifetimePriceLabel = lifetimePkg ? lifetimePkg.product.priceString : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.lifetime.toFixed(2)}` : '—'
   const annualTrialLabel = hasTrial && trialLengthLabel ? t('paywall.trialThenPrice', { length: trialLengthLabel, price: annualPriceLabel }) : null
   const annualBasePriceLabel = annualPkg ? annualPkg.product.priceString : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.annual.toFixed(2)}` : t('paywall.thePlanPrice')

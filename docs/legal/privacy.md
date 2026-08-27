@@ -59,7 +59,7 @@ You also have the right to lodge a complaint with a data protection supervisory 
 
 ## Contact
 
-For privacy questions or data deletion requests, use the in-app feedback form or contact us at raving.pascal@gmail.com. Operator details are listed in the [Impressum](./impressum.md).
+For privacy questions or data deletion requests, use the in-app feedback form or contact us at contact@lumenapp.studio. Operator details are listed in the [Impressum](./impressum.md).
 
 ## Changes to this policy
 

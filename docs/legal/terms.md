@@ -47,4 +47,4 @@ These Terms are governed by the laws of Germany, without regard to its conflict-
 
 ## Contact
 
-Questions about these Terms can be sent via the in-app feedback form, or to raving.pascal@gmail.com. Operator details are listed in the [Impressum](./impressum.md).
+Questions about these Terms can be sent via the in-app feedback form, or to contact@lumenapp.studio. Operator details are listed in the [Impressum](./impressum.md).

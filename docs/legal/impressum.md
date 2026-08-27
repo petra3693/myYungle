@@ -25,7 +25,7 @@ Company / sole trader name: Petra Szakacs (operating as Lumen Studio)
 Address: Einbecker Straße 64A, 10315 Berlin, Germany
 Phone: +49 30 23566932
 Tax information: Kleinunternehmer gemäß §19 UStG
-Contact e-mail: raving.pascal@gmail.com
+Contact e-mail: contact@lumenapp.studio
 
 ## Responsible for content
 
