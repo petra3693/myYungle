@@ -7,6 +7,16 @@ export const proPreviewPayloadSchema = z.object({
 
 export type ProPreviewPayload = z.infer<typeof proPreviewPayloadSchema>
 
+// RevenueCat's anonymous id: "$RCAnonymousID:" + a 32-char lowercase-hex UUID.
+const RC_ANONYMOUS_ID_RE = /^\$RCAnonymousID:[0-9a-f]{32}$/
+// A developer-assigned app_user_id: bounded length, no whitespace/control chars.
+const RC_CUSTOM_ID_RE = /^[A-Za-z0-9_\-.:$]{1,64}$/
+
+/** Rejects garbage (oversized strings, whitespace, injection attempts) before it ever reaches RevenueCat's API. */
+export function isValidRevenueCatAppUserId(id: string): boolean {
+  return RC_ANONYMOUS_ID_RE.test(id) || RC_CUSTOM_ID_RE.test(id)
+}
+
 export interface ProPreviewResponse {
   success: boolean
   error?: string
@@ -54,19 +64,30 @@ async function grantPromotionalEntitlement(appUserId: string, secretKey: string)
  * against RevenueCat's own record of this entitlement) — never trust a
  * client-side "already used" flag alone, since it can be cleared or bypassed.
  */
-export async function handleProPreviewRequest(body: unknown): Promise<{ status: number; body: ProPreviewResponse }> {
+export async function handleProPreviewRequest(
+  body: unknown,
+  clientIp = 'unknown',
+): Promise<{ status: number; body: ProPreviewResponse }> {
   const parsed = proPreviewPayloadSchema.safeParse(body)
   if (!parsed.success) {
     const message = parsed.error.issues[0]?.message ?? 'Invalid request.'
+    console.warn(`[myJungle] pro preview: rejected malformed request from ${clientIp}: ${message}`)
     return { status: 400, body: { success: false, error: message } }
   }
+
+  const { appUserId } = parsed.data
+
+  if (!isValidRevenueCatAppUserId(appUserId)) {
+    console.warn(`[myJungle] pro preview: rejected appUserId "${appUserId}" (bad format) from ${clientIp}`)
+    return { status: 400, body: { success: false, error: 'Invalid request.' } }
+  }
+
+  console.log(`[myJungle] pro preview: grant attempt for "${appUserId}" from ${clientIp}`)
 
   const secretKey = process.env.REVENUECAT_SECRET_API_KEY?.trim()
   if (!secretKey) {
     return { status: 503, body: { success: false, error: 'Pro Preview is not configured on the server.' } }
   }
-
-  const { appUserId } = parsed.data
 
   try {
     const subscriber = await fetchSubscriber(appUserId, secretKey)

@@ -4,6 +4,7 @@ import {
 } from '@/lib/geminiImage'
 import { compressImageForGemini, isInlinePhoto } from '@/lib/imageCompress'
 import { parseAiJson } from '@/lib/aiJson'
+import { appApiHeaders } from '@/lib/apiAuth'
 import {
   coerceAnalyzePlantResponseFromBody,
   createLowConfidencePlantResult,
@@ -85,7 +86,7 @@ export async function analyzePlantImage(
       console.log('[myJungle] analyzePlantImage: dispatching fetch to /api/analyze-plant...')
       response = await fetch('/api/analyze-plant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: appApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           imageBase64,
           mimeType: 'image/jpeg',

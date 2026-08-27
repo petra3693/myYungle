@@ -1,9 +1,9 @@
 # Deploy — environment variables
 
 Covers every environment variable the Vercel deployment needs, including the
-app-token + rate-limit protection added to the `/api/*` endpoints
+app-token + rate-limit protection added to all five `/api/*` endpoints
 (`api/analyze-plant.ts`, `api/analyze-plant-health.ts`,
-`api/analyze-plant-growth.ts`, `api/grant-pro-preview.ts`).
+`api/analyze-plant-growth.ts`, `api/grant-pro-preview.ts`, `api/feedback.ts`).
 
 ## Existing variables
 
@@ -16,7 +16,7 @@ app-token + rate-limit protection added to the `/api/*` endpoints
 
 ## New: API app-token + rate limiting
 
-Every request to the four endpoints above must now carry an `X-App-Token`
+Every request to the five endpoints above must now carry an `X-App-Token`
 header, and is additionally rate-limited by client IP.
 
 | Variable | Where | Purpose |
@@ -41,16 +41,20 @@ released token needs to be treated as compromised, rotate `APP_API_TOKEN`
 server-side and ship a new client build with the matching
 `VITE_APP_API_TOKEN`.
 
-If `APP_API_TOKEN` is unset or empty on the server, **every request is
-rejected** (`api/_auth.ts` fails closed) — the app-token check is not
-optional in production. Requests missing or failing the check get a generic
+If `APP_API_TOKEN` is unset or empty on the server, `api/_auth.ts` **fails
+open**: every request is let through rather than rejected, so forgetting to
+set the variable doesn't take the whole API down. A warning is logged once
+per server process (`console.warn`, not sent to the client) so the missing
+configuration doesn't go unnoticed — but until `APP_API_TOKEN` is set, the
+token check provides no protection at all. Set it before relying on it.
+Requests that do carry a token but fail the comparison get a generic
 `401 Unauthorized`; nothing about *why* is disclosed to the client.
 
 ### Rate limits (per client IP, one shared in-memory module: `api/_rateLimit.ts`)
 
 | Endpoint | Limit |
 |---|---|
-| `analyze-plant`, `analyze-plant-health`, `analyze-plant-growth` | 20 requests / 10 minutes, each endpoint tracked independently |
+| `analyze-plant`, `analyze-plant-health`, `analyze-plant-growth`, `feedback` | 20 requests / 10 minutes, each endpoint tracked independently |
 | `grant-pro-preview` | 3 requests / 24 hours |
 
 A request over the limit gets `429 Too Many Requests` with a generic message.
@@ -76,7 +80,7 @@ monitoring; none of that detail is echoed back to the client.
 
 ## Error responses never leak internals
 
-Every one of the four hardened endpoints now funnels unexpected failures
+Every one of the five hardened endpoints now funnels unexpected failures
 (missing env vars, upstream API errors, unhandled exceptions) through
 `sendServerError()` (`api/_shared.ts`), which logs the real error server-side
 and always sends a generic message to the client. Genuine user-facing errors

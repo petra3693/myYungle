@@ -1,6 +1,7 @@
 import { parseImageDataUrl, toUserFriendlyAnalysisError } from '@/lib/geminiImage'
 import { compressImageForGemini, isInlinePhoto } from '@/lib/imageCompress'
 import { parseAiJson } from '@/lib/aiJson'
+import { appApiHeaders } from '@/lib/apiAuth'
 import type { AppLanguage } from '@/i18n/languages'
 
 export type HealthSeverity = 'Low' | 'Moderate' | 'High'
@@ -52,7 +53,7 @@ export async function analyzePlantHealthImage(
     try {
       response = await fetch('/api/analyze-plant-health', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: appApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ imageBase64, mimeType: 'image/jpeg', language }),
       })
     } catch (error) {

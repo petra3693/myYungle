@@ -1,6 +1,7 @@
 export interface VercelRequest {
   method?: string
   body?: unknown
+  headers?: Record<string, string | string[] | undefined>
 }
 
 export interface VercelResponse {
@@ -26,11 +27,15 @@ export function errorMessage(err: unknown): string {
   return 'Unknown error'
 }
 
+/**
+ * Sends a generic error to the client and logs the real one server-side.
+ * Never forwards err.message to the client — an unexpected exception here
+ * (a missing env var, an upstream API failure, a stack trace) is exactly the
+ * kind of internal detail that must not leak. Handlers that already produce a
+ * genuine user-facing message (e.g. friendlyGeminiError for a bad photo)
+ * build that response themselves and never reach this function.
+ */
 export function sendServerError(res: VercelResponse, err: unknown, fallback: string) {
   console.error(err)
-  const message = errorMessage(err)
-  return res.status(500).json({
-    success: false,
-    error: message === 'Unknown error' ? fallback : message,
-  })
+  return res.status(500).json({ success: false, error: fallback })
 }

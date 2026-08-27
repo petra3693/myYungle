@@ -1,9 +1,11 @@
+import { appApiHeaders } from '@/lib/apiAuth'
+
 /** Client wrapper for the server-side Pro Preview (reverse-trial) grant endpoint. */
 export async function requestProPreview(appUserId: string): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const response = await fetch('/api/grant-pro-preview', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: appApiHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ appUserId }),
     })
     const body = (await response.json().catch(() => null)) as { success?: boolean; error?: string } | null
