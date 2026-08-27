@@ -1,5 +1,6 @@
 import { type AppLanguage } from '@/i18n/languages'
 import { analyzePlantImage, mapLightNeedToForm, mapWaterNeedToForm } from '@/lib/analyzePlant'
+import { type HealthSeverity } from '@/lib/analyzePlantHealth'
 import { batchedWateringDays, frequencyForWaterNeed } from '@/lib/wateringBatch'
 import { cycleAnchorForFrequency, isPlantDueOnDay, isPlantDueToday } from '@/lib/wateringDue'
 import { GREEN } from '@/screens/shared/constants'
@@ -102,6 +103,19 @@ function healthScoreColor(score: number): string {
   return '#FF3B30'
 }
 
+/** Same three-tier palette as healthScoreColor, thresholds tuned for a confidence percentage rather than a health score. */
+function confidenceColor(confidence: number): string {
+  if (confidence >= 75) return GREEN
+  if (confidence >= 50) return 'var(--color-ink-dim)'
+  return '#FF3B30'
+}
+
+function severityColor(severity: HealthSeverity): string {
+  if (severity === 'Low') return GREEN
+  if (severity === 'Moderate') return '#FFC24B'
+  return '#FF3B30'
+}
+
 function healthStatusLabel(score: number, t: (key: string) => string): string {
   if (score >= 70) return t('health.healthy')
   if (score >= 40) return t('health.needsAttention')
@@ -114,4 +128,4 @@ function daysAgoLabel(iso: string, t: (key: string, opts?: Record<string, unknow
   return t('common.daysAgo', { count: days })
 }
 
-export { todayISO, computeHealthStatus, withMinDelay, identifyPhoto, sortBatchReviewRows, fullDayName, shortDayName, nextWaterStatus, healthScoreColor, healthStatusLabel, daysAgoLabel }
+export { todayISO, computeHealthStatus, withMinDelay, identifyPhoto, sortBatchReviewRows, fullDayName, shortDayName, nextWaterStatus, healthScoreColor, healthStatusLabel, confidenceColor, severityColor, daysAgoLabel }

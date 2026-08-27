@@ -26,7 +26,7 @@ function PlantDetailScreen({
   const [showDelete, setShowDelete] = useState(false)
   const [expandedLog, setExpandedLog] = useState<string | null>(null)
   const hasAccess = canAccessProFeatures(user)
-  const wateringFrequencyLabel = frequencyLabel(plant.wateringFrequency, plant.wateringDays.length)
+  const wateringFrequencyLabel = frequencyLabel(plant.wateringFrequency, plant.wateringDays.length, t)
   const health = computeHealthStatus(plant, todayIdx, t)
   const lowConfidenceId = isLowConfidence(plant.confidence)
   const toxicityUncertain = plant.isToxicToPets === null || lowConfidenceId

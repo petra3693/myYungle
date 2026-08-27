@@ -19,7 +19,10 @@
     "couldNotAnalyzePhoto": "Impossible d'analyser cette photo. Veuillez réessayer.",
     "today": "Aujourd'hui",
     "daysAgo_one": "il y a {{count}} jour",
-    "daysAgo_other": "il y a {{count}} jours"
+    "daysAgo_other": "il y a {{count}} jours",
+    "frequencyMonthly": "Mensuel",
+    "frequencyBiweekly": "Toutes les 2 semaines",
+    "frequencyWeekly": "{{count}}x/semaine"
   },
   "language": {
     "en": "English",
@@ -67,9 +70,7 @@
     "bulkAddSubtitle": "Photographiez toutes vos plantes restantes pour compléter.",
     "bulkAddDone": "Tout ajouter en un geste",
     "tapToCapture": "Touchez pour prendre ou choisir des photos",
-    "addMore": "Ajouter plus",
-    "identifyPartialError_one": "{{count}} photo n'a pas pu être analysée — modifiez les détails de cette plante manuellement.",
-    "identifyPartialError_other": "{{count}} photos n'ont pas pu être analysées — modifiez les détails de ces plantes manuellement."
+    "addMore": "Ajouter plus"
   },
   "analysisResult": {
     "proPreviewTitle": "Aperçu Pro de 7 jours",
@@ -89,8 +90,6 @@
   "home": {
     "title": "myJungle",
     "totalPlants": "Total des plantes",
-    "thirstyPlants": "Plantes assoiffées",
-    "wateringRhythm": "Rythme d'arrosage",
     "habitCardTitle": "Vous avez pris une habitude d'arrosage",
     "habitCardBody": "Découvrez ce que les scans de santé IA de Pro peuvent faire pour votre jungle.",
     "emptyState": "Pas encore de plantes. Touchez + pour lancer votre jungle.",
@@ -99,7 +98,14 @@
     "waterToday": "À arroser aujourd'hui",
     "nextWaterTomorrow": "Prochain arrosage : Demain",
     "nextWaterOn": "Prochain arrosage : {{day}}",
-    "noSchedule": "Aucun calendrier"
+    "noSchedule": "Aucun calendrier",
+    "wateringToday_one": "À arroser aujourd'hui : {{count}} plante",
+    "wateringToday_other": "À arroser aujourd'hui : {{count}} plantes",
+    "allWateredToday": "Tout est arrosé pour aujourd'hui !",
+    "markAllWateredToday_one": "Marquer {{count}} plante comme arrosée",
+    "markAllWateredToday_other": "Marquer {{count}} plantes comme arrosées",
+    "viewInDays": "Voir dans Jours",
+    "avgHealth": "État moyen"
   },
   "days": {
     "groupedSummary_one": "Le système a réparti votre {{count}} plante sur {{days}} jour{{daysPlural}}.",
@@ -109,7 +115,8 @@
     "duePlants_other": "{{count}} plantes",
     "noPlantsScheduled": "Aucune plante prévue pour ce jour.",
     "undo": "Annuler",
-    "markAllWatered": "Tout marquer arrosé ({{done}}/{{total}})"
+    "markAllWatered": "Tout marquer arrosé ({{done}}/{{total}})",
+    "futureDayHint": "Vous pourrez cocher cela une fois ce jour arrivé."
   },
   "plantDetail": {
     "title": "Détail de la plante",
@@ -217,7 +224,8 @@
     "newPlant": "Nouvelle plante",
     "severityLow": "Faible",
     "severityModerate": "Modérée",
-    "severityHigh": "Élevée"
+    "severityHigh": "Élevée",
+    "lowConfidenceHint": "L'IA n'est pas totalement sûre de ce diagnostic — essayez une photo plus nette et mieux éclairée pour un résultat plus fiable."
   },
   "growthScan": {
     "title": "Scan de croissance",
@@ -253,7 +261,13 @@
     "privacyPolicy": "Politique de confidentialité",
     "impressum": "Mentions légales",
     "footer": "Parent de plantes depuis {{year}} · myJungle v{{version}}",
-    "resetConfirm": "Cela supprimera définitivement toutes vos plantes et vos réglages. Continuer ?"
+    "resetConfirmTitle": "Supprimer toutes les données ?",
+    "resetConfirmBody": "Cette action supprime définitivement toutes les plantes, photos et journaux de santé stockés sur cet appareil. Cette action est irréversible.",
+    "resetConfirmButton": "Tout supprimer",
+    "exportSuccess": "Vos données ont été exportées.",
+    "exportError": "Impossible d'exporter vos données. Veuillez réessayer.",
+    "exporting": "Exportation…",
+    "exportPhotosNote": "Comprend les détails des plantes, les calendriers d'arrosage et les journaux de santé — les photos ne sont pas incluses."
   },
   "limitReached": {
     "title": "Vous avez atteint vos {{limit}} plantes gratuites",
@@ -375,7 +389,7 @@
   },
   "legal": {
     "terms": {
-      "lastUpdated": "Last updated: August 26, 2026",
+      "lastUpdated": "Last updated: August 27, 2026",
       "intro": "By using myJungle (“the App”), you agree to use it for its intended purpose: tracking and caring for your houseplants. These Terms form an agreement between you and Petra Szakacs (operating as Lumen Studio) (“we”, “us”, “the operator”), the operator of the App.",
       "aiDisclaimer": "AI-generated plant identification, health diagnosis, and care guidance are provided for informational purposes only. They are generated automatically and may not always be accurate or complete. Always use your own judgment before acting on this guidance, especially where plant or pet safety is concerned — for example, toxicity warnings should never be treated as a substitute for veterinary or poison-control advice.",
       "subscriptionsHeading": "Subscriptions",
@@ -396,30 +410,38 @@
       "contactBody": "Questions about these Terms can be sent via the in-app feedback form, or to raving.pascal@gmail.com. Operator details are listed in the Impressum."
     },
     "privacy": {
-      "lastUpdated": "Last updated: August 26, 2026",
+      "lastUpdated": "Last updated: August 27, 2026",
       "intro": "myJungle (“the App”) helps you track plant watering schedules and plant care. This policy explains what data the App keeps on your device, what it sends elsewhere, who processes it, how long it is kept, and how you can delete it.",
       "deviceDataHeading": "What stays on your device",
       "deviceDataBody": "Your plant profiles (names, photos, watering schedules, care notes, health and growth history) and your app settings (language, notification preferences, subscription status cache) are stored locally on your device, in the App's local storage. This data is not uploaded to our own servers and is not visible to us.",
       "sentDataHeading": "What we send elsewhere, and why",
-      "sentDataBody": "When you photograph a plant for identification, health diagnosis, or growth tracking, that photo is sent to our AI provider, Google (Gemini API), solely to generate the requested result (plant species, care profile, health assessment, or growth comparison). The photo and prompt are transmitted for that single request; we do not retain a copy of your photos on our own servers beyond what is needed to relay the request and return the result to your device.",
-      "feedbackDataBody": "If you submit feedback through the in-app feedback form, its text (and any photo you choose to attach) is delivered to us via our feedback-delivery provider so we can read and respond to it.",
+      "sentDataBody": "When you photograph a plant for identification, health diagnosis, or growth tracking, that photo is sent to our AI provider, Google (Gemini API), solely to generate the requested result (plant species, care profile, health assessment, or growth comparison). The photo and prompt are transmitted for that single request; we do not retain a copy of your photos on our own servers beyond what is needed to relay the request and return the result to your device. This processing is carried out on the legal basis of Art. 6(1)(b) GDPR (performance of a contract), because it is necessary to provide the plant-care feature you have actively requested.",
+      "feedbackDataBody": "If you submit feedback through the in-app feedback form, its text (and any photo you choose to attach) is delivered to us via our feedback-delivery provider so we can read and respond to it. This processing is carried out on the legal basis of Art. 6(1)(a) GDPR (your consent), given by voluntarily submitting the form.",
+      "analyticsDataBody": "If analytics is enabled in your app version, we use PostHog to record basic, non-identifying product-usage events (for example, which screens or features are used) so we can understand and improve the App. This processing is carried out on the legal basis of Art. 6(1)(f) GDPR (our legitimate interest in maintaining and improving the App); you can object to this processing at any time — see “Your rights” below.",
       "processorsHeading": "Who processes data on our behalf",
       "processorsGoogle": "Google (Gemini API) — processes plant photos you submit for AI identification, health, and growth analysis. Google's own privacy policy governs how it handles that request data; we do not control Google's retention practices for API traffic.",
-      "processorsRevenueCat": "RevenueCat — manages subscriptions and purchase entitlements on our behalf. RevenueCat receives your purchase and subscription status from the App Store / Play Store so the App can unlock Pro features; it does not receive your payment card details.",
-      "processorsVercel": "Vercel — hosts the App's backend (serverless functions) that relay AI analysis requests and feedback submissions. Vercel processes this traffic as our hosting infrastructure provider.",
+      "processorsRevenueCat": "RevenueCat — manages subscriptions and purchase entitlements on our behalf. RevenueCat receives your purchase and subscription status from the App Store / Play Store so the App can unlock Pro features; it does not receive your payment card details. This processing is carried out on the legal basis of Art. 6(1)(b) GDPR (performance of your purchase/subscription contract).",
+      "processorsPostHog": "PostHog — if analytics is enabled, receives the usage events described above together with an anonymous device identifier. It does not receive your name, e-mail address, or plant data.",
+      "processorsVercel": "Vercel — hosts the App's backend (serverless functions) that relay AI analysis requests and feedback submissions. Vercel processes this traffic on our behalf, under the same legal bases described above, as our hosting infrastructure provider.",
       "noSelling": "We do not sell your personal data, and we do not use your plant photos to train our own models.",
+      "transfersHeading": "International data transfers",
+      "transfersBody": "Google, RevenueCat, and Vercel are based in the United States. Where your personal data is transferred to these providers outside the European Economic Area, that transfer is safeguarded by the European Commission's Standard Contractual Clauses (SCCs), which each provider has committed to as part of its data processing terms with us.",
       "retentionHeading": "How long we keep data",
       "retentionBody": "Data stored locally on your device (plants, photos, settings, history) is kept for as long as the App is installed, or until you delete it yourself. We do not keep a server-side copy of your plant data. Purchase and subscription records are retained by RevenueCat and the App Store / Play Store per their own retention policies, for as long as needed to support your subscription, provide refunds, and meet accounting/legal obligations.",
       "deletionHeading": "How to delete your data",
       "deletionBody": "You can permanently delete all locally stored plant data, photos, and settings at any time from Settings → Reset data inside the App. This action is immediate and cannot be undone. To also request deletion of purchase history held by Apple, Google, or RevenueCat, contact them directly, or contact us at the address below and we will forward a deletion request on your behalf where we are able to.",
       "childrenHeading": "Children's privacy",
       "childrenBody": "The App is not directed at children under 13 (or the minimum age required by your local law), and we do not knowingly collect personal data from children.",
+      "rightsHeading": "Your rights",
+      "rightsBody": "Under Articles 15 to 21 of the GDPR, you have the right to request access to, rectification of, or erasure of your personal data, to request that we restrict its processing, to receive a copy of it in a portable, machine-readable format, and to object to processing we carry out on the basis of our legitimate interest (see “Who processes data on our behalf” above). To exercise any of these rights, contact us using the details in the Contact section below.",
+      "rightsComplaintBody": "You also have the right to lodge a complaint with a data protection supervisory authority, in particular the Berlin Commissioner for Data Protection and Freedom of Information (Berliner Beauftragte für Datenschutz und Informationsfreiheit), or the supervisory authority of your own country of residence.",
       "contactHeading": "Contact",
       "contactBody": "For privacy questions or data deletion requests, use the in-app feedback form or contact us at raving.pascal@gmail.com. Operator details are listed in the Impressum.",
       "changesHeading": "Changes to this policy",
       "changesBody": "We may update this Privacy Policy from time to time to reflect changes to the App or applicable law. Continued use of the App after changes take effect constitutes your acceptance of the revised policy."
     },
     "impressum": {
+      "lastUpdated": "Last updated: August 27, 2026",
       "intro": "Information provided according to applicable imprint / provider identification requirements.",
       "serviceHeading": "Service",
       "serviceName": "myJungle Plant Watering Tracker",
@@ -427,6 +449,8 @@
       "operatorHeading": "Operator",
       "operatorCompanyName": "Company / sole trader name: Petra Szakacs (operating as Lumen Studio)",
       "operatorAddress": "Address: Einbecker Straße 64A, 10315 Berlin, Germany",
+      "operatorPhone": "Phone: +49 30 23566932",
+      "operatorTax": "Tax information: Kleinunternehmer gemäß §19 UStG",
       "operatorEmail": "Contact e-mail: raving.pascal@gmail.com",
       "responsibleHeading": "Responsible for content",
       "responsibleName": "Petra Szakacs",
@@ -437,8 +461,8 @@
   "notifications": {
     "channelName": "Rappels d'arrosage",
     "reminderTitle": "myJungle",
-    "reminderBody_one": "{{name}} attend de l'eau aujourd'hui",
-    "reminderBody_other": "{{count}} plantes attendent de l'eau aujourd'hui"
+    "reminderBody_one": "Aujourd'hui, c'est le jour d'arrosage de {{name}}",
+    "reminderBody_other": "Aujourd'hui est un jour d'arrosage pour {{count}} plantes"
   },
   "privacyHint": {
     "captureLine": "Les photos sont envoyées à Google Gemini pour l'analyse IA — jamais stockées sur nos serveurs ni utilisées à des fins publicitaires.",
@@ -447,5 +471,19 @@
   },
   "aiDisclaimer": {
     "line": "Estimation de l'IA à titre informatif, pas un avis vétérinaire ou professionnel."
+  },
+  "batchReview": {
+    "title": "Vérifiez vos plantes",
+    "subtitle_one": "Vérifiez le nom avant d'enregistrer — {{count}} photo analysée.",
+    "subtitle_other": "Vérifiez les noms avant d'enregistrer — {{count}} photos analysées.",
+    "waters": "Arrosage : {{frequency}}",
+    "couldNotIdentify": "Impossible d'identifier cette plante — vérifiez le nom ou reprenez la photo.",
+    "lowConfidenceHint": "Nous ne sommes pas tout à fait sûrs pour celle-ci — vérifiez le nom.",
+    "retakePhoto": "Reprendre la photo",
+    "discard": "Ignorer",
+    "keep": "Conserver",
+    "saveAll_one": "Enregistrer {{count}} plante",
+    "saveAll_other": "Enregistrer {{count}} plantes",
+    "nothingToSave": "Continuer sans enregistrer"
   }
 }

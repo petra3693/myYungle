@@ -1,5 +1,11 @@
 import type { Plant, WateringFrequency } from '@/types/plant'
 
+/**
+ * Deliberately not translated — this is the internal (English) day-name
+ * representation used only for parsing/serializing day names to/from an
+ * index (see indexFromDayName / dayNamesFromIndices below), never rendered
+ * to the user. Screens display days via fullDayName(t, i) instead.
+ */
 export const FULL_DAY_NAMES = [
   'Monday',
   'Tuesday',
@@ -89,4 +95,42 @@ export function isPlantDueToday(
 export function cycleAnchorForFrequency(frequency: WateringFrequency, existing: string | null): string | null {
   if (frequency === 'weekly') return null
   return existing ?? new Date().toISOString()
+}
+
+export interface DueOnDayStatus {
+  duePlants: Plant[]
+  doneCount: number
+  allDone: boolean
+}
+
+/**
+ * Which plants are due on a given day, and how many of those have already
+ * been watered on that specific date. Shared by DaysScreen (any selected
+ * day) and HomeScreen (today only) so both agree on exactly what "due" and
+ * "done" mean, instead of each re-deriving it.
+ */
+export function dueStatusForDay(
+  plants: Plant[],
+  dayIdx: number,
+  referenceDate: Date,
+  dateStr: string,
+): DueOnDayStatus {
+  const duePlants = plants.filter((p) => isPlantDueOnDay(p, dayIdx, referenceDate))
+  const doneCount = duePlants.filter((p) => p.wateredDates.includes(dateStr)).length
+  return { duePlants, doneCount, allDone: duePlants.length > 0 && doneCount === duePlants.length }
+}
+
+/**
+ * Marks every not-yet-watered plant in `plantsToMark` as watered on
+ * `dateStr`, via the caller's toggle function — skips plants already watered
+ * that day so a repeat call can never accidentally un-mark them.
+ */
+export function markPlantsWatered(
+  plantsToMark: Plant[],
+  dateStr: string,
+  toggle: (id: string, dateStr: string) => void,
+): void {
+  plantsToMark.forEach((p) => {
+    if (!p.wateredDates.includes(dateStr)) toggle(p.id, dateStr)
+  })
 }

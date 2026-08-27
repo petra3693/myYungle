@@ -27,6 +27,10 @@ export const TRIAL_DAYS = 7
 
 /** Show the lifetime win-back offer at most this often. */
 export const LIFETIME_OFFER_COOLDOWN_DAYS = 30
+/** Never offer the win-back until the user has bounced off the paywall at least this many times. */
+export const LIFETIME_OFFER_MIN_PAYWALL_DISMISSALS = 2
+/** ...and not until at least this long after the previous paywall view, so two dismissals in one sitting don't chain into it. */
+export const LIFETIME_OFFER_MIN_HOURS_SINCE_PAYWALL = 24
 
 /** Show the habit-upsell Home card starting this many days after onboarding. */
 export const HABIT_UPSELL_MIN_DAYS = 7
@@ -115,11 +119,36 @@ export function canStartHealthScan(healthScansUsed: number, user: UserState): bo
 
 // ─── Lifetime win-back eligibility (§4) ────────────────────────────────────
 
-export function canShowLifetimeOffer(lastShownIso: string | null, now: Date = new Date()): boolean {
-  if (!lastShownIso) return true
-  const last = new Date(lastShownIso).getTime()
-  const days = (now.getTime() - last) / 86400000
-  return days >= LIFETIME_OFFER_COOLDOWN_DAYS
+export interface LifetimeOfferEligibilityInput {
+  /** ISO timestamp this win-back screen was last actually shown — drives the 30-day cooldown. Null if never shown. */
+  lastShownIso: string | null
+  /** Total paywall dismissals so far, counting the one that just happened. */
+  paywallDismissedCount: number
+  /** When the paywall was shown immediately before this dismissal — null on the very first paywall view ever. */
+  lastPaywallShownAt: string | null
+  now?: Date
+}
+
+/**
+ * Gate for the lifetime win-back screen. Never fires straight off a single
+ * paywall dismissal: requires at least LIFETIME_OFFER_MIN_PAYWALL_DISMISSALS
+ * dismissals total, at least LIFETIME_OFFER_MIN_HOURS_SINCE_PAYWALL hours
+ * since the previous paywall view (so two dismissals back-to-back in one
+ * sitting can't chain straight into it), and the existing 30-day cooldown
+ * since it was last shown.
+ */
+export function canShowLifetimeOffer(input: LifetimeOfferEligibilityInput): boolean {
+  if (input.paywallDismissedCount < LIFETIME_OFFER_MIN_PAYWALL_DISMISSALS) return false
+
+  const now = input.now ?? new Date()
+
+  if (!input.lastPaywallShownAt) return false
+  const hoursSincePaywall = (now.getTime() - new Date(input.lastPaywallShownAt).getTime()) / 3600000
+  if (hoursSincePaywall < LIFETIME_OFFER_MIN_HOURS_SINCE_PAYWALL) return false
+
+  if (!input.lastShownIso) return true
+  const daysSinceShown = (now.getTime() - new Date(input.lastShownIso).getTime()) / 86400000
+  return daysSinceShown >= LIFETIME_OFFER_COOLDOWN_DAYS
 }
 
 // ─── Habit-upsell Home card eligibility (§3) ───────────────────────────────

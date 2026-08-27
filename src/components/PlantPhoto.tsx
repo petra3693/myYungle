@@ -17,9 +17,17 @@ export default function PlantPhoto({ photo, alt, className }: PlantPhotoProps) {
     }
 
     let active = true
-    void getPhotoBlob(photo).then((resolved) => {
-      if (active) setSrc(resolved)
-    })
+    getPhotoBlob(photo)
+      .then((resolved) => {
+        if (active) setSrc(resolved)
+      })
+      .catch((error: unknown) => {
+        // A missing photo (resolved === null) already renders the placeholder
+        // below — this only covers a genuine read failure (e.g. IndexedDB
+        // unavailable), which must not surface as an unhandled rejection.
+        console.error('[myJungle] Failed to load photo from storage:', error)
+        if (active) setSrc(null)
+      })
 
     return () => {
       active = false

@@ -78,13 +78,20 @@ describe('frequencyForWaterNeed', () => {
 })
 
 describe('frequencyLabel', () => {
-  it('renders weekly frequencies as an Nx/week count', () => {
-    expect(frequencyLabel('weekly', 1)).toBe('1x/week')
-    expect(frequencyLabel('weekly', 2)).toBe('2x/week')
+  const t = (key: string, opts?: Record<string, unknown>) => {
+    if (key === 'common.frequencyWeekly') return `${opts?.count}x/week`
+    if (key === 'common.frequencyBiweekly') return 'Every 2 weeks'
+    if (key === 'common.frequencyMonthly') return 'Monthly'
+    return key
+  }
+
+  it('renders weekly frequencies as an Nx/week count, translated via t()', () => {
+    expect(frequencyLabel('weekly', 1, t)).toBe('1x/week')
+    expect(frequencyLabel('weekly', 2, t)).toBe('2x/week')
   })
 
   it('renders biweekly and monthly as fixed labels, not arithmetic', () => {
-    expect(frequencyLabel('biweekly', 1)).toBe('Every 2 weeks')
-    expect(frequencyLabel('monthly', 1)).toBe('Monthly')
+    expect(frequencyLabel('biweekly', 1, t)).toBe('Every 2 weeks')
+    expect(frequencyLabel('monthly', 1, t)).toBe('Monthly')
   })
 })

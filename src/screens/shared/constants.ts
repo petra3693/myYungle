@@ -2,6 +2,10 @@ import { type AppSettings, type DayCode } from '@/types/plant'
 
 const GREEN = '#B7FF00'
 const DAYS: DayCode[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+// Deliberately not translated — used only as a fixed 7-element list to iterate
+// over (.map((_, i) => ...)) for day-picker options; the string values
+// themselves are never rendered. The displayed label always comes from
+// fullDayName(t, i) instead.
 const FULL_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const APP_VERSION = '1.0.0'
 const DEFAULT_SETTINGS: AppSettings = {

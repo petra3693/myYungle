@@ -19,7 +19,10 @@
     "couldNotAnalyzePhoto": "无法分析此照片，请重试。",
     "today": "今天",
     "daysAgo_one": "{{count}} 天前",
-    "daysAgo_other": "{{count}} 天前"
+    "daysAgo_other": "{{count}} 天前",
+    "frequencyMonthly": "每月一次",
+    "frequencyBiweekly": "每两周一次",
+    "frequencyWeekly": "每周{{count}}次"
   },
   "language": {
     "en": "English",
@@ -67,9 +70,7 @@
     "bulkAddSubtitle": "拍摄你所有剩余的植物以填满名额。",
     "bulkAddDone": "一键添加全部",
     "tapToCapture": "点击拍摄或选择照片",
-    "addMore": "添加更多",
-    "identifyPartialError_one": "有 {{count}} 张照片无法分析 — 请手动编辑该植物的详情。",
-    "identifyPartialError_other": "有 {{count}} 张照片无法分析 — 请手动编辑这些植物的详情。"
+    "addMore": "添加更多"
   },
   "analysisResult": {
     "proPreviewTitle": "7 天 Pro 体验",
@@ -89,8 +90,6 @@
   "home": {
     "title": "myJungle",
     "totalPlants": "植物总数",
-    "thirstyPlants": "口渴的植物",
-    "wateringRhythm": "浇水节奏",
     "habitCardTitle": "你已养成浇水习惯",
     "habitCardBody": "了解 Pro 版 AI 健康扫描能为你的丛林做些什么。",
     "emptyState": "还没有植物。点击 + 开始你的丛林之旅。",
@@ -99,7 +98,14 @@
     "waterToday": "今天浇水",
     "nextWaterTomorrow": "下次浇水：明天",
     "nextWaterOn": "下次浇水：{{day}}",
-    "noSchedule": "无日程安排"
+    "noSchedule": "无日程安排",
+    "wateringToday_one": "今天需要浇水：{{count}} 株",
+    "wateringToday_other": "今天需要浇水：{{count}} 株",
+    "allWateredToday": "今天都浇过水了！",
+    "markAllWateredToday_one": "将 {{count}} 株标记为已浇水",
+    "markAllWateredToday_other": "将 {{count}} 株标记为已浇水",
+    "viewInDays": "在“日程”中查看",
+    "avgHealth": "平均状态"
   },
   "days": {
     "groupedSummary_one": "我们已将你的 {{count}} 株植物分为 {{days}} 天。",
@@ -109,7 +115,8 @@
     "duePlants_other": "{{count}} 株",
     "noPlantsScheduled": "此日期没有安排植物。",
     "undo": "撤销",
-    "markAllWatered": "全部标记为已浇水（{{done}}/{{total}}）"
+    "markAllWatered": "全部标记为已浇水（{{done}}/{{total}}）",
+    "futureDayHint": "等到那一天到来后才能勾选。"
   },
   "plantDetail": {
     "title": "植物详情",
@@ -217,7 +224,8 @@
     "newPlant": "新植物",
     "severityLow": "轻度",
     "severityModerate": "中度",
-    "severityHigh": "重度"
+    "severityHigh": "重度",
+    "lowConfidenceHint": "AI 对这次诊断不太确定——请尝试用更清晰、光线更好的照片重新拍摄，以获得更可靠的结果。"
   },
   "growthScan": {
     "title": "生长扫描",
@@ -253,7 +261,13 @@
     "privacyPolicy": "隐私政策",
     "impressum": "版权信息",
     "footer": "自 {{year}} 年养植至今 · myJungle v{{version}}",
-    "resetConfirm": "此操作将永久删除你所有的植物和设置。是否继续？"
+    "resetConfirmTitle": "删除所有数据？",
+    "resetConfirmBody": "此操作将永久删除此设备上保存的所有植物、照片和健康记录，且无法撤销。",
+    "resetConfirmButton": "删除全部",
+    "exportSuccess": "数据已导出。",
+    "exportError": "无法导出数据，请重试。",
+    "exporting": "正在导出…",
+    "exportPhotosNote": "包含植物详情、浇水计划和健康记录——不包含照片。"
   },
   "limitReached": {
     "title": "已达到 {{limit}} 株免费植物上限",
@@ -375,7 +389,7 @@
   },
   "legal": {
     "terms": {
-      "lastUpdated": "Last updated: August 26, 2026",
+      "lastUpdated": "Last updated: August 27, 2026",
       "intro": "By using myJungle (“the App”), you agree to use it for its intended purpose: tracking and caring for your houseplants. These Terms form an agreement between you and Petra Szakacs (operating as Lumen Studio) (“we”, “us”, “the operator”), the operator of the App.",
       "aiDisclaimer": "AI-generated plant identification, health diagnosis, and care guidance are provided for informational purposes only. They are generated automatically and may not always be accurate or complete. Always use your own judgment before acting on this guidance, especially where plant or pet safety is concerned — for example, toxicity warnings should never be treated as a substitute for veterinary or poison-control advice.",
       "subscriptionsHeading": "Subscriptions",
@@ -396,30 +410,38 @@
       "contactBody": "Questions about these Terms can be sent via the in-app feedback form, or to raving.pascal@gmail.com. Operator details are listed in the Impressum."
     },
     "privacy": {
-      "lastUpdated": "Last updated: August 26, 2026",
+      "lastUpdated": "Last updated: August 27, 2026",
       "intro": "myJungle (“the App”) helps you track plant watering schedules and plant care. This policy explains what data the App keeps on your device, what it sends elsewhere, who processes it, how long it is kept, and how you can delete it.",
       "deviceDataHeading": "What stays on your device",
       "deviceDataBody": "Your plant profiles (names, photos, watering schedules, care notes, health and growth history) and your app settings (language, notification preferences, subscription status cache) are stored locally on your device, in the App's local storage. This data is not uploaded to our own servers and is not visible to us.",
       "sentDataHeading": "What we send elsewhere, and why",
-      "sentDataBody": "When you photograph a plant for identification, health diagnosis, or growth tracking, that photo is sent to our AI provider, Google (Gemini API), solely to generate the requested result (plant species, care profile, health assessment, or growth comparison). The photo and prompt are transmitted for that single request; we do not retain a copy of your photos on our own servers beyond what is needed to relay the request and return the result to your device.",
-      "feedbackDataBody": "If you submit feedback through the in-app feedback form, its text (and any photo you choose to attach) is delivered to us via our feedback-delivery provider so we can read and respond to it.",
+      "sentDataBody": "When you photograph a plant for identification, health diagnosis, or growth tracking, that photo is sent to our AI provider, Google (Gemini API), solely to generate the requested result (plant species, care profile, health assessment, or growth comparison). The photo and prompt are transmitted for that single request; we do not retain a copy of your photos on our own servers beyond what is needed to relay the request and return the result to your device. This processing is carried out on the legal basis of Art. 6(1)(b) GDPR (performance of a contract), because it is necessary to provide the plant-care feature you have actively requested.",
+      "feedbackDataBody": "If you submit feedback through the in-app feedback form, its text (and any photo you choose to attach) is delivered to us via our feedback-delivery provider so we can read and respond to it. This processing is carried out on the legal basis of Art. 6(1)(a) GDPR (your consent), given by voluntarily submitting the form.",
+      "analyticsDataBody": "If analytics is enabled in your app version, we use PostHog to record basic, non-identifying product-usage events (for example, which screens or features are used) so we can understand and improve the App. This processing is carried out on the legal basis of Art. 6(1)(f) GDPR (our legitimate interest in maintaining and improving the App); you can object to this processing at any time — see “Your rights” below.",
       "processorsHeading": "Who processes data on our behalf",
       "processorsGoogle": "Google (Gemini API) — processes plant photos you submit for AI identification, health, and growth analysis. Google's own privacy policy governs how it handles that request data; we do not control Google's retention practices for API traffic.",
-      "processorsRevenueCat": "RevenueCat — manages subscriptions and purchase entitlements on our behalf. RevenueCat receives your purchase and subscription status from the App Store / Play Store so the App can unlock Pro features; it does not receive your payment card details.",
-      "processorsVercel": "Vercel — hosts the App's backend (serverless functions) that relay AI analysis requests and feedback submissions. Vercel processes this traffic as our hosting infrastructure provider.",
+      "processorsRevenueCat": "RevenueCat — manages subscriptions and purchase entitlements on our behalf. RevenueCat receives your purchase and subscription status from the App Store / Play Store so the App can unlock Pro features; it does not receive your payment card details. This processing is carried out on the legal basis of Art. 6(1)(b) GDPR (performance of your purchase/subscription contract).",
+      "processorsPostHog": "PostHog — if analytics is enabled, receives the usage events described above together with an anonymous device identifier. It does not receive your name, e-mail address, or plant data.",
+      "processorsVercel": "Vercel — hosts the App's backend (serverless functions) that relay AI analysis requests and feedback submissions. Vercel processes this traffic on our behalf, under the same legal bases described above, as our hosting infrastructure provider.",
       "noSelling": "We do not sell your personal data, and we do not use your plant photos to train our own models.",
+      "transfersHeading": "International data transfers",
+      "transfersBody": "Google, RevenueCat, and Vercel are based in the United States. Where your personal data is transferred to these providers outside the European Economic Area, that transfer is safeguarded by the European Commission's Standard Contractual Clauses (SCCs), which each provider has committed to as part of its data processing terms with us.",
       "retentionHeading": "How long we keep data",
       "retentionBody": "Data stored locally on your device (plants, photos, settings, history) is kept for as long as the App is installed, or until you delete it yourself. We do not keep a server-side copy of your plant data. Purchase and subscription records are retained by RevenueCat and the App Store / Play Store per their own retention policies, for as long as needed to support your subscription, provide refunds, and meet accounting/legal obligations.",
       "deletionHeading": "How to delete your data",
       "deletionBody": "You can permanently delete all locally stored plant data, photos, and settings at any time from Settings → Reset data inside the App. This action is immediate and cannot be undone. To also request deletion of purchase history held by Apple, Google, or RevenueCat, contact them directly, or contact us at the address below and we will forward a deletion request on your behalf where we are able to.",
       "childrenHeading": "Children's privacy",
       "childrenBody": "The App is not directed at children under 13 (or the minimum age required by your local law), and we do not knowingly collect personal data from children.",
+      "rightsHeading": "Your rights",
+      "rightsBody": "Under Articles 15 to 21 of the GDPR, you have the right to request access to, rectification of, or erasure of your personal data, to request that we restrict its processing, to receive a copy of it in a portable, machine-readable format, and to object to processing we carry out on the basis of our legitimate interest (see “Who processes data on our behalf” above). To exercise any of these rights, contact us using the details in the Contact section below.",
+      "rightsComplaintBody": "You also have the right to lodge a complaint with a data protection supervisory authority, in particular the Berlin Commissioner for Data Protection and Freedom of Information (Berliner Beauftragte für Datenschutz und Informationsfreiheit), or the supervisory authority of your own country of residence.",
       "contactHeading": "Contact",
       "contactBody": "For privacy questions or data deletion requests, use the in-app feedback form or contact us at raving.pascal@gmail.com. Operator details are listed in the Impressum.",
       "changesHeading": "Changes to this policy",
       "changesBody": "We may update this Privacy Policy from time to time to reflect changes to the App or applicable law. Continued use of the App after changes take effect constitutes your acceptance of the revised policy."
     },
     "impressum": {
+      "lastUpdated": "Last updated: August 27, 2026",
       "intro": "Information provided according to applicable imprint / provider identification requirements.",
       "serviceHeading": "Service",
       "serviceName": "myJungle Plant Watering Tracker",
@@ -427,6 +449,8 @@
       "operatorHeading": "Operator",
       "operatorCompanyName": "Company / sole trader name: Petra Szakacs (operating as Lumen Studio)",
       "operatorAddress": "Address: Einbecker Straße 64A, 10315 Berlin, Germany",
+      "operatorPhone": "Phone: +49 30 23566932",
+      "operatorTax": "Tax information: Kleinunternehmer gemäß §19 UStG",
       "operatorEmail": "Contact e-mail: raving.pascal@gmail.com",
       "responsibleHeading": "Responsible for content",
       "responsibleName": "Petra Szakacs",
@@ -437,8 +461,8 @@
   "notifications": {
     "channelName": "浇水提醒",
     "reminderTitle": "myJungle",
-    "reminderBody_one": "{{name}}今天在等待浇水",
-    "reminderBody_other": "有{{count}}株植物今天在等待浇水"
+    "reminderBody_one": "今天是{{name}}的浇水日",
+    "reminderBody_other": "今天是{{count}}株植物的浇水日"
   },
   "privacyHint": {
     "captureLine": "照片会发送给 Google Gemini 进行 AI 分析——绝不会存储在我们的服务器上，也不会用于广告。",
@@ -447,5 +471,19 @@
   },
   "aiDisclaimer": {
     "line": "这是仅供参考的AI估算，不构成兽医或专业建议。"
+  },
+  "batchReview": {
+    "title": "确认你的植物",
+    "subtitle_one": "保存前请确认名称——已分析 {{count}} 张照片。",
+    "subtitle_other": "保存前请确认名称——已分析 {{count}} 张照片。",
+    "waters": "浇水：{{frequency}}",
+    "couldNotIdentify": "无法识别这株植物——请检查名称或重新拍照。",
+    "lowConfidenceHint": "我们对这个不太确定——请检查名称。",
+    "retakePhoto": "重新拍照",
+    "discard": "丢弃",
+    "keep": "保留",
+    "saveAll_one": "保存 {{count}} 株植物",
+    "saveAll_other": "保存 {{count}} 株植物",
+    "nothingToSave": "不保存继续"
   }
 }

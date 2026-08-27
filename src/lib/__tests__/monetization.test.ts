@@ -83,20 +83,69 @@ describe('userStateFromSettings — founding members are Pro even if isPro is so
 })
 
 describe('canShowLifetimeOffer', () => {
-  it('allows showing it when never shown before', () => {
-    expect(canShowLifetimeOffer(null)).toBe(true)
+  const twoDaysAgo = (now: Date) => new Date(now.getTime() - 2 * 86400000).toISOString()
+
+  it('never shows on the very first paywall dismissal, even with no prior win-back and no cooldown issue', () => {
+    const now = new Date(2026, 0, 30)
+    expect(canShowLifetimeOffer({
+      lastShownIso: null,
+      paywallDismissedCount: 1,
+      lastPaywallShownAt: null,
+      now,
+    })).toBe(false)
   })
 
-  it('blocks it within the cooldown window', () => {
+  it('blocks it with fewer than the minimum paywall dismissals, even if the paywall was viewed long ago', () => {
+    const now = new Date(2026, 0, 30)
+    expect(canShowLifetimeOffer({
+      lastShownIso: null,
+      paywallDismissedCount: 1,
+      lastPaywallShownAt: twoDaysAgo(now),
+      now,
+    })).toBe(false)
+  })
+
+  it('blocks it when the previous paywall view was less than 24h ago, even with enough dismissals', () => {
+    const now = new Date(2026, 0, 30, 12, 0, 0)
+    const lastPaywallShownAt = new Date(2026, 0, 30, 0, 0, 0).toISOString() // 12h ago
+    expect(canShowLifetimeOffer({
+      lastShownIso: null,
+      paywallDismissedCount: 2,
+      lastPaywallShownAt,
+      now,
+    })).toBe(false)
+  })
+
+  it('allows it once dismissal count and the 24h gap are both satisfied, with no prior win-back shown', () => {
+    const now = new Date(2026, 0, 30)
+    expect(canShowLifetimeOffer({
+      lastShownIso: null,
+      paywallDismissedCount: 2,
+      lastPaywallShownAt: twoDaysAgo(now),
+      now,
+    })).toBe(true)
+  })
+
+  it('still blocks it within the 30-day win-back cooldown, even with enough dismissals and enough elapsed time', () => {
     const now = new Date(2026, 0, 30)
     const shown10DaysAgo = new Date(2026, 0, 20).toISOString()
-    expect(canShowLifetimeOffer(shown10DaysAgo, now)).toBe(false)
+    expect(canShowLifetimeOffer({
+      lastShownIso: shown10DaysAgo,
+      paywallDismissedCount: 2,
+      lastPaywallShownAt: twoDaysAgo(now),
+      now,
+    })).toBe(false)
   })
 
-  it('allows it again once the cooldown has elapsed', () => {
+  it('allows it again once the 30-day win-back cooldown has elapsed too', () => {
     const now = new Date(2026, 1, 1)
     const shown31DaysAgo = new Date(2026, 0, 1).toISOString()
-    expect(canShowLifetimeOffer(shown31DaysAgo, now)).toBe(true)
+    expect(canShowLifetimeOffer({
+      lastShownIso: shown31DaysAgo,
+      paywallDismissedCount: 2,
+      lastPaywallShownAt: twoDaysAgo(now),
+      now,
+    })).toBe(true)
   })
 })
 

@@ -24,8 +24,45 @@
   100% { transform: scale(1.6); opacity: 0; }
 }
 
+@keyframes ai-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50%      { transform: scale(1.08); opacity: 1; }
+}
+
 .drop-animate { animation: drop-fall 0.82s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both; }
 .text-animate { animation: text-rise 0.5s ease-out 0.3s both; }
+
+/* Gentle breathing pulse for AiThinkingLoader's CSS fallback (used while the
+   Spline 3D scene is loading, and permanently if it fails or times out). */
+.ai-fallback-pulse { animation: ai-pulse 1.6s ease-in-out infinite; }
+
+/* Splash-screen entrance animations, plus every infinite/looping one
+   (.btn-ai's shimmer, pulse-ring wherever it's used) — reduced-motion drops
+   the loops entirely and jumps the one-shot entrances straight to their end
+   state instead of skipping the transform/opacity change altogether. */
+@media (prefers-reduced-motion: reduce) {
+  .drop-animate {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+  .text-animate {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+  .btn-ai {
+    animation: none;
+  }
+  .pulse-ring {
+    animation: none;
+    opacity: 0;
+  }
+  .ai-fallback-pulse {
+    animation: none;
+    opacity: 1;
+  }
+}
 
 @theme {
   --font-heading: 'Baloo 2', sans-serif;
@@ -70,6 +107,16 @@
   }
 
   button { font-family: var(--font-heading); cursor: pointer; }
+
+  /* Keyboard/AT focus only — mouse and touch activation never shows this.
+     -webkit-tap-highlight-color above suppresses the native tap flash on all
+     three, so this is the only focus feedback any of them get. */
+  button:focus-visible,
+  input:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--color-green);
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
@@ -107,7 +154,7 @@
   /* ── Grey uppercase section captions (HEALTH STATUS, WATERING TIMELINE, ...) ── */
   .caption-eyebrow {
     font-family: var(--font-body);
-    font-size: 12px;
+    font-size: 13px;
     color: var(--color-text-dim);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -269,6 +316,26 @@
   }
   .toggle-switch.is-on .toggle-switch__knob { left: 23px; }
 
+  /* ── Tap-target: invisible hit-area extender for icon-sized controls.
+     `position: relative` here is a fallback for elements that don't already
+     set their own position (e.g. absolute) — it never overrides one that
+     does, since Tailwind's utility layer comes after `components`. The
+     `::after` is centered on the element and sized to at least 44×44 in
+     either dimension, regardless of how small the visible control is —
+     never resizes the visible control itself. ── */
+  .tap-target {
+    position: relative;
+  }
+  .tap-target::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+
   /* ── Stat tiles ── */
   .stat-tile {
     background: var(--color-surface);
@@ -369,11 +436,16 @@
     font-size: 28px;
     line-height: 1;
   }
+  /* --color-text-dim (#8E8E93) is ~2.4:1 on the light pill (#E6E6E6) — fails
+     WCAG AA. --color-ink-dim (#6B6B70) is the default so both pills stay
+     readable; the dark pill (#000 bg) restores --color-text-dim inline,
+     where the lighter gray both reads fine and matches the rest of that
+     pill's dark-surface styling. */
   .stat-pill__label {
     font-family: var(--font-body);
     font-weight: 500;
     font-size: 13px;
-    color: var(--color-text-dim);
+    color: var(--color-ink-dim);
   }
 
   /* ── Checklist row (Days) — flat fill, no elevation ── */
@@ -469,10 +541,12 @@
   }
   .tab-bar__item {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 2px;
     width: 52px;
-    height: 52px;
+    height: 60px;
     border-radius: 9999px;
     cursor: pointer;
     color: #000000;
@@ -490,7 +564,13 @@
     align-items: center;
     justify-content: center;
   }
-  .tab-bar__label { display: none; }
+  .tab-bar__label {
+    display: block;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 10px;
+    line-height: 1;
+  }
 
   .scroll-y { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 }

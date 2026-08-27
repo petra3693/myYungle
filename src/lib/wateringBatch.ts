@@ -44,8 +44,8 @@ export function frequencyForWaterNeed(waterNeed: WaterNeed): WateringFrequency {
 }
 
 /** Human label for a frequency, e.g. "2x/week", "1x/week", "Every 2 weeks", "Monthly". */
-export function frequencyLabel(frequency: WateringFrequency, dayCount: number): string {
-  if (frequency === 'monthly') return 'Monthly'
-  if (frequency === 'biweekly') return 'Every 2 weeks'
-  return `${dayCount}x/week`
+export function frequencyLabel(frequency: WateringFrequency, dayCount: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  if (frequency === 'monthly') return t('common.frequencyMonthly')
+  if (frequency === 'biweekly') return t('common.frequencyBiweekly')
+  return t('common.frequencyWeekly', { count: dayCount })
 }

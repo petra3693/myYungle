@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getDateForDayIndex, isPlantDueOnDay, isPlantDueToday } from '@/lib/wateringDue'
+import { dueStatusForDay, getDateForDayIndex, isPlantDueOnDay, isPlantDueToday, markPlantsWatered } from '@/lib/wateringDue'
 import type { Plant } from '@/types/plant'
 
 type SchedulePlant = Pick<Plant, 'wateringDays' | 'wateringFrequency' | 'wateringCycleAnchor'>
@@ -71,5 +71,87 @@ describe('isPlantDueToday', () => {
     const mondayOfWeek2 = getDateForDayIndex(0, WEEK2_WED)
     const todayIdxForThatMonday = 0
     expect(isPlantDueToday(p, todayIdxForThatMonday, mondayOfWeek2)).toBe(true)
+  })
+})
+
+function fullPlant(overrides: Partial<Plant> = {}): Plant {
+  return {
+    id: 'p1',
+    name: 'Test plant',
+    room: 'Unknown',
+    careNote: '',
+    wateringDays: [0],
+    isCustomSchedule: false,
+    scheduleDays: ['MON'],
+    wateringFrequency: 'weekly',
+    wateringCycleAnchor: null,
+    waterNeed: 'Moderate',
+    lightNeed: 'Medium',
+    photo: '',
+    lastWateredAt: null,
+    previousWateredAt: null,
+    history: [],
+    healthLogs: [],
+    wateredDates: [],
+    isWateredToday: false,
+    isToxicToPets: null,
+    ...overrides,
+  }
+}
+
+describe('dueStatusForDay', () => {
+  it('counts only due plants, and only those watered on the exact date as done', () => {
+    const today = '2026-01-05' // a Monday, matching ANCHOR_MONDAY
+    const plants = [
+      fullPlant({ id: 'a', wateringDays: [0], wateredDates: [today] }), // due, done
+      fullPlant({ id: 'b', wateringDays: [0], wateredDates: [] }), // due, not done
+      fullPlant({ id: 'c', wateringDays: [2], wateredDates: [] }), // not due (Wednesday only)
+    ]
+    const result = dueStatusForDay(plants, 0, ANCHOR_MONDAY, today)
+    expect(result.duePlants.map((p) => p.id)).toEqual(['a', 'b'])
+    expect(result.doneCount).toBe(1)
+    expect(result.allDone).toBe(false)
+  })
+
+  it('reports allDone true only when every due plant is watered that day, and false when nothing is due', () => {
+    const today = '2026-01-05'
+    const allDone = dueStatusForDay(
+      [fullPlant({ id: 'a', wateringDays: [0], wateredDates: [today] })],
+      0,
+      ANCHOR_MONDAY,
+      today,
+    )
+    expect(allDone.allDone).toBe(true)
+
+    const noneDue = dueStatusForDay(
+      [fullPlant({ id: 'a', wateringDays: [2], wateredDates: [] })],
+      0,
+      ANCHOR_MONDAY,
+      today,
+    )
+    expect(noneDue.duePlants).toEqual([])
+    expect(noneDue.allDone).toBe(false)
+  })
+})
+
+describe('markPlantsWatered', () => {
+  it('toggles every not-yet-watered plant and skips ones already watered that day', () => {
+    const today = '2026-01-05'
+    const plants = [
+      fullPlant({ id: 'a', wateredDates: [today] }),
+      fullPlant({ id: 'b', wateredDates: [] }),
+      fullPlant({ id: 'c', wateredDates: [] }),
+    ]
+    const toggled: string[] = []
+    markPlantsWatered(plants, today, (id) => toggled.push(id))
+    expect(toggled).toEqual(['b', 'c'])
+  })
+
+  it('does nothing when every plant is already watered that day', () => {
+    const today = '2026-01-05'
+    const plants = [fullPlant({ id: 'a', wateredDates: [today] })]
+    const toggled: string[] = []
+    markPlantsWatered(plants, today, (id) => toggled.push(id))
+    expect(toggled).toEqual([])
   })
 })

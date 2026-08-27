@@ -1,7 +1,5 @@
 import type { Plant } from '@/types/plant'
 
-export const LAST_ACTIVE_DATE_KEY = 'mj_last_active_date'
-
 /** Local (device-timezone) `YYYY-MM-DD`, not UTC — a date rollover should follow the user's clock. */
 export function localDateString(date: Date): string {
   const y = date.getFullYear()
@@ -11,18 +9,37 @@ export function localDateString(date: Date): string {
 }
 
 /**
- * Pure rollover step: when the stored "last active" date differs from today,
- * every plant's `isWateredToday` resets so a new day starts unwatered again.
- * `lastWateredAt`/`previousWateredAt` are left untouched — they're history, not daily state.
+ * Pure rollover step: `isWateredToday` is derived from `wateredDates`, not stored
+ * independently, so this just recomputes it against `today` for every plant.
+ * That makes it safe to call as often as needed (on load, on foreground, on a
+ * midnight timer) — a plant whose derived value already matches keeps its exact
+ * object reference, and the whole array reference is preserved when nothing
+ * changed, so callers can skip re-rendering.
  */
-export function rolloverWateredState(
-  plants: Plant[],
-  storedDate: string | null,
-  today: string,
-): { plants: Plant[]; rolled: boolean } {
-  if (storedDate === today) return { plants, rolled: false }
-  return {
-    plants: plants.map((p) => (p.isWateredToday ? { ...p, isWateredToday: false } : p)),
-    rolled: true,
+export function rolloverWateredState(plants: Plant[], today: string): { plants: Plant[]; rolled: boolean } {
+  let rolled = false
+  const next = plants.map((p) => {
+    const shouldBeWateredToday = p.wateredDates.includes(today)
+    if (p.isWateredToday === shouldBeWateredToday) return p
+    rolled = true
+    return { ...p, isWateredToday: shouldBeWateredToday }
+  })
+  return { plants: rolled ? next : plants, rolled }
+}
+
+/**
+ * Migrates a plant record saved before `wateredDates` existed: seeds a single
+ * entry from `lastWateredAt`'s local date, since that was the only watering
+ * event legacy data tracked. Records already carrying `wateredDates` pass
+ * through de-duplicated, untouched otherwise.
+ */
+export function migrateWateredDates(raw: { wateredDates?: unknown; lastWateredAt?: unknown }): string[] {
+  if (Array.isArray(raw.wateredDates)) {
+    return Array.from(new Set(raw.wateredDates.filter((d): d is string => typeof d === 'string')))
   }
+  if (typeof raw.lastWateredAt === 'string') {
+    const parsed = new Date(raw.lastWateredAt)
+    if (!Number.isNaN(parsed.getTime())) return [localDateString(parsed)]
+  }
+  return []
 }

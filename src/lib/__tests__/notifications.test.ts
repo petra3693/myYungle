@@ -42,6 +42,7 @@ function fakePlant(overrides: Partial<Plant> & Pick<Plant, 'name' | 'wateringDay
     previousWateredAt: null,
     history: [],
     healthLogs: [],
+    wateredDates: [],
     isWateredToday: false,
     isToxicToPets: null,
     ...overrides,
@@ -82,12 +83,12 @@ describe('buildReminderBody', () => {
   const t = i18n.getFixedT('en')
 
   it('names the plant when exactly one is due', () => {
-    expect(buildReminderBody(t, [{ name: 'Monstera' }])).toBe('Monstera is waiting for water today')
+    expect(buildReminderBody(t, [{ name: 'Monstera' }])).toBe("Today is Monstera's watering day")
   })
 
   it('uses a count when multiple plants are due', () => {
     expect(buildReminderBody(t, [{ name: 'Monstera' }, { name: 'Cactus' }, { name: 'Fern' }])).toBe(
-      '3 plants are waiting for water today',
+      'Today is a watering day for 3 plants',
     )
   })
 })
@@ -146,11 +147,11 @@ describe('syncWateringNotifications', () => {
     expect(notifications).toHaveLength(2)
 
     const monday = notifications.find((n: { id: number }) => n.id === 5100)
-    expect(monday.body).toBe('Monstera is waiting for water today')
+    expect(monday.body).toBe("Today is Monstera's watering day")
     expect(monday.schedule).toEqual({ on: { weekday: 2, hour: 8, minute: 30 }, repeats: true, allowWhileIdle: true })
 
     const wednesday = notifications.find((n: { id: number }) => n.id === 5102)
-    expect(wednesday.body).toBe('2 plants are waiting for water today')
+    expect(wednesday.body).toBe('Today is a watering day for 2 plants')
     expect(wednesday.schedule.on.weekday).toBe(4)
   })
 

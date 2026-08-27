@@ -1,8 +1,10 @@
 import { type AnalyzePlantHealthResult } from '@/lib/analyzePlantHealth'
-import { healthScoreColor, healthStatusLabel } from '@/screens/shared/helpers'
-import { IconCheck, IconLeaf, IconNavAdd, IconNavCalendar, IconNavHealth, IconNavHome, IconNavSettings, IconRuler } from '@/screens/shared/icons'
+import { GREEN } from '@/screens/shared/constants'
+import { confidenceColor, healthScoreColor, healthStatusLabel, severityColor } from '@/screens/shared/helpers'
+import { IconAlert, IconCheck, IconLeaf, IconNavAdd, IconNavCalendar, IconNavHealth, IconNavHome, IconNavSettings, IconRuler } from '@/screens/shared/icons'
 import { type Tab } from '@/types/screens'
 import Spline from '@splinetool/react-spline'
+import { Component, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 // ─── Small building blocks ───────────────────────────────────────────────────
@@ -51,22 +53,84 @@ const AI_THINKING_SCENE_URL = 'https://prod.spline.design/uTHVwstWqr3EZSQv/scene
 // that keeps the full, uncropped animation visible at any display size.
 const AI_THINKING_NATIVE_SIZE = 640
 
+/** Spline scenes load over the network at runtime — on a slow or offline connection this never resolves, so it's given a hard deadline. */
+const SPLINE_LOAD_TIMEOUT_MS = 3000
+
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  } catch {
+    return false
+  }
+}
+
+/** Catches synchronous/render-time failures from the Spline scene (e.g. WebGL unavailable) so AiThinkingLoader can fall back locally instead of tripping the app-level ErrorBoundary. */
+class SplineErrorBoundary extends Component<{ onError: () => void; children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false }
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+  componentDidCatch() {
+    this.props.onError()
+  }
+  render() {
+    return this.state.hasError ? null : this.props.children
+  }
+}
+
+/** Brand-matching CSS-only stand-in for the 3D scene: the same droplet mark used on the splash screen, breathing gently while the AI works. */
+function StaticThinkingLoader({ size, animate }: { size: number; animate: boolean }) {
+  return (
+    <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', color: GREEN }}>
+      <svg
+        className={animate ? 'ai-fallback-pulse' : undefined}
+        width={size * 0.5}
+        height={size * 0.58}
+        viewBox="0 0 85 116"
+        fill="currentColor"
+      >
+        <path d="M42.5 2.9C45.9 16.9 53.7 29.9 63.9 38.2l1.1 0.9C77.4 48.9 83 59.4 83 71.9c0 11-4.4 21.6-12.1 29.4C63.2 109 52.6 113.4 42.5 113.4S21.8 109 14 101.3C6.3 93.5 1.9 82.9 1.9 71.9c0-11.6 5.7-22.7 17.2-32.2l1.1-0.9C29.5 29.9 39.1 16.9 42.5 2.9z" />
+      </svg>
+    </div>
+  )
+}
+
 function AiThinkingLoader({ size = 160 }: { size?: number }) {
   const scale = size / AI_THINKING_NATIVE_SIZE
+  const [reducedMotion] = useState(prefersReducedMotion)
+  // Reduced-motion skips the 3D scene entirely — never even attempted, so it
+  // starts (and stays) in the failed/fallback state.
+  const [splineState, setSplineState] = useState<'loading' | 'ready' | 'failed'>(reducedMotion ? 'failed' : 'loading')
+
+  useEffect(() => {
+    if (splineState !== 'loading') return
+    const timer = setTimeout(() => setSplineState('failed'), SPLINE_LOAD_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [splineState])
+
   return (
     <div style={{ width: size, height: size, position: 'relative' }}>
-      <div
-        style={{
-          width: AI_THINKING_NATIVE_SIZE,
-          height: AI_THINKING_NATIVE_SIZE,
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: `translate(-50%, -50%) scale(${scale})`,
-        }}
-      >
-        <Spline scene={AI_THINKING_SCENE_URL} style={{ width: '100%', height: '100%' }} />
+      <div style={{ position: 'absolute', inset: 0, opacity: splineState === 'ready' ? 0 : 1, transition: 'opacity 0.3s ease' }}>
+        <StaticThinkingLoader size={size} animate={!reducedMotion} />
       </div>
+      {splineState !== 'failed' && (
+        <div
+          style={{
+            width: AI_THINKING_NATIVE_SIZE,
+            height: AI_THINKING_NATIVE_SIZE,
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: `translate(-50%, -50%) scale(${scale})`,
+            opacity: splineState === 'ready' ? 1 : 0,
+            transition: 'opacity 0.3s ease',
+          }}
+        >
+          <SplineErrorBoundary onError={() => setSplineState('failed')}>
+            <Spline scene={AI_THINKING_SCENE_URL} style={{ width: '100%', height: '100%' }} onLoad={() => setSplineState('ready')} />
+          </SplineErrorBoundary>
+        </div>
+      )}
     </div>
   )
 }
@@ -127,6 +191,8 @@ function HealthReportCard({ photo, plantName, scannedAt, result }: {
 }) {
   const { t } = useTranslation()
   const statusColor = healthScoreColor(result.healthScore)
+  const confColor = confidenceColor(result.confidence)
+  const isLowConfidence = result.confidence < 50
   return (
     <>
       <img src={photo} alt="" className="w-full rounded-[1.5rem] object-cover mb-4" style={{ height: 220 }} />
@@ -145,16 +211,19 @@ function HealthReportCard({ photo, plantName, scannedAt, result }: {
             <span className="font-body" style={{ fontSize: 11, color: 'var(--color-ink-dim)' }}>{t('health.status')}</span>
           </div>
           <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#E6E6E6' }}>
-            <div style={{ color: '#0a8f3f' }}><IconRuler size={16} /></div>
+            <div style={{ color: severityColor(result.severity) }}><IconRuler size={16} /></div>
             <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{t(`health.severity${result.severity}`)}</span>
             <span className="font-body" style={{ fontSize: 11, color: 'var(--color-ink-dim)' }}>{t('health.severity')}</span>
           </div>
           <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#E6E6E6' }}>
-            <div style={{ color: '#0a8f3f' }}><IconCheck size={16} /></div>
+            <div style={{ color: confColor }}>{result.confidence >= 75 ? <IconCheck size={16} /> : <IconAlert size={16} />}</div>
             <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{result.confidence}%</span>
             <span className="font-body" style={{ fontSize: 11, color: 'var(--color-ink-dim)' }}>{t('health.confidence')}</span>
           </div>
         </div>
+        {isLowConfidence && (
+          <p className="font-body" style={{ fontSize: 12, color: '#a5680f', lineHeight: 1.4 }}>{t('health.lowConfidenceHint')}</p>
+        )}
         <div className="rounded-2xl p-4" style={{ background: '#E6E6E6' }}>
           <span className="caption-eyebrow" style={{ color: 'var(--color-ink-dim)' }}>{t('health.diagnosis')}</span>
           <div className="font-heading mt-1" style={{ fontSize: 18 }}>{result.diagnosis}</div>

@@ -144,7 +144,7 @@ function BatchReviewScreen({
                     ? t('batchReview.couldNotIdentify')
                     : lowConf
                       ? t('batchReview.lowConfidenceHint')
-                      : t('batchReview.waters', { frequency: frequencyLabel(row.draft.wateringFrequency, row.draft.wateringDays.length) })}
+                      : t('batchReview.waters', { frequency: frequencyLabel(row.draft.wateringFrequency, row.draft.wateringDays.length, t) })}
                 </div>
                 {failed && !isDiscarded && (
                   <button

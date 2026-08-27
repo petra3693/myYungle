@@ -88,7 +88,7 @@ function HomeScreen({
         </div>
         <div className="stat-pill" style={{ background: '#000' }}>
           <span className="stat-pill__value" style={{ color: GREEN }}>{plants.length === 0 ? '—' : `${avgHealth}%`}</span>
-          <span className="stat-pill__label">{t('home.avgHealth')}</span>
+          <span className="stat-pill__label" style={{ color: 'var(--color-text-dim)' }}>{t('home.avgHealth')}</span>
         </div>
       </div>
       {showProPreviewBanner && previewState !== 'success' && (

@@ -50,6 +50,9 @@ export interface Plant {
   previousWateredAt: string | null
   history: HistoryEntry[]
   healthLogs: PlantHealthLog[]
+  /** Local (device-timezone) `YYYY-MM-DD` dates this plant was watered on — the source of truth for `isWateredToday`. */
+  wateredDates: string[]
+  /** Derived from `wateredDates` vs. today's local date — never set directly other than to keep it in sync. */
   isWateredToday: boolean
   /** null = unknown / not set */
   isToxicToPets: boolean | null
@@ -105,4 +108,8 @@ export interface AppSettings {
   proPreviewBannerDismissed: boolean
   /** Whether the onboarding capture screen's "your photos, handled carefully" privacy intro card has been dismissed — shown at most once, ever. */
   privacyIntroCardDismissed: boolean
+  /** How many times the paywall has been closed without purchasing — gates the lifetime win-back offer. */
+  paywallDismissedCount: number
+  /** ISO timestamp the paywall was shown for the dismissal immediately before the current one — null before the first-ever dismissal. */
+  lastPaywallShownAt: string | null
 }

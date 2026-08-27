@@ -90,7 +90,7 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
     galleryInputRef.current?.click()
   }
 
-  const wateringFrequencyLabel = draft ? frequencyLabel(draft.wateringFrequency, draft.wateringDays.length) : ''
+  const wateringFrequencyLabel = draft ? frequencyLabel(draft.wateringFrequency, draft.wateringDays.length, t) : ''
   const usedSlots = Math.max(0, FREE_PLANT_LIMIT - remainingFreeSlots)
 
   return (
@@ -173,11 +173,11 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
 
               <div className="mt-4 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#E6E6E6' }}>
                 <span className="font-body" style={{ fontSize: 14, color: 'var(--color-ink-dim)' }}>{t('manualAdd.lightRequirement')}</span>
-                <span className="font-heading" style={{ fontSize: 14, color: '#111' }}>{draft.lightNeed.toLowerCase()}</span>
+                <span className="font-heading" style={{ fontSize: 14, color: '#111' }}>{draft.lightNeed === 'High' ? t('plantDetail.lightDirect') : draft.lightNeed === 'Low' ? t('plantDetail.lightShade') : t('plantDetail.lightIndirect')}</span>
               </div>
               <div className="mt-3 rounded-2xl p-4 flex items-center justify-between" style={{ background: '#E6E6E6' }}>
                 <span className="font-body" style={{ fontSize: 14, color: 'var(--color-ink-dim)' }}>{t('manualAdd.humidity')}</span>
-                <span className="font-heading" style={{ fontSize: 14, color: '#111' }}>{draft.humidityNeed}</span>
+                <span className="font-heading" style={{ fontSize: 14, color: '#111' }}>{draft.humidityNeed === 'high' ? t('plantDetail.humidityHigh') : draft.humidityNeed === 'low' ? t('plantDetail.humidityLow') : t('plantDetail.humidityNormal')}</span>
               </div>
 
               <div className="mt-3 rounded-2xl px-4 py-3 flex items-center gap-2" style={{ border: `1.5px solid ${GREEN}`, background: '#e6fbee' }}>
