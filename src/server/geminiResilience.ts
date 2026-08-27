@@ -11,7 +11,7 @@ const MAX_ATTEMPTS_PER_MODEL = 3
 const RETRY_BASE_DELAY_MS = 1000
 
 export function primaryGeminiModel(): string {
-  return process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash'
+  return process.env.GEMINI_MODEL?.trim() || 'gemini-1.5-flash'
 }
 
 function geminiModelChain(): string[] {
