@@ -220,7 +220,7 @@ function HealthCheckFlowScreen({ plants, mode, presetPlant, onBack, onSaveLog, o
       {showAttachPicker && (
         <>
           <div className="sheet-backdrop is-open" onClick={() => setShowAttachPicker(false)} />
-          <div className="fixed left-0 right-0 bottom-0 z-[70]">
+          <div className="fixed left-0 right-0 bottom-0 z-[100]">
             <div className="sheet-panel is-open p-5 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3">
               <span className="font-heading" style={{ fontSize: 18 }}>{t('health.attachToWhich')}</span>
               {plants.length === 0 ? (

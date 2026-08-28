@@ -62,7 +62,7 @@
     "captureSubtitle": "Fotografía tus plantas ({{count}} plazas gratuitas)",
     "captureDone": "Iniciar análisis con IA",
     "skipForNow": "Omitir por ahora",
-    "capturedCount": "{{count}}/{{total}} capturadas (gratis)",
+    "capturedCount": "{{count}}/{{total}} plazas gratuitas usadas",
     "healthGrowthHint": "Salud y crecimiento por escaneo — Pro lo desbloquea",
     "identifying_one": "Identificando {{count}} planta…",
     "identifying_other": "Identificando {{count}} plantas…",
@@ -376,8 +376,7 @@
     "permissionPrompt": "Aún no solicitado",
     "permissionUnavailable": "Gestionado por la app (vista previa web)",
     "deniedHint": "Las notificaciones están desactivadas en la configuración de tu dispositivo. Actívalas para recibir recordatorios de riego.",
-    "enableButton": "Activar notificaciones",
-    "enabledLabel": "Notificaciones activadas"
+    "enableButton": "Activar notificaciones"
   },
   "scheduleSettings": {
     "title": "Ajustes del calendario de riego",

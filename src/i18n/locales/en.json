@@ -62,7 +62,7 @@
     "captureSubtitle": "Photograph your plants ({{count}} free slots)",
     "captureDone": "Start AI analysis",
     "skipForNow": "Skip for now",
-    "capturedCount": "{{count}}/{{total}} captured (free)",
+    "capturedCount": "{{count}}/{{total}} free plant slots used",
     "healthGrowthHint": "Health & growth based on scan — Pro unlocks it",
     "identifying_one": "Identifying {{count}} plant…",
     "identifying_other": "Identifying {{count}} plants…",
@@ -376,8 +376,7 @@
     "permissionPrompt": "Not yet requested",
     "permissionUnavailable": "Managed by the app (web preview)",
     "deniedHint": "Notifications are turned off in your device settings. Enable them there to receive watering reminders.",
-    "enableButton": "Enable Notifications",
-    "enabledLabel": "Notifications Enabled"
+    "enableButton": "Enable Notifications"
   },
   "scheduleSettings": {
     "title": "Watering Schedule Settings",

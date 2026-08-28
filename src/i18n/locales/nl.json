@@ -62,7 +62,7 @@
     "captureSubtitle": "Fotografeer je planten ({{count}} gratis plekken)",
     "captureDone": "AI-analyse starten",
     "skipForNow": "Voorlopig overslaan",
-    "capturedCount": "{{count}}/{{total}} vastgelegd (gratis)",
+    "capturedCount": "{{count}}/{{total}} gratis plekken gebruikt",
     "healthGrowthHint": "Gezondheid en groei via scan — Pro ontgrendelt dit",
     "identifying_one": "{{count}} plant identificeren…",
     "identifying_other": "{{count}} planten identificeren…",
@@ -376,8 +376,7 @@
     "permissionPrompt": "Nog niet gevraagd",
     "permissionUnavailable": "Wordt beheerd door de app (webpreview)",
     "deniedHint": "Meldingen staan uit in je apparaatinstellingen. Zet ze daar aan om giet-herinneringen te ontvangen.",
-    "enableButton": "Meldingen inschakelen",
-    "enabledLabel": "Meldingen ingeschakeld"
+    "enableButton": "Meldingen inschakelen"
   },
   "scheduleSettings": {
     "title": "Instellingen giet schema",

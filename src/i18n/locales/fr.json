@@ -62,7 +62,7 @@
     "captureSubtitle": "Photographiez vos plantes ({{count}} places gratuites)",
     "captureDone": "Lancer l'analyse IA",
     "skipForNow": "Passer pour l'instant",
-    "capturedCount": "{{count}}/{{total}} capturées (gratuit)",
+    "capturedCount": "{{count}}/{{total}} places gratuites utilisées",
     "healthGrowthHint": "Santé et croissance par scan — Pro le débloque",
     "identifying_one": "Identification de {{count}} plante…",
     "identifying_other": "Identification de {{count}} plantes…",
@@ -376,8 +376,7 @@
     "permissionPrompt": "Pas encore demandée",
     "permissionUnavailable": "Géré par l'application (aperçu web)",
     "deniedHint": "Les notifications sont désactivées dans les paramètres de votre appareil. Activez-les pour recevoir les rappels d'arrosage.",
-    "enableButton": "Activer les notifications",
-    "enabledLabel": "Notifications activées"
+    "enableButton": "Activer les notifications"
   },
   "scheduleSettings": {
     "title": "Paramètres du calendrier d'arrosage",

@@ -62,7 +62,7 @@
     "captureSubtitle": "Fotografa le tue piante ({{count}} posti gratuiti)",
     "captureDone": "Avvia analisi IA",
     "skipForNow": "Salta per ora",
-    "capturedCount": "{{count}}/{{total}} catturate (gratis)",
+    "capturedCount": "{{count}}/{{total}} posti gratuiti utilizzati",
     "healthGrowthHint": "Salute e crescita tramite scansione — Pro li sblocca",
     "identifying_one": "Identificazione di {{count}} pianta…",
     "identifying_other": "Identificazione di {{count}} piante…",
@@ -376,8 +376,7 @@
     "permissionPrompt": "Non ancora richiesta",
     "permissionUnavailable": "Gestito dall'app (anteprima web)",
     "deniedHint": "Le notifiche sono disattivate nelle impostazioni del dispositivo. Attivale per ricevere i promemoria di irrigazione.",
-    "enableButton": "Attiva notifiche",
-    "enabledLabel": "Notifiche attivate"
+    "enableButton": "Attiva notifiche"
   },
   "scheduleSettings": {
     "title": "Impostazioni del calendario di irrigazione",

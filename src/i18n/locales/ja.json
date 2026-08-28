@@ -62,7 +62,7 @@
     "captureSubtitle": "植物を撮影しよう（無料枠{{count}}件）",
     "captureDone": "AI解析を開始",
     "skipForNow": "今はスキップ",
-    "capturedCount": "{{count}}/{{total}}件を撮影済み（無料）",
+    "capturedCount": "無料枠 {{count}}/{{total}} 使用中",
     "healthGrowthHint": "スキャンで健康と成長を確認 — Proで解放",
     "identifying_one": "{{count}}件の植物を識別中…",
     "identifying_other": "{{count}}件の植物を識別中…",
@@ -376,8 +376,7 @@
     "permissionPrompt": "まだリクエストしていません",
     "permissionUnavailable": "アプリが管理します（Webプレビュー）",
     "deniedHint": "デバイスの設定で通知がオフになっています。水やりのリマインダーを受け取るには、そこで通知をオンにしてください。",
-    "enableButton": "通知を有効にする",
-    "enabledLabel": "通知が有効です"
+    "enableButton": "通知を有効にする"
   },
   "scheduleSettings": {
     "title": "水やりスケジュール設定",

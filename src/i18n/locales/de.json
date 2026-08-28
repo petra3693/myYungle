@@ -62,7 +62,7 @@
     "captureSubtitle": "Fotografiere deine Pflanzen ({{count}} kostenlose Plätze)",
     "captureDone": "KI-Analyse starten",
     "skipForNow": "Vorerst überspringen",
-    "capturedCount": "{{count}}/{{total}} aufgenommen (kostenlos)",
+    "capturedCount": "{{count}}/{{total}} kostenlose Plätze belegt",
     "healthGrowthHint": "Gesundheit & Wachstum per Scan — Pro schaltet es frei",
     "identifying_one": "Identifiziere {{count}} Pflanze…",
     "identifying_other": "Identifiziere {{count}} Pflanzen…",
@@ -376,8 +376,7 @@
     "permissionPrompt": "Noch nicht angefragt",
     "permissionUnavailable": "Wird von der App verwaltet (Web-Vorschau)",
     "deniedHint": "Benachrichtigungen sind in deinen Geräteeinstellungen deaktiviert. Aktiviere sie dort, um Gieß-Erinnerungen zu erhalten.",
-    "enableButton": "Benachrichtigungen aktivieren",
-    "enabledLabel": "Benachrichtigungen aktiviert"
+    "enableButton": "Benachrichtigungen aktivieren"
   },
   "scheduleSettings": {
     "title": "Gießplan-Einstellungen",

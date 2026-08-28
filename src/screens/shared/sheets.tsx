@@ -16,10 +16,10 @@ function DayPickerSheet({ selected, onSelect, onClose }: { selected: number; onS
   const [open, setOpen] = useState(false)
   useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
   function close(action?: () => void) { setOpen(false); setTimeout(() => action?.(), 180) }
-  return (
+  return createPortal(
     <>
       <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onClose)} />
-      <div className="fixed left-0 right-0 bottom-0 z-[70]">
+      <div className="fixed left-0 right-0 bottom-0 z-[100]">
         <div className={`sheet-panel ${open ? 'is-open' : ''} p-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-1`}>
           <span className="caption-eyebrow block px-4 pt-2 pb-1" style={{ color: 'var(--color-ink-dim)' }}>{t('dayPicker.title')}</span>
           {FULL_DAY_NAMES.map((_, i) => (
@@ -36,7 +36,8 @@ function DayPickerSheet({ selected, onSelect, onClose }: { selected: number; onS
           ))}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 function ConfirmSheet({ title, body, confirmLabel, danger, onCancel, onConfirm }: {
@@ -49,7 +50,7 @@ function ConfirmSheet({ title, body, confirmLabel, danger, onCancel, onConfirm }
   return createPortal(
     <>
       <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onCancel)} />
-      <div className="fixed left-4 right-4 z-[70]" style={{ top: '50%', transform: 'translateY(-50%)' }}>
+      <div className="fixed left-4 right-4 z-[100]" style={{ top: '50%', transform: 'translateY(-50%)' }}>
         <div className={`modal-card ${open ? 'is-open' : ''} p-5 flex flex-col gap-4`}>
           <span className="font-heading" style={{ fontSize: 18 }}>{title}</span>
           <p className="font-body" style={{ fontSize: 14, color: '#444', lineHeight: 1.5 }}>{body}</p>
@@ -75,10 +76,10 @@ function LanguagePickerSheet({ current, onSelect, onClose }: { current: AppLangu
   const [open, setOpen] = useState(false)
   useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
   function close(action?: () => void) { setOpen(false); setTimeout(() => action?.(), 180) }
-  return (
+  return createPortal(
     <>
       <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onClose)} />
-      <div className="fixed left-0 right-0 bottom-0 z-[70]">
+      <div className="fixed left-0 right-0 bottom-0 z-[100]">
         <div className={`sheet-panel ${open ? 'is-open' : ''} p-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-1`} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
           <span className="caption-eyebrow block px-3 pt-2 pb-1" style={{ color: 'var(--color-ink-dim)' }}>{t('languagePicker.title')}</span>
           {LANGUAGE_OPTIONS.map((opt) => (
@@ -95,7 +96,8 @@ function LanguagePickerSheet({ current, onSelect, onClose }: { current: AppLangu
           ))}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 function NotificationSettingsSheet({ pushNotifications, reminderTime, onToggle, onChangeReminderTime, onClose }: {
@@ -144,10 +146,10 @@ function NotificationSettingsSheet({ pushNotifications, reminderTime, onToggle, 
   const alreadyEnabled = pushNotifications && permissionStatus !== 'denied'
   const buttonDisabled = busy || alreadyEnabled || !hasValidTime
 
-  return (
+  return createPortal(
     <>
       <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onClose)} />
-      <div className="fixed left-0 right-0 bottom-0 z-[70]">
+      <div className="fixed left-0 right-0 bottom-0 z-[100]">
         <div className={`sheet-panel ${open ? 'is-open' : ''} p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-4`}>
           <div className="flex items-center justify-between">
             <span className="font-heading" style={{ fontSize: 18 }}>{t('notificationSettings.title')}</span>
@@ -187,18 +189,27 @@ function NotificationSettingsSheet({ pushNotifications, reminderTime, onToggle, 
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => void handleToggle()}
-            disabled={buttonDisabled}
-            className="btn-fill w-full"
-            style={{ height: 52, fontSize: 15, opacity: buttonDisabled ? 0.5 : 1 }}
-          >
-            {alreadyEnabled ? t('notificationSettings.enabledLabel') : t('notificationSettings.enableButton')}
-          </button>
+          {alreadyEnabled ? (
+            // Already on — a disabled button restating "Enabled" invites a tap that does
+            // nothing. A plain Done just closes the sheet, matching how it got opened.
+            <button type="button" onClick={() => close(onClose)} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>
+              {t('common.done')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void handleToggle()}
+              disabled={buttonDisabled}
+              className="btn-fill w-full"
+              style={{ height: 52, fontSize: 15, opacity: buttonDisabled ? 0.5 : 1 }}
+            >
+              {t('notificationSettings.enableButton')}
+            </button>
+          )}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 function WateringScheduleSettingsSheet({
@@ -226,57 +237,62 @@ function WateringScheduleSettingsSheet({
 
   return (
     <>
-      <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onClose)} />
-      <div className="fixed left-0 right-0 bottom-0 z-[70]">
-        <div className={`sheet-panel ${open ? 'is-open' : ''} p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-4`}>
-          <div className="flex items-center justify-between">
-            <span className="font-heading" style={{ fontSize: 18 }}>{t('scheduleSettings.title')}</span>
-            <IconCircleBtn onClick={() => close(onClose)} label={t('common.close')}><IconX size={16} /></IconCircleBtn>
-          </div>
-          <p className="font-body" style={{ fontSize: 13, color: 'var(--color-ink-dim)' }}>{t('scheduleSettings.description')}</p>
-
-          <div className="rounded-2xl overflow-hidden" style={{ background: '#E6E6E6' }}>
-            <button
-              type="button"
-              onClick={() => setShowDayPicker(true)}
-              className="flex items-center justify-between w-full px-4 py-3.5"
-              style={{ borderBottom: '1px solid #d8d8d8' }}
-            >
-              <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{t('scheduleSettings.primaryDay')}</span>
-              <span className="flex items-center gap-1.5">
-                <span className="font-body" style={{ fontSize: 14, color: '#666' }}>{fullDayName(t, primaryWateringDay)}</span>
-                <IconChevronRight size={16} />
-              </span>
-            </button>
-            <div className="flex items-center justify-between px-4 py-3.5">
-              <div className="min-w-0 pr-3">
-                <div className="font-heading" style={{ fontSize: 15, color: '#111' }}>{t('scheduleSettings.groupToggle')}</div>
-                <div className="font-body" style={{ fontSize: 13, color: '#666', marginTop: 2 }}>{t('scheduleSettings.groupToggleHint')}</div>
+      {createPortal(
+        <>
+          <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onClose)} />
+          <div className="fixed left-0 right-0 bottom-0 z-[100]">
+            <div className={`sheet-panel ${open ? 'is-open' : ''} p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-4`}>
+              <div className="flex items-center justify-between">
+                <span className="font-heading" style={{ fontSize: 18 }}>{t('scheduleSettings.title')}</span>
+                <IconCircleBtn onClick={() => close(onClose)} label={t('common.close')}><IconX size={16} /></IconCircleBtn>
               </div>
-              <Toggle on={groupWateringDays} onChange={onChangeGroupingStrategy} />
+              <p className="font-body" style={{ fontSize: 13, color: 'var(--color-ink-dim)' }}>{t('scheduleSettings.description')}</p>
+
+              <div className="rounded-2xl overflow-hidden" style={{ background: '#E6E6E6' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowDayPicker(true)}
+                  className="flex items-center justify-between w-full px-4 py-3.5"
+                  style={{ borderBottom: '1px solid #d8d8d8' }}
+                >
+                  <span className="font-heading" style={{ fontSize: 15, color: '#111' }}>{t('scheduleSettings.primaryDay')}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-body" style={{ fontSize: 14, color: '#666' }}>{fullDayName(t, primaryWateringDay)}</span>
+                    <IconChevronRight size={16} />
+                  </span>
+                </button>
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div className="min-w-0 pr-3">
+                    <div className="font-heading" style={{ fontSize: 15, color: '#111' }}>{t('scheduleSettings.groupToggle')}</div>
+                    <div className="font-body" style={{ fontSize: 13, color: '#666', marginTop: 2 }}>{t('scheduleSettings.groupToggleHint')}</div>
+                  </div>
+                  <Toggle on={groupWateringDays} onChange={onChangeGroupingStrategy} />
+                </div>
+              </div>
+
+              {/* Fixed-height slot reserved regardless of content, so this note appearing/disappearing never shifts the layout. */}
+              <div style={{ minHeight: 20 }}>
+                {customScheduleCount > 0 && (
+                  <p className="font-body" style={{ fontSize: 13, color: 'var(--color-ink-dim)' }}>
+                    {t('scheduleSettings.customScheduleNote', { count: customScheduleCount })}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={onRecalculateAll}
+                disabled={recalculateDisabled}
+                className="btn-fill w-full"
+                style={{ height: 52, fontSize: 15, opacity: recalculateDisabled ? 0.5 : 1 }}
+              >
+                {recalculateDisabled ? t('scheduleSettings.upToDateLabel') : t('scheduleSettings.recalculateButton')}
+              </button>
             </div>
           </div>
-
-          {/* Fixed-height slot reserved regardless of content, so this note appearing/disappearing never shifts the layout. */}
-          <div style={{ minHeight: 20 }}>
-            {customScheduleCount > 0 && (
-              <p className="font-body" style={{ fontSize: 13, color: 'var(--color-ink-dim)' }}>
-                {t('scheduleSettings.customScheduleNote', { count: customScheduleCount })}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={onRecalculateAll}
-            disabled={recalculateDisabled}
-            className="btn-fill w-full"
-            style={{ height: 52, fontSize: 15, opacity: recalculateDisabled ? 0.5 : 1 }}
-          >
-            {recalculateDisabled ? t('scheduleSettings.upToDateLabel') : t('scheduleSettings.recalculateButton')}
-          </button>
-        </div>
-      </div>
+        </>,
+        document.body,
+      )}
       {showDayPicker && (
         <DayPickerSheet
           selected={primaryWateringDay}
@@ -302,10 +318,10 @@ function PrivacyDetailsSheet({ onClose }: { onClose: () => void }) {
   useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
   function close() { setOpen(false); setTimeout(onClose, 180) }
   const blocks = LEGAL_BLOCKS.privacy
-  return (
+  return createPortal(
     <>
       <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={close} />
-      <div className="fixed left-0 right-0 bottom-0 z-[70]">
+      <div className="fixed left-0 right-0 bottom-0 z-[100]">
         <div className={`sheet-panel ${open ? 'is-open' : ''} p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3`} style={{ maxHeight: '80vh' }}>
           <div className="flex items-center justify-between shrink-0">
             <span className="font-heading" style={{ fontSize: 18 }}>{t(LEGAL_TITLE_KEYS.privacy)}</span>
@@ -326,7 +342,8 @@ function PrivacyDetailsSheet({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 // ─── Monetization: Limit reached / Pro unlock ─────────────────────────────────
@@ -336,10 +353,10 @@ function LimitReachedSheet({ onUnlock, onCancel }: { onUnlock: () => void; onCan
   const [open, setOpen] = useState(false)
   useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
   function close(action: () => void) { setOpen(false); setTimeout(action, 180) }
-  return (
+  return createPortal(
     <>
       <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onCancel)} />
-      <div className="fixed left-4 right-4 z-[70]" style={{ top: '50%', transform: 'translateY(-50%)' }}>
+      <div className="fixed left-4 right-4 z-[100]" style={{ top: '50%', transform: 'translateY(-50%)' }}>
         <div className={`modal-card ${open ? 'is-open' : ''} p-6 flex flex-col items-center gap-4 text-center`}>
           <div className="flex items-center justify-center rounded-full" style={{ width: 64, height: 64, background: '#f3ecec' }}>
             <IconAlert size={28} />
@@ -352,7 +369,8 @@ function LimitReachedSheet({ onUnlock, onCancel }: { onUnlock: () => void; onCan
           <button type="button" onClick={() => close(onCancel)} className="font-heading w-full" style={{ height: 52, borderRadius: 9999, background: '#E6E6E6', color: '#888' }}>{t('limitReached.cancel')}</button>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 /** Our own confirmation modal for the destructive "reset all data" action — never window.confirm(), which shows the raw domain in a native WKWebView. */
@@ -361,10 +379,10 @@ function ResetDataSheet({ onConfirm, onCancel }: { onConfirm: () => void; onCanc
   const [open, setOpen] = useState(false)
   useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
   function close(action: () => void) { setOpen(false); setTimeout(action, 180) }
-  return (
+  return createPortal(
     <>
       <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={() => close(onCancel)} />
-      <div className="fixed left-4 right-4 z-[70]" style={{ top: '50%', transform: 'translateY(-50%)' }}>
+      <div className="fixed left-4 right-4 z-[100]" style={{ top: '50%', transform: 'translateY(-50%)' }}>
         <div className={`modal-card ${open ? 'is-open' : ''} p-6 flex flex-col items-center gap-4 text-center`}>
           <div className="flex items-center justify-center rounded-full" style={{ width: 64, height: 64, background: '#f3ecec' }}>
             <IconAlert size={28} />
@@ -379,7 +397,8 @@ function ResetDataSheet({ onConfirm, onCancel }: { onConfirm: () => void; onCanc
           <button type="button" onClick={() => close(onCancel)} className="font-heading w-full" style={{ height: 52, borderRadius: 9999, background: '#E6E6E6', color: '#888' }}>{t('common.cancel')}</button>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 

@@ -62,7 +62,7 @@
     "captureSubtitle": "Fotózd le a növényeidet ({{count}} ingyenes hely)",
     "captureDone": "AI-elemzés indítása",
     "skipForNow": "Most kihagyom",
-    "capturedCount": "{{count}}/{{total}} lefotózva (ingyenes)",
+    "capturedCount": "{{count}}/{{total}} ingyenes növény hely használatban",
     "healthGrowthHint": "Egészség & növekedés szkennelésből — a Pro feloldja",
     "identifying_one": "{{count}} növény azonosítása…",
     "identifying_other": "{{count}} növény azonosítása…",
@@ -376,8 +376,7 @@
     "permissionPrompt": "Még nem kérted",
     "permissionUnavailable": "Az alkalmazás kezeli (webes előnézet)",
     "deniedHint": "Az értesítések ki vannak kapcsolva a készüléked beállításaiban. Kapcsold be őket az öntözési emlékeztetők fogadásához.",
-    "enableButton": "Értesítések engedélyezése",
-    "enabledLabel": "Értesítések engedélyezve"
+    "enableButton": "Értesítések engedélyezése"
   },
   "scheduleSettings": {
     "title": "Öntözési ütemterv beállításai",

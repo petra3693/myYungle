@@ -311,7 +311,7 @@ function PlantDetailScreen({
       {showActions && createPortal(
         <>
           <div className="sheet-backdrop is-open" onClick={() => setShowActions(false)} />
-          <div className="fixed left-0 right-0 bottom-0 z-[70]">
+          <div className="fixed left-0 right-0 bottom-0 z-[100]">
             <div className="sheet-panel is-open p-3 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-1">
               <button
                 type="button"

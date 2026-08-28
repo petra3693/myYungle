@@ -177,7 +177,7 @@ function BatchCaptureScreen({
                     type="button"
                     onClick={() => removePhoto(p.id)}
                     className="absolute top-1.5 right-1.5 icon-circle tap-target"
-                    style={{ width: 26, height: 26, background: 'rgba(0,0,0,0.75)' }}
+                    style={{ width: 26, height: 26, background: 'rgba(0,0,0,0.75)', color: '#fff' }}
                     aria-label={t('common.removePhoto')}
                   >
                     <IconX size={12} />

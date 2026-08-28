@@ -62,7 +62,7 @@
     "captureSubtitle": "Fotografe as suas plantas ({{count}} vagas gratuitas)",
     "captureDone": "Iniciar análise de IA",
     "skipForNow": "Saltar por agora",
-    "capturedCount": "{{count}}/{{total}} capturadas (grátis)",
+    "capturedCount": "{{count}}/{{total}} vagas gratuitas utilizadas",
     "healthGrowthHint": "Saúde e crescimento por scan — o Pro desbloqueia",
     "identifying_one": "A identificar {{count}} planta…",
     "identifying_other": "A identificar {{count}} plantas…",
@@ -376,8 +376,7 @@
     "permissionPrompt": "Ainda não solicitada",
     "permissionUnavailable": "Gerido pela aplicação (pré-visualização web)",
     "deniedHint": "As notificações estão desativadas nas definições do seu dispositivo. Ative-as para receber lembretes de rega.",
-    "enableButton": "Ativar notificações",
-    "enabledLabel": "Notificações ativadas"
+    "enableButton": "Ativar notificações"
   },
   "scheduleSettings": {
     "title": "Definições do calendário de rega",

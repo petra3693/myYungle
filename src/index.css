@@ -297,7 +297,11 @@
     width: 50px;
     height: 30px;
     border-radius: 9999px;
-    background: var(--color-surface-2);
+    /* --color-surface-2 (#2c2c2e) was nearly indistinguishable from the #000
+       knob below — the whole control read as a flat black blob when off.
+       #52525b (Tailwind zinc-600) keeps a neutral, clearly-visible "off" gray
+       against both light and dark surrounding cards. */
+    background: #52525b;
     border: none;
     flex-shrink: 0;
     cursor: pointer;
@@ -311,7 +315,10 @@
     width: 24px;
     height: 24px;
     border-radius: 9999px;
-    background: #000;
+    /* White knob reads clearly against the new gray "off" track above; kept
+       white (not dark) in the "on" state too so it stays visible against the
+       lime green track instead of nearly disappearing into it. */
+    background: #fff;
     transition: left 0.15s ease;
   }
   .toggle-switch.is-on .toggle-switch__knob { left: 23px; }

@@ -62,7 +62,7 @@
     "captureSubtitle": "拍摄你的植物（{{count}} 个免费名额）",
     "captureDone": "开始 AI 分析",
     "skipForNow": "暂时跳过",
-    "capturedCount": "已拍摄 {{count}}/{{total}}（免费）",
+    "capturedCount": "已使用 {{count}}/{{total}} 个免费名额",
     "healthGrowthHint": "通过扫描了解健康与生长状况 — Pro 解锁",
     "identifying_one": "正在识别 {{count}} 株植物…",
     "identifying_other": "正在识别 {{count}} 株植物…",
@@ -376,8 +376,7 @@
     "permissionPrompt": "尚未请求",
     "permissionUnavailable": "由应用管理（网页预览）",
     "deniedHint": "通知在您的设备设置中已关闭。请在那里开启通知以接收浇水提醒。",
-    "enableButton": "开启通知",
-    "enabledLabel": "通知已启用"
+    "enableButton": "开启通知"
   },
   "scheduleSettings": {
     "title": "浇水计划设置",

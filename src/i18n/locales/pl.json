@@ -62,7 +62,7 @@
     "captureSubtitle": "Sfotografuj swoje rośliny ({{count}} darmowych miejsc)",
     "captureDone": "Rozpocznij analizę AI",
     "skipForNow": "Pomiń na razie",
-    "capturedCount": "{{count}}/{{total}} uchwyconych (za darmo)",
+    "capturedCount": "{{count}}/{{total}} darmowych miejsc wykorzystanych",
     "healthGrowthHint": "Zdrowie i wzrost poprzez skan — Pro odblokowuje",
     "identifying_one": "Identyfikowanie {{count}} rośliny…",
     "identifying_other": "Identyfikowanie {{count}} roślin…",
@@ -376,8 +376,7 @@
     "permissionPrompt": "Jeszcze nie poproszono",
     "permissionUnavailable": "Zarządzane przez aplikację (podgląd web)",
     "deniedHint": "Powiadomienia są wyłączone w ustawieniach urządzenia. Włącz je tam, aby otrzymywać przypomnienia o podlewaniu.",
-    "enableButton": "Włącz powiadomienia",
-    "enabledLabel": "Powiadomienia włączone"
+    "enableButton": "Włącz powiadomienia"
   },
   "scheduleSettings": {
     "title": "Ustawienia harmonogramu podlewania",
