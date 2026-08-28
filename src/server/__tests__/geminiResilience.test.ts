@@ -123,6 +123,43 @@ describe('generateGeminiJsonResilient', () => {
     expect(errorSpy.mock.calls[0]?.[0]).toContain('CONFIGURATION ERROR')
   })
 
+  it('moves straight to the next model (no retry, no backoff) on a 404, and logs it distinctly', async () => {
+    // vi.spyOn returns the SAME spy instance across tests once console.error is already
+    // mocked (e.g. by the 400-error test above) — mockClear() drops its call history so
+    // this test only sees calls made during its own run.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    errorSpy.mockClear()
+    generateContentMock
+      .mockRejectedValueOnce(new GoogleGenerativeAIFetchError('model not found', 404))
+      .mockResolvedValueOnce(textResult('{"ok":true}'))
+
+    const result = await generateGeminiJsonResilient('key', DUMMY_SCHEMA, 'prompt', DUMMY_IMAGE_PART)
+
+    expect(result).toBe('{"ok":true}')
+    // Exactly one attempt on the primary (no same-model retry burned on a 404) before the
+    // fallback model's first attempt succeeds.
+    expect(generateContentMock).toHaveBeenCalledTimes(2)
+    const models = calledModels()
+    expect(models[0]).toBe(primaryGeminiModel())
+    expect(models[1]).not.toBe(primaryGeminiModel())
+    // Distinct from both the transient-retry warning and the fatal "CONFIGURATION ERROR" —
+    // this is a per-model problem, not a request-wide one.
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    expect(errorSpy.mock.calls[0]?.[0]).toContain('MODEL NOT FOUND')
+  })
+
+  it('throws GeminiOverloadedError when every model in the chain 404s, without ever retrying a model', async () => {
+    generateContentMock.mockRejectedValue(new GoogleGenerativeAIFetchError('model not found', 404))
+
+    const promise = generateGeminiJsonResilient('key', DUMMY_SCHEMA, 'prompt', DUMMY_IMAGE_PART)
+    promise.catch(() => {})
+    await vi.runAllTimersAsync()
+
+    await expect(promise).rejects.toBeInstanceOf(GeminiOverloadedError)
+    // One attempt per model (primary + the single fallback) — a 404 never burns a 2nd attempt.
+    expect(generateContentMock).toHaveBeenCalledTimes(2)
+  })
+
   it('retries a 429 rate-limit error like any other transient failure', async () => {
     generateContentMock
       .mockRejectedValueOnce(new GoogleGenerativeAIFetchError('rate limited', 429))

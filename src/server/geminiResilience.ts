@@ -30,7 +30,7 @@ const RETRY_BASE_DELAY_MS = 500
 export const GEMINI_TOTAL_BUDGET_MS = 8000
 
 export function primaryGeminiModel(): string {
-  return process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash'
+  return process.env.GEMINI_MODEL?.trim() || 'gemini-3.6-flash'
 }
 
 function geminiModelChain(): string[] {
@@ -62,20 +62,31 @@ function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err ?? 'Unknown error')
 }
 
+type GeminiErrorOutcome = 'retry' | 'nextModel' | 'fatal'
+
 /**
- * 4xx other than 429 means the request itself was invalid (bad payload, bad
- * API key) — retrying identical input won't help. Everything else — 5xx,
- * 429, a network failure, or an empty candidate with no status at all — is
- * transient and worth retrying / falling back to another model.
+ * 404 means this specific model id isn't served (renamed, retired, or never
+ * existed for this project) — retrying it is pointless, but a *different*
+ * model may well still work, so this moves on to the next model in the
+ * chain instead of aborting the whole operation. This isn't hypothetical:
+ * Google has retired "current" flash models more than once during this
+ * project's lifetime, each time as a clean 404 on that one model id.
+ *
+ * 401/403/400 (and anything else 4xx besides 429) mean the request itself
+ * was invalid in a way no model swap fixes — bad API key, bad payload,
+ * safety block — so those abort immediately. 5xx, 429, a network failure, or
+ * an empty candidate with no status at all are transient and worth a retry
+ * on the same model first.
  */
-function isRetryableError(err: unknown): boolean {
+function classifyGeminiError(err: unknown): GeminiErrorOutcome {
   if (err instanceof GoogleGenerativeAIFetchError) {
     const status = err.status
-    if (status === undefined) return true
-    if (status >= 400 && status < 500 && status !== 429) return false
-    return true
+    if (status === undefined) return 'retry'
+    if (status === 404) return 'nextModel'
+    if (status >= 400 && status < 500 && status !== 429) return 'fatal'
+    return 'retry'
   }
-  return true
+  return 'retry'
 }
 
 async function callGeminiModel(
@@ -104,10 +115,12 @@ async function callGeminiModel(
  * waiting a short backoff between attempts on transient errors (overload,
  * 429/5xx, network failure, empty response). If a model is still failing
  * once its attempts are exhausted, moves on to the next fallback model and
- * repeats. A non-retryable error (bad request, invalid API key, unknown
- * model, safety block) is thrown immediately without burning retries or
- * fallbacks, and logged distinctly from transient failures since it's a
- * configuration problem, not load.
+ * repeats — the same thing happens immediately, without burning retries,
+ * when a model returns 404 (that model id isn't served, so retrying it is
+ * pointless, but a different model may still work). A truly fatal error
+ * (bad request, invalid API key, safety block) is thrown immediately instead
+ * — no model swap fixes those — and logged distinctly from transient
+ * failures since it's a configuration problem, not load.
  *
  * The whole operation — every model, every attempt, every backoff wait — is
  * bounded by GEMINI_TOTAL_BUDGET_MS, checked before every single attempt
@@ -138,13 +151,24 @@ export async function generateGeminiJsonResilient(
       try {
         return await callGeminiModel(genAI, model, prompt, imagePart, responseSchema)
       } catch (err) {
-        if (!isRetryableError(err)) {
-          // Distinct from the transient-failure warning below: a 404/401/403 here means a
-          // bad model id or API key — retrying identical input will never fix it.
+        const outcome = classifyGeminiError(err)
+
+        if (outcome === 'fatal') {
+          // Distinct from the transient-failure warning below: 401/403/400 here means a bad
+          // API key or payload — retrying identical input, on any model, will never fix it.
           console.error(
-            `[myJungle] Gemini CONFIGURATION ERROR on model "${model}" — not a load issue, check the model id / API key: ${errorMessage(err)}`,
+            `[myJungle] Gemini CONFIGURATION ERROR on model "${model}" — not a load issue, check the API key / request payload: ${errorMessage(err)}`,
           )
           throw err
+        }
+
+        if (outcome === 'nextModel') {
+          // Also a configuration issue (this model id isn't served), but scoped to just this
+          // one model — the next model in the chain gets a fair shot instead of aborting.
+          console.error(
+            `[myJungle] Gemini MODEL NOT FOUND: "${model}" (404) — skipping its remaining retries and moving to the next model in the chain: ${errorMessage(err)}`,
+          )
+          break
         }
 
         const attemptsLeft = MAX_ATTEMPTS_PER_MODEL - attempt
