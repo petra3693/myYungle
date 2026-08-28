@@ -28,8 +28,6 @@
 	<string>myJungle uses your camera to photograph your plants so it can identify the species and track their care.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>myJungle needs access to your photo library so you can choose an existing plant photo to identify and track.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>We need access to save plant photos to your library.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
