@@ -69,18 +69,10 @@ function HomeScreen({
         </div>
       )}
       {needsWaterToday > 0 && (
-        <button type="button" onClick={onMarkAllWateredToday} className="btn-fill w-full mb-2" style={{ height: 52, fontSize: 15 }}>
+        <button type="button" onClick={onMarkAllWateredToday} className="btn-fill w-full mb-6" style={{ height: 52, fontSize: 15 }}>
           {t('home.markAllWateredToday', { count: needsWaterToday })}
         </button>
       )}
-      <button
-        type="button"
-        onClick={onGoToDays}
-        className="font-body w-full text-center mb-6"
-        style={{ fontSize: 13, color: 'var(--color-ink-dim)', textDecoration: 'underline' }}
-      >
-        {t('home.viewInDays')}
-      </button>
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="stat-pill" style={{ background: '#E6E6E6' }}>
           <span className="stat-pill__value" style={{ color: '#000' }}>{plants.length}</span>
@@ -192,6 +184,14 @@ function HomeScreen({
           })}
         </div>
       )}
+      <button
+        type="button"
+        onClick={onGoToDays}
+        className="font-body w-full text-center mt-6"
+        style={{ fontSize: 13, color: 'var(--color-ink-dim)', textDecoration: 'underline' }}
+      >
+        {t('home.viewInDays')}
+      </button>
     </div>
   )
 }
