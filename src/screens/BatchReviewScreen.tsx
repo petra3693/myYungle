@@ -120,7 +120,7 @@ function BatchReviewScreen({
               }}
             >
               <img src={row.draft.photo} alt="" className="rounded-xl object-cover shrink-0 w-14 h-14" />
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 pr-2">
                 {editingId === row.id ? (
                   <input
                     autoFocus
@@ -133,8 +133,8 @@ function BatchReviewScreen({
                     style={{ fontSize: 15, color: '#111', background: 'transparent', borderBottom: '1.5px solid var(--color-ink-dim)', paddingBottom: 2 }}
                   />
                 ) : (
-                  <button type="button" onClick={() => setEditingId(row.id)} className="text-left w-full">
-                    <span className="font-heading truncate" style={{ fontSize: 15, color: '#111', textDecoration: 'underline', textDecorationColor: '#ccc' }}>
+                  <button type="button" onClick={() => setEditingId(row.id)} className="text-left w-full block min-w-0">
+                    <span className="font-heading truncate block" style={{ fontSize: 15, color: '#111', textDecoration: 'underline', textDecorationColor: '#ccc' }}>
                       {nameFor(row)}
                     </span>
                   </button>

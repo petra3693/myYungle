@@ -545,8 +545,18 @@
     align-items: center;
     justify-content: center;
     gap: 2px;
-    width: 52px;
-    height: 60px;
+    /* 52px was too narrow for several locales' translated labels ("Beállítások",
+       "Einstellungen", "Instellingen") — they visibly overflowed the round
+       button. min/max-width (instead of a fixed width) lets a medium-length
+       label push the button a little wider to display in full, while
+       max-width plus the label's own ellipsis (below) caps how far any
+       single label can grow — 5 x 64px + gaps still fits comfortably within
+       343px of available width on the narrowest supported screen (iPhone SE,
+       375px, minus the tab bar's 16px side margins). */
+    min-width: 52px;
+    max-width: 64px;
+    height: 64px;
+    padding: 0 4px;
     border-radius: 9999px;
     cursor: pointer;
     color: #000000;
@@ -563,13 +573,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
   .tab-bar__label {
     display: block;
+    max-width: 100%;
     font-family: var(--font-body);
     font-weight: 600;
     font-size: 10px;
-    line-height: 1;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .scroll-y { overflow-y: auto; -webkit-overflow-scrolling: touch; }
