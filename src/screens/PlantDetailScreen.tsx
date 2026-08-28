@@ -28,6 +28,15 @@ function PlantDetailScreen({
   const hasAccess = canAccessProFeatures(user)
   const wateringFrequencyLabel = frequencyLabel(plant.wateringFrequency, plant.wateringDays.length, t)
   const health = computeHealthStatus(plant, todayIdx, t)
+  /**
+   * healthScoreColor()'s "good" tier is the lime brand color (GREEN) — reads
+   * fine as a background fill or a small decorative dot, but as body TEXT on
+   * this screen's white card it fails contrast badly. #065f46 (Tailwind
+   * emerald-800) keeps the same green association at ~7.9:1 against white,
+   * clearing WCAG AAA for normal text. Only overrides the "good" tier —
+   * healthScoreColor()'s amber/red tiers are unchanged.
+   */
+  const healthScoreTextColor = (score: number) => (score >= 70 ? '#065f46' : healthScoreColor(score))
   const lowConfidenceId = isLowConfidence(plant.confidence)
   const toxicityUncertain = plant.isToxicToPets === null || lowConfidenceId
 
@@ -38,7 +47,7 @@ function PlantDetailScreen({
         <span className="font-heading truncate px-2" style={{ fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>{t('plantDetail.title')}</span>
         <IconCircleBtn onClick={() => setShowActions(true)} label={t('common.moreOptions')}><IconDotsHorizontal /></IconCircleBtn>
       </div>
-      <div className="scroll-y flex-1 pb-28">
+      <div className="scroll-y flex-1 pb-32">
         <div className="px-5" style={{ height: 220 }}>
           <div className="rounded-[1.5rem] overflow-hidden w-full h-full">
             <PlantPhoto photo={plant.photo} alt={plant.name} className="w-full h-full object-cover" />
@@ -97,7 +106,7 @@ function PlantDetailScreen({
               <>
                 <div className="flex items-center justify-between mb-2">
                   <span className="caption-eyebrow" style={{ color: 'var(--color-ink-dim)' }}>{t('plantDetail.healthScoreAi')}</span>
-                  <span className="font-body font-semibold" style={{ fontSize: 13, color: healthScoreColor(plant.healthLogs[0].healthScore) }}>
+                  <span className="font-body font-semibold" style={{ fontSize: 13, color: healthScoreTextColor(plant.healthLogs[0].healthScore) }}>
                     {plant.healthLogs[0].healthScore}% {plant.healthLogs[0].diagnosis}
                   </span>
                 </div>
