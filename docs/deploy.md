@@ -241,6 +241,39 @@ resolved. A `401` specifically also logs its own unmissable
 `[myJungle] ... 401 Unauthorized` line from `logUnauthorizedApiError()`
 (`src/lib/apiAuth.ts`) at the moment the request fails.
 
+### Build order for a native release — and why it can't be skipped
+
+A native archive is only ever as correct as the `dist/` bundle it was built
+from, and that bundle is fixed the moment `vite build` runs — nothing later
+in the pipeline (`cap sync`, Xcode's own Archive step, App Store Connect)
+ever re-reads your `.env` or corrects a bad build. Always do these **in this
+exact order**:
+
+1. **`npm run build`** — reads `.env`/`.env.local` *right now* and bakes the
+   result into `dist/`. This is the only step that ever looks at your local
+   env vars.
+2. **`npx cap sync ios`** (or `android`) — copies that already-built `dist/`
+   into the native project. It has no idea what env vars produced it.
+3. **Archive** (Xcode's Product → Archive, or the Android Studio/Play
+   Console equivalent) — packages whatever is already sitting in the native
+   project. By this point it's too late to fix a missing key by editing
+   `.env`; you'd have to redo step 1.
+
+**Vercel's own project Environment Variables never factor into any of
+this** — they only apply to `npm run deploy:vercel`, a completely separate
+pipeline that builds and deploys the *web* app. Setting `VITE_RC_KEY_IOS` in
+the Vercel dashboard has zero effect on a native archive; it has to be in
+your local `.env` at the moment you run step 1 above.
+
+As a build-time backstop for this exact mistake, `vite.config.ts` now
+refuses a `production`-mode build outright (`vite build`, i.e. step 1 above)
+if `VITE_RC_KEY_IOS` and `VITE_RC_KEY_ANDROID` are both unset, or if either
+one that *is* set still starts with `test_` — see
+`assertRevenueCatKeysForProductionBuild()` in `vite.config.ts` for the exact
+rule (it doesn't require both, only that at least one is set and isn't a
+placeholder). Set `ALLOW_MISSING_RC_KEYS=1` to skip this for a web-only
+build or a CI job that never produces a native archive.
+
 ## Deploying
 
 After setting the env vars above, `npm run deploy:vercel` builds and deploys

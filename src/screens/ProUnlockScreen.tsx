@@ -11,12 +11,14 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 function ProUnlockScreen({
-  source, offering, offeringsStatus, onClose, onPurchased, onOpenLegal, onRetryOfferings, onSimulateWebPurchase,
+  source, offering, offeringsStatus, offeringsErrorDetail, onClose, onPurchased, onOpenLegal, onRetryOfferings, onSimulateWebPurchase,
   showProPreview, onTryProPreview, onProPreviewGranted,
 }: {
   source: PaywallSource | null
   offering: PurchasesOffering | null
   offeringsStatus: OfferingsStatus
+  /** Plain-English detail on the most recent thing that made offeringsStatus go to 'unavailable' — see App.tsx. */
+  offeringsErrorDetail: string | null
   onClose: () => void
   onPurchased: (customerInfo: CustomerInfo, plan: SelectablePlan) => void
   onOpenLegal: (doc: LegalDoc) => void
@@ -38,6 +40,12 @@ function ProUnlockScreen({
   const isWebPreview = !Capacitor.isNativePlatform()
   // A real load failure on a real device (not the expected "no SDK on web" case) — offer a retry, not just dashes.
   const offeringsFailed = offeringsStatus === 'unavailable' && !isWebPreview
+  // Debug detail for the offeringsFailed banner — same spirit as packageMissing's below:
+  // never the full key (just presence + a 5-char prefix, enough to eyeball "is this the iOS
+  // key or did I paste the Android one in"), plus whatever actually threw during boot.
+  const debugPlatform = Capacitor.getPlatform()
+  const debugKey = debugPlatform === 'ios' ? import.meta.env.VITE_RC_KEY_IOS : debugPlatform === 'android' ? import.meta.env.VITE_RC_KEY_ANDROID : undefined
+  const debugKeyStatus = debugKey ? `present ("${debugKey.slice(0, 5)}…")` : 'MISSING'
   // Falls back to a product-ID search through availablePackages when the typed
   // .monthly/.annual/.lifetime accessor comes back null — see resolvePackage().
   const monthlyPkg = resolvePackage(offering, offering?.monthly ?? null, PRODUCT_MONTHLY)
@@ -268,9 +276,16 @@ function ProUnlockScreen({
         )}
 
         {offeringsFailed && (
-          <div className="rounded-2xl px-4 py-3 mt-4 flex items-center justify-between gap-2" style={{ background: '#fdecec' }}>
-            <span className="font-body" style={{ fontSize: 13, color: '#a33', lineHeight: 1.4 }}>{t('paywall.pricingLoadError')}</span>
-            <button type="button" onClick={onRetryOfferings} className="font-heading shrink-0" style={{ fontSize: 13, color: '#a33', textTransform: 'uppercase' }}>{t('paywall.retry')}</button>
+          <div className="rounded-2xl px-4 py-3 mt-4" style={{ background: '#fdecec' }}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-body" style={{ fontSize: 13, color: '#a33', lineHeight: 1.4 }}>{t('paywall.pricingLoadError')}</span>
+              <button type="button" onClick={onRetryOfferings} className="font-heading shrink-0" style={{ fontSize: 13, color: '#a33', textTransform: 'uppercase' }}>{t('paywall.retry')}</button>
+            </div>
+            {/* Same spirit as packageMissing's debug line below — plain-English, not translated,
+                never the full API key. */}
+            <p className="font-body mt-1" style={{ fontSize: 11, color: '#a33', opacity: 0.75, lineHeight: 1.4 }}>
+              Debug: platform="{debugPlatform}", key={debugKeyStatus}, last error: {offeringsErrorDetail ?? '—'}
+            </p>
           </div>
         )}
 

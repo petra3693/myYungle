@@ -16,6 +16,7 @@ export default defineConfig(async ({ mode }: ConfigEnv): Promise<UserConfig> => 
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
   const env = loadEnv(mode, projectRoot, '')
+  assertRevenueCatKeysForProductionBuild(mode, env)
   const devPlugins: Plugin[] = []
   if (mode === 'development') {
     const devModuleUrl = pathToFileURL(path.resolve(projectRoot, 'vite.dev-plugins.ts')).href
@@ -63,6 +64,56 @@ export default defineConfig(async ({ mode }: ConfigEnv): Promise<UserConfig> => 
     },
   }
 })
+
+/**
+ * Guardrail against shipping a native build with a missing/placeholder
+ * RevenueCat key — a native build reads whatever's in the local .env at
+ * `npm run build` time and bakes it into the bundle right then; there's no
+ * runtime fallback, and Vercel's own project env vars never reach an
+ * Xcode/Android Studio archive (see docs/deploy.md "Native build
+ * environment"). App.tsx already degrades gracefully at runtime if a key is
+ * missing (the paywall's "pricing load error" state instead of a crash) —
+ * this is a second, earlier line of defense that fails the *build* outright
+ * for a genuinely unconfigured production build, so the gap can't ship
+ * silently in the first place.
+ *
+ * Deliberately does NOT require both keys — some builds only ever target one
+ * platform. Fails only when NEITHER is set at all, or when one that IS set
+ * is still a "test_" placeholder (that's always a mistake, regardless of how
+ * many platforms are configured).
+ *
+ * Set ALLOW_MISSING_RC_KEYS=1 to skip this check — for a web-only build (no
+ * native archive is ever produced from it) or a CI job that never ships to
+ * a store.
+ */
+function assertRevenueCatKeysForProductionBuild(mode: string, env: Record<string, string>): void {
+  if (mode !== 'production') return
+  if (process.env.ALLOW_MISSING_RC_KEYS === '1') return
+
+  const iosKey = env.VITE_RC_KEY_IOS?.trim()
+  const androidKey = env.VITE_RC_KEY_ANDROID?.trim()
+  const problems: string[] = []
+
+  if (!iosKey && !androidKey) {
+    problems.push('neither VITE_RC_KEY_IOS nor VITE_RC_KEY_ANDROID is set')
+  }
+  if (iosKey?.startsWith('test_')) {
+    problems.push('VITE_RC_KEY_IOS is still a placeholder "test_" key')
+  }
+  if (androidKey?.startsWith('test_')) {
+    problems.push('VITE_RC_KEY_ANDROID is still a placeholder "test_" key')
+  }
+
+  if (problems.length === 0) return
+
+  throw new Error(
+    `[myJungle] Production build refused: ${problems.join('; ')}. ` +
+      'These must be set to real RevenueCat public API keys in your local .env file BEFORE running ' +
+      '"npm run build" — a native build reads .env directly at build time and bakes the value into the ' +
+      "bundle; Vercel's own project Environment Variables never reach an Xcode/Android Studio archive. " +
+      'Set ALLOW_MISSING_RC_KEYS=1 to skip this check for a web-only build or a CI job that never ships to a store.',
+  )
+}
 
 type FigmaSiteConfiguration = {
   title?: string

@@ -106,6 +106,10 @@ export default function App() {
   const [paywallSource, setPaywallSource] = useState<PaywallSource | null>(null)
   const [offering, setOffering] = useState<PurchasesOffering | null>(null)
   const [offeringsStatus, setOfferingsStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading')
+  // Plain-English detail on the most recent thing that made offeringsStatus go to
+  // 'unavailable' — read by ProUnlockScreen's debug line (offeringsFailed branch) so a
+  // tester on a real device without a debugger attached can see *why*, not just that it failed.
+  const [offeringsErrorDetail, setOfferingsErrorDetail] = useState<string | null>(null)
   const user = useUserState(settings)
   const todayIdx = getTodayDayIndex()
   const wateringCount = useMemo(() => plants.reduce((n, p) => n + plantHistory(p).filter((h) => h.note === 'Watered.').length, 0), [plants])
@@ -231,8 +235,11 @@ export default function App() {
       }
       setOffering(offerings.current)
       setOfferingsStatus('ready')
+      setOfferingsErrorDetail(null)
     } catch (error) {
-      console.error(`[myJungle] getOfferings() failed: ${describeRevenueCatError(error)}`, error)
+      const detail = describeRevenueCatError(error)
+      console.error(`[myJungle] getOfferings() failed: ${detail}`, error)
+      setOfferingsErrorDetail(`getOfferings() failed: ${detail}`)
       setOfferingsStatus('unavailable')
     }
   }
@@ -256,9 +263,9 @@ export default function App() {
         // Never configure the SDK with a missing or placeholder test key in a
         // real build — surface it as the paywall's existing "pricing load
         // error" state (with its Retry button) instead of a white screen.
-        console.error(
-          `[myJungle] RevenueCat API key for "${platform}" is missing or is a placeholder test key. Set ${envVarName} in your environment before shipping.`,
-        )
+        const detail = `${envVarName} is ${!apiKey ? 'missing' : 'still a placeholder test_ key'}`
+        console.error(`[myJungle] RevenueCat API key for "${platform}" is missing or is a placeholder test key. Set ${envVarName} in your environment before shipping.`)
+        setOfferingsErrorDetail(detail)
         setOfferingsStatus('unavailable')
         return
       }
@@ -284,7 +291,9 @@ export default function App() {
         // plugin failing to link) becomes an unhandled rejection and offeringsStatus
         // stays stuck at 'loading' forever — the paywall would spin indefinitely
         // instead of ever reaching the "pricing load error" Retry state.
-        console.error(`[myJungle] Purchases.configure() failed: ${describeRevenueCatError(error)}`, error)
+        const detail = describeRevenueCatError(error)
+        console.error(`[myJungle] Purchases.configure() failed: ${detail}`, error)
+        setOfferingsErrorDetail(`Purchases.configure() failed: ${detail}`)
         setOfferingsStatus('unavailable')
         return
       }
@@ -768,6 +777,7 @@ export default function App() {
         source={paywallSource}
         offering={offering}
         offeringsStatus={offeringsStatus}
+        offeringsErrorDetail={offeringsErrorDetail}
         onClose={handleClosePaywall}
         onOpenLegal={(doc) => { setLegalDoc(doc); setScreen('legal') }}
         onRetryOfferings={() => void fetchOfferings()}
