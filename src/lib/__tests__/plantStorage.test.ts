@@ -107,11 +107,55 @@ describe('savePlantsToStorage', () => {
     expect(mockFilesystem.writeFile).toHaveBeenCalledWith(expect.objectContaining({ path: 'mj_plants.json', data: '[]' }))
   })
 
-  it('reports a storage error when the native write fails for a non-quota reason', async () => {
+  it('reports a storage error when the native write fails for a non-quota reason and the fallback also fails', async () => {
     mockCapacitor.isNativePlatform.mockReturnValue(true)
     mockFilesystem.writeFile.mockRejectedValue(new Error('Permission denied'))
 
     const result = await savePlantsToStorage([])
     expect(result.ok).toBe(false)
+  })
+
+  it('succeeds via the lite fallback when the first write fails for ANY reason, not just a quota error', async () => {
+    // Simulates IndexedDB/localStorage being unavailable in some way that isn't a quota
+    // error — the fallback must still be attempted, not just for isQuotaError() cases.
+    mockFilesystem.writeFile.mockRejectedValueOnce(new Error('IndexedDB is not available in this context'))
+    mockFilesystem.writeFile.mockResolvedValueOnce(undefined)
+    mockCapacitor.isNativePlatform.mockReturnValue(true)
+
+    const result = await savePlantsToStorage([{ id: 'p1', photo: 'data:image/jpeg;base64,AAAA' } as unknown as import('@/types/plant').Plant])
+    expect(result).toEqual({ ok: true })
+    expect(mockFilesystem.writeFile).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not crash the whole save when a plant has a malformed (non-string) photo field', async () => {
+    // Reproduces a real bug: corrupted/partially-migrated stored data can have
+    // photo === undefined despite the Plant type claiming `photo: string`. Before the
+    // fix, isIndexedPhotoRef/isInlinePhoto threw a bare TypeError reading .startsWith
+    // on undefined, and Promise.all in preparePlantsForStorage propagated that up,
+    // failing the ENTIRE save for every plant — not just the one with bad data.
+    const malformed = [
+      { id: 'p1', photo: undefined, history: [], healthLogs: [] },
+      { id: 'p2', photo: 'data:image/jpeg;base64,AAAA', history: [], healthLogs: [] },
+    ] as unknown as import('@/types/plant').Plant[]
+
+    const result = await savePlantsToStorage(malformed)
+    expect(result).toEqual({ ok: true })
+    const saved = JSON.parse(localStorage.getItem('mj_plants')!)
+    expect(saved).toHaveLength(2)
+    expect(saved[0].photo).toBe('')
+  })
+
+  it('does not crash when a history/health-log entry has a malformed photo field', async () => {
+    const malformed = [
+      {
+        id: 'p1',
+        photo: 'data:image/jpeg;base64,AAAA',
+        history: [{ id: 'h1', date: '2026-01-01', note: '', photo: undefined }],
+        healthLogs: [{ id: 'l1', timestamp: '2026-01-01', photo: null, healthScore: 90, diagnosis: '', treatmentNotes: '', recommendedActions: [], analyzedByAI: true }],
+      },
+    ] as unknown as import('@/types/plant').Plant[]
+
+    const result = await savePlantsToStorage(malformed)
+    expect(result).toEqual({ ok: true })
   })
 })

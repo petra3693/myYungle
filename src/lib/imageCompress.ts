@@ -4,8 +4,17 @@ export const PHOTO_JPEG_QUALITY = 0.75
 const HEIC_MIME_RE = /^image\/hei[cf]$/i
 const HEIC_DATA_URL_RE = /^data:image\/hei[cf]/i
 
-export function isInlinePhoto(value: string): boolean {
-  return value.startsWith('data:image/')
+/**
+ * Accepts `unknown`, not just `string` — this is a boundary check on data
+ * read back from storage (localStorage/native file JSON), which can contain
+ * a plant/history/health-log entry with a missing or malformed `photo` field
+ * despite the type saying `photo: string` (the type only holds for code that
+ * *writes* the field correctly; corrupted or partially-migrated stored data
+ * doesn't have to obey it). A crash here previously took down the entire
+ * plants save via Promise.all in plantStorage.ts — see offloadInlinePhoto.
+ */
+export function isInlinePhoto(value: unknown): value is string {
+  return typeof value === 'string' && value.startsWith('data:image/')
 }
 
 function scaledSize(width: number, height: number, maxSize: number): { width: number; height: number } {

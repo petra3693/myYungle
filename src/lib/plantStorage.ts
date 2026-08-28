@@ -30,8 +30,20 @@ function isQuotaError(error: unknown): boolean {
 }
 
 async function offloadInlinePhoto(key: string, value: string): Promise<string> {
+  // Defends against stored data that doesn't actually match the `photo: string`
+  // type it claims to have — a missing/null photo on a plant, history entry, or
+  // health log (corrupted localStorage, an interrupted write, a future migration
+  // bug) used to throw a bare TypeError here that Promise.all propagated up and
+  // took down the ENTIRE plants save, for every plant, not just the bad one.
+  if (typeof value !== 'string') {
+    console.warn(`[myJungle] offloadInlinePhoto: "${key}" has a non-string photo (${typeof value}) — saving as empty instead of failing the whole save.`)
+    return ''
+  }
   if (isIndexedPhotoRef(value)) return value
   if (!isInlinePhoto(value)) return value
+  // Resize/recompress before it ever reaches storage — not just before the Gemini
+  // upload path (compressImageForGemini) — so a large original photo never risks
+  // tripping the localStorage/IndexedDB quota fallback below in the first place.
   const compressed = await compressImageDataUrl(value, PHOTO_MAX_DIMENSION, PHOTO_JPEG_QUALITY)
   return storePhotoBlob(key, compressed)
 }
@@ -58,18 +70,28 @@ export async function preparePlantsForStorage(plants: Plant[]): Promise<Plant[]>
   )
 }
 
-/** Last-resort payload when localStorage is still full — drop any stray inline data. */
+/**
+ * Last-resort payload — used both when localStorage is full (drop any stray
+ * inline data to shrink the payload) and as the general fallback when the
+ * normal IndexedDB-offload save path fails for any other reason (IndexedDB
+ * blocked/unavailable, a malformed stored photo). Deliberately does NOT call
+ * preparePlantsForStorage()/offloadInlinePhoto() — those are exactly what
+ * failed to produce this fallback in the first place, so retrying through
+ * them would just fail the same way again. Operates on the raw `plants`
+ * array with plain string checks instead.
+ */
 function plantsForLiteStorage(plants: Plant[]): Plant[] {
+  const safePhoto = (value: unknown): string => (typeof value === 'string' ? value : '')
   return plants.map((plant) => ({
     ...plant,
-    photo: isIndexedPhotoRef(plant.photo) || !isInlinePhoto(plant.photo) ? plant.photo : '',
+    photo: isIndexedPhotoRef(plant.photo) || !isInlinePhoto(plant.photo) ? safePhoto(plant.photo) : '',
     history: (plant.history ?? []).map((entry) => ({
       ...entry,
-      photo: isIndexedPhotoRef(entry.photo) || !isInlinePhoto(entry.photo) ? entry.photo : plant.photo,
+      photo: isIndexedPhotoRef(entry.photo) || !isInlinePhoto(entry.photo) ? safePhoto(entry.photo) : safePhoto(plant.photo),
     })),
     healthLogs: (plant.healthLogs ?? []).map((log) => ({
       ...log,
-      photo: isIndexedPhotoRef(log.photo) || !isInlinePhoto(log.photo) ? log.photo : plant.photo,
+      photo: isIndexedPhotoRef(log.photo) || !isInlinePhoto(log.photo) ? safePhoto(log.photo) : safePhoto(plant.photo),
     })),
   }))
 }
@@ -125,19 +147,22 @@ export async function savePlantsToStorage(plants: Plant[]): Promise<StorageResul
     return { ok: true }
   } catch (error) {
     console.error('[myJungle] Failed to save plants:', error)
-    if (!isQuotaError(error)) {
-      return { ok: false, error: 'Could not save your plants. Storage may be unavailable.' }
-    }
-
+    // Retry through the lite fallback for ANY failure here, not just a confirmed
+    // quota error — the same fallback is also the right response to IndexedDB
+    // being blocked/unavailable (private browsing, a locked-down localhost/dev
+    // environment) or a malformed stored photo tripping preparePlantsForStorage.
+    // plantsForLiteStorage() deliberately doesn't depend on whatever just failed
+    // (see its own comment), so it's safe to attempt regardless of the cause.
     try {
-      const prepared = await preparePlantsForStorage(plants)
-      await writePlantsPayload(JSON.stringify(plantsForLiteStorage(prepared)))
+      await writePlantsPayload(JSON.stringify(plantsForLiteStorage(plants)))
       return { ok: true }
     } catch (retryError) {
       console.error('[myJungle] Lite plant save also failed:', retryError)
       return {
         ok: false,
-        error: 'Storage is full. Try removing a plant or exporting then resetting data.',
+        error: isQuotaError(error)
+          ? 'Storage is full. Try removing a plant or exporting then resetting data.'
+          : 'Could not save your plants. Storage may be unavailable.',
       }
     }
   }

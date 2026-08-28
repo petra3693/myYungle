@@ -4,8 +4,9 @@ import type { HistoryEntry, PlantHealthLog } from '@/types/plant'
 const photoDb = createStore('myjungle-photos-db', 'photos')
 const IDB_PREFIX = 'idb://'
 
-export function isIndexedPhotoRef(value: string): boolean {
-  return value.startsWith(IDB_PREFIX)
+/** See isInlinePhoto in imageCompress.ts for why this accepts `unknown`, not `string`. */
+export function isIndexedPhotoRef(value: unknown): value is string {
+  return typeof value === 'string' && value.startsWith(IDB_PREFIX)
 }
 
 export function toIndexedPhotoRef(key: string): string {
