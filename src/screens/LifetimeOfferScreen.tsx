@@ -1,5 +1,6 @@
 import { type LegalDoc } from '@/legal/legalContent'
 import { logEvent } from '@/lib/analytics'
+import { PRODUCT_LIFETIME, resolvePackage } from '@/lib/monetization'
 import { FALLBACK_PREVIEW_PRICES, PRO_BENEFIT_KEYS } from '@/screens/shared/constants'
 import { IconCheck } from '@/screens/shared/icons'
 import { type OfferingsStatus } from '@/types/screens'
@@ -20,10 +21,17 @@ function LifetimeOfferScreen({ offering, offeringsStatus, onDismiss, onPurchased
   const [purchasing, setPurchasing] = useState(false)
   const [restoring, setRestoring] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const lifetimePkg = offering?.lifetime ?? null
+  // Falls back to a product-ID search through availablePackages when the typed
+  // .lifetime accessor comes back null — see resolvePackage().
+  const lifetimePkg = resolvePackage(offering, offering?.lifetime ?? null, PRODUCT_LIFETIME)
   const isWebPreview = !Capacitor.isNativePlatform()
   const priceLabel = lifetimePkg ? lifetimePkg.product.priceString : isWebPreview ? `$${FALLBACK_PREVIEW_PRICES.lifetime.toFixed(2)}` : '—'
   const ready = offeringsStatus === 'ready' && lifetimePkg !== null
+  // See the identical check in ProUnlockScreen.tsx for why this is a distinct
+  // case from a hard offerings-fetch failure, and why it shows real debug
+  // detail instead of a fabricated price.
+  const packageMissing = offeringsStatus === 'ready' && !isWebPreview && lifetimePkg === null
+  const debugAvailablePackages = offering?.availablePackages.map((pkg) => `${pkg.identifier}->${pkg.product.identifier}`).join(', ') || 'none'
 
   useEffect(() => {
     logEvent('lifetime_offer_shown', {})
@@ -106,6 +114,11 @@ function LifetimeOfferScreen({ offering, offeringsStatus, onDismiss, onPurchased
         >
           {purchasing ? t('common.processing') : offeringsStatus === 'loading' ? t('paywall.loadingPrices') : !ready ? t('paywall.pricingUnavailable') : t('paywall.getLifetimeAccess')}
         </button>
+        {packageMissing && (
+          <p className="font-body text-center mt-2" style={{ fontSize: 11, color: '#a33', opacity: 0.75, lineHeight: 1.4 }}>
+            Debug: offering "{offering?.identifier ?? '—'}" has no lifetime package. Packages found: {debugAvailablePackages}
+          </p>
+        )}
         <p className="font-body text-center mt-3" style={{ fontSize: 13, color: 'var(--color-ink-dim)', lineHeight: 1.4 }}>
           {t('paywall.lifetimeLegal')}
         </p>

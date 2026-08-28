@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import type { PurchasesOffering, PurchasesPackage } from '@revenuecat/purchases-capacitor'
 import {
   isFoundingMember,
   canAccessProFeatures,
@@ -10,10 +11,23 @@ import {
   computeAnnualDiscountLabel,
   trialLengthFromIntroPrice,
   trialUnitI18nKey,
+  resolvePackage,
   PRODUCT_LEGACY_ONETIME,
+  PRODUCT_MONTHLY,
   FREE_PLANT_LIMIT,
   FREE_HEALTH_SCANS,
 } from '@/lib/monetization'
+
+function fakePackage(identifier: string, productId: string): PurchasesPackage {
+  return {
+    identifier,
+    product: { identifier: productId, priceString: '$4.99' },
+  } as unknown as PurchasesPackage
+}
+
+function fakeOffering(availablePackages: PurchasesPackage[]): PurchasesOffering {
+  return { identifier: 'default', availablePackages } as unknown as PurchasesOffering
+}
 
 describe('isFoundingMember — §0 non-negotiable: never lose Pro access', () => {
   it('grants founding-member status when RevenueCat reports the legacy one-time product', () => {
@@ -259,5 +273,31 @@ describe('trialUnitI18nKey — maps a period unit to its i18n plural-key base', 
     expect(trialUnitI18nKey('WEEK')).toBe('paywall.trialUnitWeek')
     expect(trialUnitI18nKey('MONTH')).toBe('paywall.trialUnitMonth')
     expect(trialUnitI18nKey('YEAR')).toBe('paywall.trialUnitYear')
+  })
+})
+
+describe('resolvePackage — never fabricates a package, only widens how a real one is found', () => {
+  it('returns the typed convenience accessor when RevenueCat already resolved it', () => {
+    const pkg = fakePackage('$rc_monthly', PRODUCT_MONTHLY)
+    const offering = fakeOffering([pkg])
+    expect(resolvePackage(offering, pkg, PRODUCT_MONTHLY)).toBe(pkg)
+  })
+
+  it('falls back to matching by product identifier in availablePackages when the typed accessor is null', () => {
+    // Simulates the real-world RevenueCat dashboard gotcha: a package configured under a
+    // custom identifier (not $rc_monthly) still carries the right product, so offering.monthly
+    // is null even though the actual monthly product is right there in availablePackages.
+    const pkg = fakePackage('custom_monthly_package', PRODUCT_MONTHLY)
+    const offering = fakeOffering([pkg])
+    expect(resolvePackage(offering, null, PRODUCT_MONTHLY)).toBe(pkg)
+  })
+
+  it('returns null — never a fabricated package — when no package matches the product id', () => {
+    const offering = fakeOffering([fakePackage('$rc_annual', 'myjungle_pro_annual')])
+    expect(resolvePackage(offering, null, PRODUCT_MONTHLY)).toBe(null)
+  })
+
+  it('returns null when there is no offering at all', () => {
+    expect(resolvePackage(null, null, PRODUCT_MONTHLY)).toBe(null)
   })
 })

@@ -199,6 +199,35 @@ export default function App() {
         console.error(
           '[myJungle] getOfferings() succeeded but returned no current offering — check that a "current" offering is configured and has packages attached in the RevenueCat dashboard.',
         )
+      } else {
+        // getOfferings() succeeding is not the same as the packages this app
+        // actually needs being present — .monthly/.annual/.lifetime only
+        // populate for RC's *predefined* package identifiers, so a package
+        // added under a custom identifier in the dashboard is real and
+        // purchasable (see resolvePackage() in lib/monetization.ts) but
+        // invisible here. Logging exactly what RevenueCat did return — every
+        // package's own identifier and underlying product ID — is the
+        // fastest way to tell "nothing configured" apart from "configured,
+        // just not the way this app expects" on a TestFlight build where
+        // there's no debugger attached, only the device console.
+        const missing = [
+          !offerings.current.monthly && PRODUCT_MONTHLY,
+          !offerings.current.annual && PRODUCT_ANNUAL,
+          !offerings.current.lifetime && PRODUCT_LIFETIME,
+        ].filter((v): v is string => Boolean(v))
+        if (missing.length > 0) {
+          const found = offerings.current.availablePackages
+            .map((pkg) => `${pkg.identifier} -> ${pkg.product.identifier} (${pkg.product.priceString})`)
+            .join(', ')
+          console.error(
+            `[myJungle] Offering "${offerings.current.identifier}" has no typed package for: ${missing.join(', ')}. ` +
+              `Its availablePackages: [${found || 'none'}]. If a product ID above matches one of the missing ones, ` +
+              `the RevenueCat dashboard package isn't using RC's predefined identifier ($rc_monthly/$rc_annual/$rc_lifetime) ` +
+              `— the app falls back to matching by product ID (resolvePackage()) so this isn't fatal, but if the product ID ` +
+              `is missing entirely, check that the underlying App Store Connect product is "Ready to Submit" and the Paid ` +
+              `Applications Agreement is active — a TestFlight build calls the real store, unlike a StoreKit Configuration file.`,
+          )
+        }
       }
       setOffering(offerings.current)
       setOfferingsStatus('ready')
@@ -232,6 +261,20 @@ export default function App() {
         )
         setOfferingsStatus('unavailable')
         return
+      }
+      // RevenueCat's public API keys are prefixed by store: "appl_" for iOS,
+      // "goog_" for Android. A key with the wrong prefix for this platform —
+      // easy to hit by pasting the Android key into VITE_RC_KEY_IOS, or a
+      // secret/server key into either — still passes Purchases.configure()
+      // without error, but every getOfferings() call afterward will fail or
+      // return empty; that failure mode gives no hint the key was the cause.
+      // Non-fatal on purpose: RC's own prefix scheme could change, so this is
+      // a diagnostic, not a hard gate.
+      const expectedPrefix = platform === 'ios' ? 'appl_' : 'goog_'
+      if (!apiKey.startsWith(expectedPrefix)) {
+        console.error(
+          `[myJungle] ${envVarName} doesn't start with "${expectedPrefix}", the expected prefix for a RevenueCat ${platform} public API key — double-check this isn't the other platform's key or a secret key. Proceeding anyway in case RevenueCat's prefix convention differs for this account.`,
+        )
       }
       try {
         await Purchases.setLogLevel({ level: import.meta.env.DEV ? LOG_LEVEL.DEBUG : LOG_LEVEL.ERROR })

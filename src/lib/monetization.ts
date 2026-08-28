@@ -1,4 +1,5 @@
 import type { AppSettings, UserState } from '@/types/plant'
+import type { PurchasesOffering, PurchasesPackage } from '@revenuecat/purchases-capacitor'
 
 // ─── Products & entitlement ────────────────────────────────────────────────
 // These identifiers must match the RevenueCat dashboard configuration
@@ -13,6 +14,32 @@ export const PRODUCT_MONTHLY = 'myjungle_pro_monthly'
 export const PRODUCT_LIFETIME = 'myjungle_pro_lifetime'
 /** Legacy non-consumable — no longer sold, read-only for grandfathering. */
 export const PRODUCT_LEGACY_ONETIME = 'myjungle_pro_onetime'
+
+/**
+ * Resolves a plan's package from an offering without relying solely on
+ * RevenueCat's typed convenience accessors (offering.monthly/.annual/.lifetime).
+ * Those only populate when a package was configured in the RevenueCat
+ * dashboard using one of RC's *predefined* package identifiers ($rc_monthly,
+ * $rc_annual, $rc_lifetime) — a package added under a custom identifier
+ * still exists and is purchasable via availablePackages, but the typed
+ * accessor for it stays null. That's a real, easy-to-hit dashboard
+ * misconfiguration (RC backend validation has no way to know which product
+ * "should" be the monthly one), and looks identical from the client's side
+ * to genuinely missing pricing — hence checking both.
+ *
+ * Always returns a package RevenueCat actually reported having (with its own
+ * real product/price) — never fabricates one, so a displayed price can never
+ * diverge from what StoreKit/Play Billing will actually charge.
+ */
+export function resolvePackage(
+  offering: PurchasesOffering | null,
+  convenience: PurchasesPackage | null,
+  productId: string,
+): PurchasesPackage | null {
+  if (convenience) return convenience
+  if (!offering) return null
+  return offering.availablePackages.find((pkg) => pkg.product.identifier === productId) ?? null
+}
 
 /** Free-tier plant cap. Single tunable spot — see §1 of the monetization spec. */
 export const FREE_PLANT_LIMIT = 5

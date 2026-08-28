@@ -1,6 +1,6 @@
 import { type LegalDoc } from '@/legal/legalContent'
 import { logEvent } from '@/lib/analytics'
-import { FREE_PLANT_LIMIT, TRIAL_DAYS, computeAnnualDiscountLabel, paywallCopyForSource, trialLengthFromIntroPrice, trialUnitI18nKey, type PaywallSource, type TrialLength } from '@/lib/monetization'
+import { FREE_PLANT_LIMIT, PRODUCT_ANNUAL, PRODUCT_LIFETIME, PRODUCT_MONTHLY, TRIAL_DAYS, computeAnnualDiscountLabel, paywallCopyForSource, resolvePackage, trialLengthFromIntroPrice, trialUnitI18nKey, type PaywallSource, type TrialLength } from '@/lib/monetization'
 import { FALLBACK_PREVIEW_PRICES, GREEN, PRO_BENEFIT_KEYS } from '@/screens/shared/constants'
 import { IconCheck, IconChevronLeft, IconSparkles } from '@/screens/shared/icons'
 import { IconCircleBtn } from '@/screens/shared/ui'
@@ -38,11 +38,23 @@ function ProUnlockScreen({
   const isWebPreview = !Capacitor.isNativePlatform()
   // A real load failure on a real device (not the expected "no SDK on web" case) — offer a retry, not just dashes.
   const offeringsFailed = offeringsStatus === 'unavailable' && !isWebPreview
-  const monthlyPkg = offering?.monthly ?? null
-  const annualPkg = offering?.annual ?? null
-  const lifetimePkg = offering?.lifetime ?? null
+  // Falls back to a product-ID search through availablePackages when the typed
+  // .monthly/.annual/.lifetime accessor comes back null — see resolvePackage().
+  const monthlyPkg = resolvePackage(offering, offering?.monthly ?? null, PRODUCT_MONTHLY)
+  const annualPkg = resolvePackage(offering, offering?.annual ?? null, PRODUCT_ANNUAL)
+  const lifetimePkg = resolvePackage(offering, offering?.lifetime ?? null, PRODUCT_LIFETIME)
   const selectedPkg = selected === 'annual' ? annualPkg : selected === 'monthly' ? monthlyPkg : lifetimePkg
   const ready = offeringsStatus === 'ready' && selectedPkg !== null
+  // Offerings loaded fine (offeringsFailed above only covers a hard fetch
+  // failure), but the selected plan's package still didn't resolve even
+  // through resolvePackage()'s product-ID fallback — a distinct case that
+  // otherwise silently showed "Pricing unavailable" with no way to tell
+  // *why* on a TestFlight build with no debugger attached. Shows exactly
+  // what RevenueCat returned instead of a fabricated price, since a
+  // fabricated one could show something StoreKit wouldn't actually charge.
+  const packageMissing = offeringsStatus === 'ready' && !isWebPreview && selectedPkg === null
+  const missingProductId = selected === 'annual' ? PRODUCT_ANNUAL : selected === 'monthly' ? PRODUCT_MONTHLY : PRODUCT_LIFETIME
+  const debugAvailablePackages = offering?.availablePackages.map((pkg) => `${pkg.identifier}->${pkg.product.identifier}`).join(', ') || 'none'
   // Trial length always comes from the annual package's real intro offer —
   // when there isn't one, no trial messaging is shown at all. Web/dev preview
   // never has a real product, so it falls back to TRIAL_DAYS purely so the
@@ -259,6 +271,19 @@ function ProUnlockScreen({
           <div className="rounded-2xl px-4 py-3 mt-4 flex items-center justify-between gap-2" style={{ background: '#fdecec' }}>
             <span className="font-body" style={{ fontSize: 13, color: '#a33', lineHeight: 1.4 }}>{t('paywall.pricingLoadError')}</span>
             <button type="button" onClick={onRetryOfferings} className="font-heading shrink-0" style={{ fontSize: 13, color: '#a33', textTransform: 'uppercase' }}>{t('paywall.retry')}</button>
+          </div>
+        )}
+
+        {packageMissing && (
+          <div className="rounded-2xl px-4 py-3 mt-4" style={{ background: '#fdecec' }}>
+            <span className="font-body" style={{ fontSize: 13, color: '#a33', lineHeight: 1.4 }}>{t('paywall.pricingLoadError')}</span>
+            {/* Plain-English debug detail, not translated — this is a technical diagnostic for
+                a tester/developer to read off a TestFlight build, not end-user copy. Shows what
+                RevenueCat actually returned rather than a fabricated price for this plan, since a
+                fabricated price could show something StoreKit wouldn't actually charge. */}
+            <p className="font-body mt-1" style={{ fontSize: 11, color: '#a33', opacity: 0.75, lineHeight: 1.4 }}>
+              Debug: offering "{offering?.identifier ?? '—'}" has no package for product "{missingProductId}". Packages found: {debugAvailablePackages}
+            </p>
           </div>
         )}
 
