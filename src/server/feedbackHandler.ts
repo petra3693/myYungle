@@ -54,7 +54,7 @@ async function sendViaResend(message: string): Promise<void> {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      from: process.env.FEEDBACK_FROM_EMAIL ?? 'myJungle <onboarding@resend.dev>',
+      from: process.env.FEEDBACK_FROM_EMAIL ?? 'myJungle <noreply@lumenapp.studio>',
       to: [to],
       subject: 'myJungle App Feedback',
       text: message.replace(/\*\*/g, ''),
