@@ -17,6 +17,7 @@
     "restoring": "復元中…",
     "tryAgain": "もう一度お試しください",
     "couldNotAnalyzePhoto": "この写真を解析できませんでした。もう一度お試しください。",
+    "serviceUnreachable": "サービスに接続できませんでした。接続を確認してもう一度お試しください。",
     "today": "今日",
     "daysAgo_one": "{{count}}日前",
     "daysAgo_other": "{{count}}日前",

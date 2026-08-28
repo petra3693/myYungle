@@ -137,6 +137,40 @@ happily start sending events the moment `VITE_POSTHOG_KEY` is set in any
 environment, App Store/Play declarations or not. Update the declarations
 *before* setting the key on a build headed for review, not after.
 
+## Native build environment — checklist before `npm run build && npx cap sync ios`
+
+Unlike the Vercel deploy, which reads its env vars from the Vercel project's
+own settings at build time, a **native build is built entirely on your own
+machine**: `vite build` bakes whatever is in your local `.env`/`.env.local`
+into the JS bundle at that exact moment, and `npx cap sync ios` (or
+`android`) just copies that already-built bundle into the native project.
+There is no runtime fallback — a variable missing from `.env` when `npm run
+build` ran is missing from the shipped app, full stop, even if you add it to
+`.env` a minute later and don't rebuild. Before producing a native build,
+confirm these are all set in `.env`:
+
+| Variable | Required? | Symptom if missing |
+|---|---|---|
+| `VITE_APP_API_TOKEN` | **Required** | Every `/api/*` request the app makes gets a `401` from the server's token check. The client currently — see `src/lib/analyzePlant.ts` and its `analyzePlantHealth.ts`/`analyzePlantGrowth.ts` siblings — catches this and shows a generic "couldn't reach the service" error, but **does not** fabricate a plant result; on older client builds shipped before that split existed, a missing token instead silently produced a fake low-confidence "Unknown Plant" entry, indistinguishable in the UI from Gemini genuinely being unsure. Must be the exact same value as the server's `APP_API_TOKEN` in the Vercel project. |
+| `VITE_RC_KEY_IOS` (or `VITE_RC_KEY_ANDROID` for Android) | **Required** for a real (non-test) build | `Purchases.configure()` is skipped (see `AGENTS.md`), so the paywall falls back to its "pricing load error" state with a Retry button instead of ever loading real offerings. Never ship a release build with this unset or still `test_`-prefixed. |
+| `VITE_API_BASE_URL` | Optional | Only needed to point a native build at a *different* deployment than production (a staging environment, a preview URL). Unset → `src/lib/apiAuth.ts`'s `apiUrl()` falls back to the production `my-jungle-app.vercel.app` origin, which is correct for a normal release build. |
+| `VITE_POSTHOG_KEY` | Optional | Unset → `logEvent()` stays console+localStorage-only, no analytics sent (see above) — a legitimate choice for a dev build, but confirm it's deliberate before shipping. |
+
+The **`VITE_APP_API_TOKEN` row is the one to watch**: it's the one most
+likely to be missing on a freshly cloned checkout (it's a secret, so it's
+gitignored and has to be filled in by hand from `.env.example`), and its
+failure mode — a generic error, or on older builds a fake "Unknown Plant"
+row — gives no direct hint that a token is the cause. If plant
+identification fails immediately on a native build but works fine on the
+web deployment, check this first: open the app with `import.meta.env.DEV`
+true (a debug build) and look for the `[myJungle] startup diagnostics:`
+line logged once at launch (`src/main.tsx`) — it reports whether
+`VITE_APP_API_TOKEN` is `present` or `MISSING` (never its value), which
+platform Capacitor thinks it's running on, and the API base URL that was
+resolved. A `401` specifically also logs its own unmissable
+`[myJungle] ... 401 Unauthorized` line from `logUnauthorizedApiError()`
+(`src/lib/apiAuth.ts`) at the moment the request fails.
+
 ## Deploying
 
 After setting the env vars above, `npm run deploy:vercel` builds and deploys

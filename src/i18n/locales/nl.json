@@ -17,6 +17,7 @@
     "restoring": "Bezig met herstellen…",
     "tryAgain": "Opnieuw proberen",
     "couldNotAnalyzePhoto": "Deze foto kon niet worden geanalyseerd. Probeer het opnieuw.",
+    "serviceUnreachable": "Kon de service niet bereiken. Controleer je verbinding en probeer het opnieuw.",
     "today": "Vandaag",
     "daysAgo_one": "{{count}} dag geleden",
     "daysAgo_other": "{{count}} dagen geleden",

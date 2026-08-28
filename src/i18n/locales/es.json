@@ -17,6 +17,7 @@
     "restoring": "Restaurando…",
     "tryAgain": "Inténtalo de nuevo",
     "couldNotAnalyzePhoto": "No se pudo analizar esta foto. Inténtalo de nuevo.",
+    "serviceUnreachable": "No se pudo conectar con el servicio. Comprueba tu conexión e inténtalo de nuevo.",
     "today": "Hoy",
     "daysAgo_one": "hace {{count}} día",
     "daysAgo_other": "hace {{count}} días",

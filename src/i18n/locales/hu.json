@@ -17,6 +17,7 @@
     "restoring": "Visszaállítás…",
     "tryAgain": "Próbáld újra",
     "couldNotAnalyzePhoto": "Nem sikerült elemezni a fotót. Kérlek, próbáld újra.",
+    "serviceUnreachable": "Nem sikerült elérni a szolgáltatást. Ellenőrizd a kapcsolatot, és próbáld újra.",
     "today": "Ma",
     "daysAgo_one": "{{count}} napja",
     "daysAgo_other": "{{count}} napja",

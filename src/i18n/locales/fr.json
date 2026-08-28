@@ -17,6 +17,7 @@
     "restoring": "Restauration…",
     "tryAgain": "Réessayer",
     "couldNotAnalyzePhoto": "Impossible d'analyser cette photo. Veuillez réessayer.",
+    "serviceUnreachable": "Impossible de contacter le service. Vérifiez votre connexion et réessayez.",
     "today": "Aujourd'hui",
     "daysAgo_one": "il y a {{count}} jour",
     "daysAgo_other": "il y a {{count}} jours",

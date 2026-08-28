@@ -1,4 +1,4 @@
-import { apiUrl, appApiHeaders } from '@/lib/apiAuth'
+import { apiUrl, appApiHeaders, logUnauthorizedApiError } from '@/lib/apiAuth'
 
 /** Client wrapper for the server-side Pro Preview (reverse-trial) grant endpoint. */
 export async function requestProPreview(appUserId: string): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -8,6 +8,10 @@ export async function requestProPreview(appUserId: string): Promise<{ ok: true }
       headers: appApiHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ appUserId }),
     })
+    if (response.status === 401) {
+      logUnauthorizedApiError('grant-pro-preview')
+      return { ok: false, error: 'Pro Preview request failed. Please try again.' }
+    }
     const body = (await response.json().catch(() => null)) as { success?: boolean; error?: string } | null
     if (!response.ok || !body?.success) {
       return { ok: false, error: body?.error ?? `Pro Preview request failed (${response.status}).` }

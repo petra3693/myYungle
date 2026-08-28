@@ -17,6 +17,7 @@
     "restoring": "Przywracanie…",
     "tryAgain": "Spróbuj ponownie",
     "couldNotAnalyzePhoto": "Nie udało się przeanalizować tego zdjęcia. Spróbuj ponownie.",
+    "serviceUnreachable": "Nie udało się połączyć z usługą. Sprawdź połączenie i spróbuj ponownie.",
     "today": "Dzisiaj",
     "daysAgo_one": "{{count}} dzień temu",
     "daysAgo_other": "{{count}} dni temu",

@@ -4,13 +4,13 @@ import {
 } from '@/lib/geminiImage'
 import { compressImageForGemini, isInlinePhoto } from '@/lib/imageCompress'
 import { parseAiJson } from '@/lib/aiJson'
-import { apiUrl, appApiHeaders } from '@/lib/apiAuth'
+import { apiUrl, appApiHeaders, logUnauthorizedApiError } from '@/lib/apiAuth'
 import {
-  coerceAnalyzePlantResponseFromBody,
-  createLowConfidencePlantResult,
+  coerceAnalyzePlantResult,
   isAnalyzePlantErrorPayload,
   type AnalyzePlantResult,
 } from '@/lib/analyzePlantResult'
+import i18n from '@/i18n/i18n'
 import type { AppLanguage } from '@/i18n/languages'
 
 export type { GeminiSupportedMime } from '@/lib/geminiImage'
@@ -18,8 +18,14 @@ export { parseImageDataUrl } from '@/lib/geminiImage'
 
 export interface AnalyzePlantApiResponse extends AnalyzePlantResult {}
 
-const FRIENDLY_ANALYSIS_FALLBACK =
-  'Could not analyze this plant photo. Please try again with a clearer image.'
+function friendlyAnalysisFallback(language: AppLanguage): string {
+  return i18n.t('common.couldNotAnalyzePhoto', { lng: language })
+}
+
+/** Network failure, non-2xx status, or a 2xx body that isn't valid Gemini JSON — never a genuine "AI looked and wasn't sure" result. */
+function serviceUnreachableMessage(language: AppLanguage): string {
+  return i18n.t('common.serviceUnreachable', { lng: language })
+}
 
 /** Keep JSON payloads small for Vercel serverless (well under 4.5 MB body limit). */
 const MAX_CLIENT_BASE64_CHARS = 3_500_000
@@ -35,25 +41,6 @@ function getErrorMessageFromBody(body: unknown, fallback: string): string {
     }
   }
   return fallback
-}
-
-function buildNonJsonErrorMessage(status: number, text: string): string {
-  const trimmed = text.trim()
-  if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
-    return 'Plant analysis API is unavailable in this environment. Use vite dev with GEMINI_API_KEY set, or deploy to Vercel.'
-  }
-  return toUserFriendlyAnalysisError(trimmed, `Analysis failed (${status}). Please try again.`)
-}
-
-function normalizeClientPlantResponse(
-  body: unknown,
-  preferredDays: string[],
-  language: AppLanguage,
-): AnalyzePlantApiResponse {
-  if (isAnalyzePlantErrorPayload(body)) {
-    return createLowConfidencePlantResult(preferredDays, language)
-  }
-  return coerceAnalyzePlantResponseFromBody(body, preferredDays, language)
 }
 
 export async function analyzePlantImage(
@@ -98,41 +85,46 @@ export async function analyzePlantImage(
       console.log(`[myJungle] analyzePlantImage: fetch resolved with status ${response.status}`)
     } catch (error) {
       console.error('[myJungle] analyze-plant network error:', error)
-      return {
-        ok: false,
-        error: 'Could not reach the plant analysis service. Check your connection and try again.',
-      }
+      return { ok: false, error: serviceUnreachableMessage(language) }
     }
 
     const responseText = await response.text()
 
+    // A 401 here only ever means the client's X-App-Token didn't match the server's
+    // APP_API_TOKEN — never treat it as "the AI wasn't sure", and never say why in the UI.
+    if (response.status === 401) {
+      logUnauthorizedApiError('analyze-plant')
+      return { ok: false, error: serviceUnreachableMessage(language) }
+    }
+
     if (!response.ok) {
       console.error(`[myJungle] analyze-plant failed (${response.status}):`, responseText)
       const body = parseAiJson(responseText)
-      if (body) {
-        return {
-          ok: false,
-          error: getErrorMessageFromBody(body, FRIENDLY_ANALYSIS_FALLBACK),
-        }
+      return {
+        ok: false,
+        error: body ? getErrorMessageFromBody(body, friendlyAnalysisFallback(language)) : serviceUnreachableMessage(language),
       }
-      return { ok: false, error: buildNonJsonErrorMessage(response.status, responseText) }
     }
 
     const data = parseAiJson(responseText)
     if (!data) {
-      console.warn('[myJungle] analyze-plant success body was not JSON; using low-confidence fallback')
-      const fallback = createLowConfidencePlantResult(preferredDays, language)
-      return { ok: true, data: fallback }
+      // A 2xx with an unparseable body means this response never actually came from Gemini
+      // (most likely a proxy/SPA fallback page) — a real failure, not a genuine low-confidence
+      // identification, so it must not be presented to the user as one.
+      console.error('[myJungle] analyze-plant: 2xx response body was not valid JSON:', responseText.slice(0, 500))
+      return { ok: false, error: serviceUnreachableMessage(language) }
     }
 
     if (isAnalyzePlantErrorPayload(data)) {
       return {
         ok: false,
-        error: getErrorMessageFromBody(data, FRIENDLY_ANALYSIS_FALLBACK),
+        error: getErrorMessageFromBody(data, friendlyAnalysisFallback(language)),
       }
     }
 
-    const normalized = normalizeClientPlantResponse(data, preferredDays, language)
+    // Only a genuine 2xx Gemini JSON response reaches this point — any low confidence /
+    // "Unknown Plant" name from here on is Gemini's own honest answer, not a masked failure.
+    const normalized = coerceAnalyzePlantResult(data, preferredDays, language)
 
     // Prefer server-normalized days; if empty, keep client preferred day as a soft fallback.
     if (normalized.recommendedDays.length === 0 && preferredDays.length > 0) {
@@ -146,8 +138,8 @@ export async function analyzePlantImage(
       ok: false,
       error:
         error instanceof Error
-          ? toUserFriendlyAnalysisError(error.message, FRIENDLY_ANALYSIS_FALLBACK)
-          : FRIENDLY_ANALYSIS_FALLBACK,
+          ? toUserFriendlyAnalysisError(error.message, friendlyAnalysisFallback(language))
+          : friendlyAnalysisFallback(language),
     }
   }
 }

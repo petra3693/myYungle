@@ -1,7 +1,8 @@
 import { parseImageDataUrl, toUserFriendlyAnalysisError } from '@/lib/geminiImage'
 import { compressImageForGemini, isInlinePhoto } from '@/lib/imageCompress'
 import { parseAiJson } from '@/lib/aiJson'
-import { apiUrl, appApiHeaders } from '@/lib/apiAuth'
+import { apiUrl, appApiHeaders, logUnauthorizedApiError } from '@/lib/apiAuth'
+import i18n from '@/i18n/i18n'
 import type { AppLanguage } from '@/i18n/languages'
 
 export type HealthSeverity = 'Low' | 'Moderate' | 'High'
@@ -24,7 +25,14 @@ function normalizeSeverity(value: unknown): HealthSeverity {
   return 'Low'
 }
 
-const FRIENDLY_FALLBACK = 'Could not analyze this plant photo. Please try again with a clearer image.'
+function friendlyFallback(language: AppLanguage): string {
+  return i18n.t('common.couldNotAnalyzePhoto', { lng: language })
+}
+
+/** Network failure, non-2xx status, or a 2xx body that isn't valid Gemini JSON. */
+function serviceUnreachableMessage(language: AppLanguage): string {
+  return i18n.t('common.serviceUnreachable', { lng: language })
+}
 
 function getErrorMessageFromBody(body: unknown, fallback: string): string {
   if (body && typeof body === 'object') {
@@ -60,19 +68,26 @@ export async function analyzePlantHealthImage(
       console.log(`[myJungle] analyze-plant-health: fetch to ${url} resolved with status ${response.status}`)
     } catch (error) {
       console.error('[myJungle] analyze-plant-health network error:', error)
-      return { ok: false, error: 'Could not reach the plant health service. Check your connection and try again.' }
+      return { ok: false, error: serviceUnreachableMessage(language) }
     }
 
     const responseText = await response.text()
+
+    if (response.status === 401) {
+      logUnauthorizedApiError('analyze-plant-health')
+      return { ok: false, error: serviceUnreachableMessage(language) }
+    }
+
     const data = parseAiJson(responseText)
 
     if (!response.ok) {
       console.error(`[myJungle] analyze-plant-health failed (${response.status}):`, responseText)
-      return { ok: false, error: getErrorMessageFromBody(data, FRIENDLY_FALLBACK) }
+      return { ok: false, error: data ? getErrorMessageFromBody(data, friendlyFallback(language)) : serviceUnreachableMessage(language) }
     }
 
     if (!data || typeof data !== 'object') {
-      return { ok: false, error: FRIENDLY_FALLBACK }
+      console.error('[myJungle] analyze-plant-health: 2xx response body was not valid JSON:', responseText.slice(0, 500))
+      return { ok: false, error: serviceUnreachableMessage(language) }
     }
 
     const record = data as Record<string, unknown>
@@ -103,7 +118,10 @@ export async function analyzePlantHealthImage(
     console.error('[myJungle] analyze-plant-health unexpected error:', error)
     return {
       ok: false,
-      error: error instanceof Error ? toUserFriendlyAnalysisError(error.message, FRIENDLY_FALLBACK) : FRIENDLY_FALLBACK,
+      error:
+        error instanceof Error
+          ? toUserFriendlyAnalysisError(error.message, friendlyFallback(language))
+          : friendlyFallback(language),
     }
   }
 }

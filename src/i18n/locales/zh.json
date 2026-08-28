@@ -17,6 +17,7 @@
     "restoring": "恢复中…",
     "tryAgain": "请重试",
     "couldNotAnalyzePhoto": "无法分析此照片，请重试。",
+    "serviceUnreachable": "无法连接服务。请检查网络连接后重试。",
     "today": "今天",
     "daysAgo_one": "{{count}} 天前",
     "daysAgo_other": "{{count}} 天前",

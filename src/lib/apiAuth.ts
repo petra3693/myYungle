@@ -35,3 +35,21 @@ export function apiUrl(path: string): string {
   const base = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || DEFAULT_NATIVE_API_BASE_URL
   return `${base.replace(/\/+$/, '')}${path}`
 }
+
+/**
+ * Unmissable console diagnostic for a 401 from one of our own /api/* endpoints.
+ * That status only ever means the X-App-Token header didn't match the server's
+ * APP_API_TOKEN — almost always because VITE_APP_API_TOKEN was absent from
+ * .env at the moment `vite build` ran. Unlike Vercel's own build (which reads
+ * env vars from its project settings at build time), a local/native build
+ * bakes whatever is in .env into the bundle right then — there's no runtime
+ * fallback, so a token added to .env *after* the build was produced still
+ * won't be in it. See docs/deploy.md "Native build environment".
+ */
+export function logUnauthorizedApiError(context: string): void {
+  console.error(
+    `[myJungle] ${context}: 401 Unauthorized — VITE_APP_API_TOKEN is missing or doesn't match the server's ` +
+      `APP_API_TOKEN. This must be set in .env BEFORE running "npm run build" for a native build (it's baked ` +
+      `into the bundle at build time, not read at runtime). See docs/deploy.md "Native build environment".`,
+  )
+}
