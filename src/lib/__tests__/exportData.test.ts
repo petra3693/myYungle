@@ -60,7 +60,6 @@ function makeSettings(): AppSettings {
     proPreviewUsedAt: null,
     proPreviewExpiredPaywallShown: false,
     proPreviewBannerDismissed: false,
-    privacyIntroCardDismissed: false,
     paywallDismissedCount: 0,
     lastPaywallShownAt: null,
   }

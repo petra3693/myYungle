@@ -59,10 +59,9 @@
     "step5": "AIが植物の不調を検知",
     "getStarted": "始める",
     "captureTitle": "あなたのジャングルを迎えよう！",
-    "captureSubtitle": "すべての植物を一度に撮影 — 無料枠は{{count}}件。",
+    "captureSubtitle": "植物を撮影しよう（無料枠{{count}}件）",
     "captureDone": "AI解析を開始",
     "skipForNow": "今はスキップ",
-    "freeSlotsHint": "無料の植物は{{count}}件 — Proなら上限なし",
     "capturedCount": "{{count}}/{{total}}件を撮影済み（無料）",
     "healthGrowthHint": "スキャンで健康と成長を確認 — Proで解放",
     "identifying_one": "{{count}}件の植物を識別中…",
@@ -185,6 +184,7 @@
     "uploadPhoto": "写真をアップロード",
     "takePhoto": "写真を撮る",
     "fromGallery": "ギャラリーから",
+    "replacePhoto": "写真を変更",
     "identifying": "植物を識別中…",
     "enterManually": "手動で入力",
     "plantName": "植物の名前",
@@ -469,8 +469,7 @@
   },
   "privacyHint": {
     "captureLine": "写真はAI分析のためにGoogle Geminiに送信されます。サーバーに保存されることも、広告に利用されることもありません。",
-    "detailsLink": "詳細",
-    "introTitle": "あなたの写真は大切に扱われます"
+    "detailsLink": "詳細"
   },
   "aiDisclaimer": {
     "line": "これは参考程度のAI推定であり、獣医学的または専門的な助言ではありません。"

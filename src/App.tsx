@@ -51,6 +51,34 @@ import LifetimeOfferScreen from '@/screens/LifetimeOfferScreen'
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 
+/**
+ * Extracts the fields that actually explain a RevenueCat SDK failure —
+ * `code`/`readableErrorCode` (which of PURCHASES_ERROR_CODE this is) and
+ * `underlyingErrorMessage` (the raw StoreKit/Play Billing error underneath,
+ * e.g. "Cannot connect to iTunes Store" or a product-ID-not-found error) —
+ * so a console.error of just the bare Error object doesn't bury the one
+ * detail that says *why* offerings/customer info failed to load.
+ */
+function describeRevenueCatError(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const e = error as {
+      code?: unknown
+      message?: unknown
+      underlyingErrorMessage?: unknown
+      userInfo?: { readableErrorCode?: unknown }
+    }
+    const parts: string[] = []
+    if (e.userInfo?.readableErrorCode) parts.push(`code=${e.userInfo.readableErrorCode}`)
+    else if (e.code !== undefined) parts.push(`code=${e.code}`)
+    if (typeof e.message === 'string' && e.message.trim()) parts.push(`message="${e.message.trim()}"`)
+    if (typeof e.underlyingErrorMessage === 'string' && e.underlyingErrorMessage.trim()) {
+      parts.push(`underlying="${e.underlyingErrorMessage.trim()}"`)
+    }
+    if (parts.length > 0) return parts.join(', ')
+  }
+  return error instanceof Error ? error.message : String(error)
+}
+
 export default function App() {
   const { t } = useTranslation()
   const [screen, setScreen] = useState<Screen>('splash')
@@ -167,10 +195,15 @@ export default function App() {
     setOfferingsStatus('loading')
     try {
       const offerings = await Purchases.getOfferings()
+      if (!offerings.current) {
+        console.error(
+          '[myJungle] getOfferings() succeeded but returned no current offering — check that a "current" offering is configured and has packages attached in the RevenueCat dashboard.',
+        )
+      }
       setOffering(offerings.current)
       setOfferingsStatus('ready')
     } catch (error) {
-      console.error('[myJungle] failed to fetch offerings:', error)
+      console.error(`[myJungle] getOfferings() failed: ${describeRevenueCatError(error)}`, error)
       setOfferingsStatus('unavailable')
     }
   }
@@ -200,8 +233,18 @@ export default function App() {
         setOfferingsStatus('unavailable')
         return
       }
-      await Purchases.setLogLevel({ level: import.meta.env.DEV ? LOG_LEVEL.DEBUG : LOG_LEVEL.ERROR })
-      await Purchases.configure({ apiKey })
+      try {
+        await Purchases.setLogLevel({ level: import.meta.env.DEV ? LOG_LEVEL.DEBUG : LOG_LEVEL.ERROR })
+        await Purchases.configure({ apiKey })
+      } catch (error) {
+        // Without this catch, a throw here (e.g. a malformed key, or the native
+        // plugin failing to link) becomes an unhandled rejection and offeringsStatus
+        // stays stuck at 'loading' forever — the paywall would spin indefinitely
+        // instead of ever reaching the "pricing load error" Retry state.
+        console.error(`[myJungle] Purchases.configure() failed: ${describeRevenueCatError(error)}`, error)
+        setOfferingsStatus('unavailable')
+        return
+      }
       if (cancelled) return
 
       // Keeps Pro status and the UI in sync in real time for anything that
@@ -225,7 +268,7 @@ export default function App() {
           openPaywall('preview_expired')
         }
       } catch (error) {
-        console.error('[myJungle] failed to sync entitlements on boot:', error)
+        console.error(`[myJungle] getCustomerInfo() failed on boot: ${describeRevenueCatError(error)}`, error)
       }
       await fetchOfferings()
     }
@@ -625,8 +668,6 @@ export default function App() {
           setScreen('main')
           setTab('home')
         }}
-        showPrivacyIntroCard={!settings.privacyIntroCardDismissed}
-        onDismissPrivacyIntroCard={() => setSettings((s) => ({ ...s, privacyIntroCardDismissed: true }))}
       />
     )
   } else if (screen === 'plantDetail' && selectedPlant) {

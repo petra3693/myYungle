@@ -106,8 +106,6 @@ export interface AppSettings {
   proPreviewExpiredPaywallShown: boolean
   /** Whether the user dismissed the Home-screen Pro Preview banner — it then only reappears on the paywall. */
   proPreviewBannerDismissed: boolean
-  /** Whether the onboarding capture screen's "your photos, handled carefully" privacy intro card has been dismissed — shown at most once, ever. */
-  privacyIntroCardDismissed: boolean
   /** How many times the paywall has been closed without purchasing — gates the lifetime win-back offer. */
   paywallDismissedCount: number
   /** ISO timestamp the paywall was shown for the dismissal immediately before the current one — null before the first-ever dismissal. */

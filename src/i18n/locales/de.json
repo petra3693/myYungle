@@ -59,10 +59,9 @@
     "step5": "KI erkennt, wenn eine Pflanze krank wird",
     "getStarted": "Los geht's",
     "captureTitle": "Bring deinen Dschungel rein!",
-    "captureSubtitle": "Fotografiere alle deine Pflanzen auf einmal — {{count}} kostenlose Plätze.",
+    "captureSubtitle": "Fotografiere deine Pflanzen ({{count}} kostenlose Plätze)",
     "captureDone": "KI-Analyse starten",
     "skipForNow": "Vorerst überspringen",
-    "freeSlotsHint": "{{count}} kostenlose Pflanzen — Pro hebt das Limit auf",
     "capturedCount": "{{count}}/{{total}} aufgenommen (kostenlos)",
     "healthGrowthHint": "Gesundheit & Wachstum per Scan — Pro schaltet es frei",
     "identifying_one": "Identifiziere {{count}} Pflanze…",
@@ -185,6 +184,7 @@
     "uploadPhoto": "Foto hochladen",
     "takePhoto": "Foto aufnehmen",
     "fromGallery": "Aus der Galerie",
+    "replacePhoto": "Foto ändern",
     "identifying": "Pflanze wird identifiziert…",
     "enterManually": "Details manuell eingeben",
     "plantName": "Pflanzenname",
@@ -469,8 +469,7 @@
   },
   "privacyHint": {
     "captureLine": "Fotos werden zur KI-Analyse an Google Gemini gesendet — nie auf unseren Servern gespeichert oder für Werbung verwendet.",
-    "detailsLink": "Details",
-    "introTitle": "Deine Fotos werden sorgfältig behandelt"
+    "detailsLink": "Details"
   },
   "aiDisclaimer": {
     "line": "Informative KI-Einschätzung, kein tierärztlicher oder fachlicher Rat."

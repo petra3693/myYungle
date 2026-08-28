@@ -59,10 +59,9 @@
     "step5": "AI wykrywa, kiedy roślina choruje",
     "getStarted": "Rozpocznij",
     "captureTitle": "Wprowadź swoją dżunglę!",
-    "captureSubtitle": "Sfotografuj wszystkie rośliny naraz — {{count}} darmowych miejsc.",
+    "captureSubtitle": "Sfotografuj swoje rośliny ({{count}} darmowych miejsc)",
     "captureDone": "Rozpocznij analizę AI",
     "skipForNow": "Pomiń na razie",
-    "freeSlotsHint": "{{count}} darmowych roślin — Pro usuwa limit",
     "capturedCount": "{{count}}/{{total}} uchwyconych (za darmo)",
     "healthGrowthHint": "Zdrowie i wzrost poprzez skan — Pro odblokowuje",
     "identifying_one": "Identyfikowanie {{count}} rośliny…",
@@ -185,6 +184,7 @@
     "uploadPhoto": "Prześlij zdjęcie",
     "takePhoto": "Zrób zdjęcie",
     "fromGallery": "Z galerii",
+    "replacePhoto": "Zmień zdjęcie",
     "identifying": "Identyfikowanie rośliny…",
     "enterManually": "Wprowadź dane ręcznie",
     "plantName": "Nazwa rośliny",
@@ -469,8 +469,7 @@
   },
   "privacyHint": {
     "captureLine": "Zdjęcia są wysyłane do Google Gemini w celu analizy AI — nigdy nie są przechowywane na naszych serwerach ani wykorzystywane do reklam.",
-    "detailsLink": "Szczegóły",
-    "introTitle": "Twoje zdjęcia są starannie chronione"
+    "detailsLink": "Szczegóły"
   },
   "aiDisclaimer": {
     "line": "Szacunek AI ma charakter wyłącznie informacyjny — to nie porada weterynaryjna ani fachowa."

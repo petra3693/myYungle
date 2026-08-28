@@ -59,10 +59,9 @@
     "step5": "Az AI észreveszi, ha egy növény megbetegszik",
     "getStarted": "Kezdjük",
     "captureTitle": "Hozd be a dzsungeledet!",
-    "captureSubtitle": "Fotózd le az összes növényedet egyszerre — {{count}} ingyenes hely.",
+    "captureSubtitle": "Fotózd le a növényeidet ({{count}} ingyenes hely)",
     "captureDone": "AI-elemzés indítása",
     "skipForNow": "Most kihagyom",
-    "freeSlotsHint": "{{count}} ingyenes növény — a Pro feloldja a limitet",
     "capturedCount": "{{count}}/{{total}} lefotózva (ingyenes)",
     "healthGrowthHint": "Egészség & növekedés szkennelésből — a Pro feloldja",
     "identifying_one": "{{count}} növény azonosítása…",
@@ -185,6 +184,7 @@
     "uploadPhoto": "Fotó feltöltése",
     "takePhoto": "Fotó készítése",
     "fromGallery": "Galériából",
+    "replacePhoto": "Fotó cseréje",
     "identifying": "Növény azonosítása…",
     "enterManually": "Adatok kézi megadása",
     "plantName": "Növény neve",
@@ -469,8 +469,7 @@
   },
   "privacyHint": {
     "captureLine": "A fotókat a Google Gemini elemzi ki mesterséges intelligenciával — sosem tároljuk a szervereinken, és nem használjuk reklámra.",
-    "detailsLink": "Részletek",
-    "introTitle": "A fotóid gondos kezelésben részesülnek"
+    "detailsLink": "Részletek"
   },
   "aiDisclaimer": {
     "line": "Ez egy tájékoztató jellegű AI-becslés, nem állatorvosi vagy szakértői tanács."

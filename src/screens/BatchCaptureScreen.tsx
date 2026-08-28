@@ -11,7 +11,7 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 function BatchCaptureScreen({
-  title, subtitle, freeSlots, onBack, onDone, doneLabel, onSkip, showPrivacyIntroCard, onDismissPrivacyIntroCard,
+  title, subtitle, freeSlots, onBack, onDone, doneLabel, onSkip,
 }: {
   title: string
   subtitle: string
@@ -21,9 +21,6 @@ function BatchCaptureScreen({
   doneLabel: string
   /** Only passed for onboarding's own capture step — bulk-add has no "skip", there's nothing to skip past. */
   onSkip?: () => void
-  /** Shown once, ever — only the onboarding capture step passes this (not bulk-add). */
-  showPrivacyIntroCard?: boolean
-  onDismissPrivacyIntroCard?: () => void
 }) {
   const { t } = useTranslation()
   const [photos, setPhotos] = useState<CapturedPhoto[]>([])
@@ -129,40 +126,10 @@ function BatchCaptureScreen({
       <div className="flex items-center px-5 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-4 shrink-0">
         {onBack ? <IconCircleBtn onClick={onBack} label={t('common.back')}><IconChevronLeft /></IconCircleBtn> : <div style={{ width: 44 }} />}
       </div>
-      {showPrivacyIntroCard && (
-        <div className="px-5 shrink-0">
-          <div className="rounded-2xl p-4 mb-4 relative" style={{ background: '#E6E6E6' }}>
-            <button
-              type="button"
-              aria-label={t('common.dismiss')}
-              onClick={onDismissPrivacyIntroCard}
-              className="absolute flex items-center justify-center rounded-full"
-              style={{ top: 0, right: 0, width: 44, height: 44, color: 'var(--color-ink-dim)' }}
-            >
-              <IconX size={14} />
-            </button>
-            <div className="flex items-center gap-2 mb-1 pr-6">
-              <div style={{ color: '#111' }}><IconLock size={16} /></div>
-              <span className="font-heading" style={{ fontSize: 13, color: '#111', textTransform: 'uppercase' }}>{t('privacyHint.introTitle')}</span>
-            </div>
-            <p className="font-body" style={{ fontSize: 13, color: '#666', lineHeight: 1.4 }}>
-              {t('privacyHint.captureLine')}{' '}
-              <button type="button" onClick={() => setShowPrivacyDetails(true)} className="font-body" style={{ fontSize: 13, color: '#666', textDecoration: 'underline' }}>
-                {t('privacyHint.detailsLink')}
-              </button>
-            </p>
-          </div>
-        </div>
-      )}
       <div className="px-5 shrink-0">
         <p className="font-body" style={{ fontSize: 14, color: '#666' }}>{subtitle}</p>
-        {freeSlots !== null && (
-          <p className="font-body" style={{ fontSize: 13, color: 'var(--color-ink-dim)', marginTop: 4 }}>
-            {t('onboarding.freeSlotsHint', { count: freeSlots })}
-          </p>
-        )}
       </div>
-      <div className="scroll-y flex-1 px-5 pt-4 pb-4 flex flex-col">
+      <div className="scroll-y flex-1 px-5 pt-4 pb-4 flex flex-col space-y-4">
         {photos.length === 0 ? (
           <button
             type="button"
@@ -178,7 +145,7 @@ function BatchCaptureScreen({
           </button>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between">
               <span className="font-heading" style={{ fontSize: 13, color: '#111', textTransform: 'uppercase' }}>
                 {freeSlots !== null ? t('onboarding.capturedCount', { count: photos.length, total: freeSlots }) : photos.length}
               </span>
@@ -237,8 +204,8 @@ function BatchCaptureScreen({
           </>
         )}
       </div>
-      <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
-        <div className="flex items-center justify-center gap-2" style={{ marginBottom: 12 }}>
+      <div className="px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
+        <div className="flex items-center justify-center gap-2 mb-4">
           <div style={{ color: GREEN }}><IconCheck size={14} /></div>
           <span className="font-body" style={{ fontSize: 13, color: '#666' }}>{t('onboarding.healthGrowthHint')}</span>
         </div>

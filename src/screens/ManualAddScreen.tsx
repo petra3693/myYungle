@@ -90,6 +90,12 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
     galleryInputRef.current?.click()
   }
 
+  /** The single "replace photo" control shown once a photo exists — offers the OS's own camera-or-gallery chooser on native (CameraSource.Prompt) rather than picking one for the user. */
+  function replacePhoto() {
+    if (Capacitor.isNativePlatform()) { void handleNativeCapture(CameraSource.Prompt); return }
+    galleryInputRef.current?.click()
+  }
+
   const wateringFrequencyLabel = draft ? frequencyLabel(draft.wateringFrequency, draft.wateringDays.length, t) : ''
   const usedSlots = Math.max(0, FREE_PLANT_LIMIT - remainingFreeSlots)
 
@@ -103,30 +109,45 @@ function ManualAddScreen({ onBack, onAdd, remainingFreeSlots, isPro, language, p
           {isPro ? t('manualAdd.unlimitedPlants') : t('manualAdd.slotsLeft', { remaining: remainingFreeSlots, total: FREE_PLANT_LIMIT })}
         </span>
       </div>
-      <div className="px-5 pb-4 shrink-0" style={{ height: 220 }}>
+      <div className="px-5 pb-4 shrink-0 h-44">
         {!photo ? (
           <div className="dash-picker w-full h-full flex flex-col items-center justify-center gap-2">
             <IconCamera size={28} />
             <span className="font-body" style={{ fontSize: 14, color: '#fff' }}>{t('manualAdd.uploadPhoto')}</span>
           </div>
         ) : (
-          <img src={photo} alt="" className="w-full h-full rounded-[1.5rem] object-cover" />
+          <div className="relative w-full h-full">
+            <img src={photo} alt="" className="w-full h-full rounded-2xl object-cover" />
+            <button
+              type="button"
+              onClick={replacePhoto}
+              className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full px-3"
+              style={{ height: 32, fontSize: 12, background: 'rgba(0,0,0,0.65)', color: '#fff' }}
+            >
+              <IconCamera size={14} />
+              {t('manualAdd.replacePhoto')}
+            </button>
+          </div>
         )}
       </div>
       <div className="flex-1 min-h-0 flex flex-col" style={{ background: '#fff', borderRadius: '1.75rem 1.75rem 0 0' }}>
-        <div className="scroll-y flex-1 px-5 pt-5">
-          <button type="button" onClick={() => void openCamera()} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>{t('manualAdd.takePhoto')}</button>
-          <button
-            type="button"
-            onClick={openGallery}
-            className="btn-outline-ink w-full mt-3"
-            style={{ height: 52, fontSize: 15 }}
-          >
-            {t('manualAdd.fromGallery')}
-          </button>
-          <div className="mt-3">
-            <PrivacyHintLine onShowDetails={() => setShowPrivacyDetails(true)} color="var(--color-ink-dim)" />
-          </div>
+        <div className="scroll-y flex-1 px-5 pt-5 pb-24">
+          {!photo && (
+            <>
+              <button type="button" onClick={() => void openCamera()} className="btn-fill w-full" style={{ height: 52, fontSize: 15 }}>{t('manualAdd.takePhoto')}</button>
+              <button
+                type="button"
+                onClick={openGallery}
+                className="btn-outline-ink w-full mt-3"
+                style={{ height: 52, fontSize: 15 }}
+              >
+                {t('manualAdd.fromGallery')}
+              </button>
+              <div className="mt-3">
+                <PrivacyHintLine onShowDetails={() => setShowPrivacyDetails(true)} color="var(--color-ink-dim)" />
+              </div>
+            </>
+          )}
 
           {analyzing && (
             <div className="flex flex-col items-center gap-2 mt-4">

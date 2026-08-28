@@ -1,0 +1,147 @@
+{
+  "identifier" : "54E02ACE-7FD2-4BB3-B162-D1C46B6DC800",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "internalID" : "1CF2902B-95EA-4819-9091-15A5B7E510E0",
+      "localizations" : [
+        {
+          "description" : "One-time purchase, lifetime access to all myJungle Pro features.",
+          "displayName" : "myJungle Pro Lifetime",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "myjungle_pro_lifetime",
+      "referenceName" : "myJungle Pro Lifetime",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0",
+    "_developerTeamID" : "0",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "9EE3BC1F-CBD2-46E1-817D-CD33508E271F",
+      "localizations" : [
+
+      ],
+      "name" : "myJungle Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "39.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "D556ABE6-1FF3-4206-B730-C3BFCCACA055",
+          "introductoryOffer" : {
+            "internalID" : "BFE7B2C6-A43D-4A6B-BE46-A77A9B254300",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Annual subscription to myJungle Pro, billed once a year.",
+              "displayName" : "myJungle Pro Annual",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "myjungle_pro_annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "myJungle Pro Annual",
+          "subscriptionGroupID" : "9EE3BC1F-CBD2-46E1-817D-CD33508E271F",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "2FD7D3D1-A3AF-46CB-8124-5197A18E08EB",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Monthly subscription to myJungle Pro, billed every month.",
+              "displayName" : "myJungle Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "myjungle_pro_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "myJungle Pro Monthly",
+          "subscriptionGroupID" : "9EE3BC1F-CBD2-46E1-817D-CD33508E271F",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

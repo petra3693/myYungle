@@ -59,10 +59,9 @@
     "step5": "A IA deteta quando uma planta adoece",
     "getStarted": "Começar",
     "captureTitle": "Traga a sua selva!",
-    "captureSubtitle": "Fotografe todas as suas plantas de uma vez — {{count}} vagas gratuitas.",
+    "captureSubtitle": "Fotografe as suas plantas ({{count}} vagas gratuitas)",
     "captureDone": "Iniciar análise de IA",
     "skipForNow": "Saltar por agora",
-    "freeSlotsHint": "{{count}} plantas grátis — o Pro remove o limite",
     "capturedCount": "{{count}}/{{total}} capturadas (grátis)",
     "healthGrowthHint": "Saúde e crescimento por scan — o Pro desbloqueia",
     "identifying_one": "A identificar {{count}} planta…",
@@ -185,6 +184,7 @@
     "uploadPhoto": "Carregar foto",
     "takePhoto": "Tirar foto",
     "fromGallery": "Da galeria",
+    "replacePhoto": "Alterar foto",
     "identifying": "A identificar a planta…",
     "enterManually": "Inserir detalhes manualmente",
     "plantName": "Nome da planta",
@@ -469,8 +469,7 @@
   },
   "privacyHint": {
     "captureLine": "As fotos são enviadas ao Google Gemini para análise por IA — nunca armazenadas nos nossos servidores nem usadas para publicidade.",
-    "detailsLink": "Detalhes",
-    "introTitle": "As tuas fotos, tratadas com cuidado"
+    "detailsLink": "Detalhes"
   },
   "aiDisclaimer": {
     "line": "Estimativa de IA apenas para fins informativos, não é um conselho veterinário ou profissional."

@@ -59,10 +59,9 @@
     "step5": "AI detecteert wanneer een plant ziek wordt",
     "getStarted": "Aan de slag",
     "captureTitle": "Breng je jungle binnen!",
-    "captureSubtitle": "Fotografeer al je planten in één keer — {{count}} gratis plekken.",
+    "captureSubtitle": "Fotografeer je planten ({{count}} gratis plekken)",
     "captureDone": "AI-analyse starten",
     "skipForNow": "Voorlopig overslaan",
-    "freeSlotsHint": "{{count}} gratis planten — Pro heft de limiet op",
     "capturedCount": "{{count}}/{{total}} vastgelegd (gratis)",
     "healthGrowthHint": "Gezondheid en groei via scan — Pro ontgrendelt dit",
     "identifying_one": "{{count}} plant identificeren…",
@@ -185,6 +184,7 @@
     "uploadPhoto": "Foto uploaden",
     "takePhoto": "Foto maken",
     "fromGallery": "Uit galerij",
+    "replacePhoto": "Foto wijzigen",
     "identifying": "Plant identificeren…",
     "enterManually": "Handmatig invoeren",
     "plantName": "Plantnaam",
@@ -469,8 +469,7 @@
   },
   "privacyHint": {
     "captureLine": "Foto's worden naar Google Gemini gestuurd voor AI-analyse — nooit opgeslagen op onze servers of gebruikt voor advertenties.",
-    "detailsLink": "Details",
-    "introTitle": "Jouw foto's, zorgvuldig behandeld"
+    "detailsLink": "Details"
   },
   "aiDisclaimer": {
     "line": "AI-inschatting, uitsluitend ter informatie — geen diergeneeskundig of professioneel advies."

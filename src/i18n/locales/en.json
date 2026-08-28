@@ -59,10 +59,9 @@
     "step5": "AI spots it when a plant gets sick",
     "getStarted": "Get started",
     "captureTitle": "Bring in your jungle!",
-    "captureSubtitle": "Photograph all your plants at once — {{count}} free slots.",
+    "captureSubtitle": "Photograph your plants ({{count}} free slots)",
     "captureDone": "Start AI analysis",
     "skipForNow": "Skip for now",
-    "freeSlotsHint": "{{count}} free plants — Pro removes the limit",
     "capturedCount": "{{count}}/{{total}} captured (free)",
     "healthGrowthHint": "Health & growth based on scan — Pro unlocks it",
     "identifying_one": "Identifying {{count}} plant…",
@@ -185,6 +184,7 @@
     "uploadPhoto": "Upload photo",
     "takePhoto": "Take photo",
     "fromGallery": "From gallery",
+    "replacePhoto": "Change photo",
     "identifying": "Identifying your plant…",
     "enterManually": "Enter details manually",
     "plantName": "Plant name",
@@ -469,8 +469,7 @@
   },
   "privacyHint": {
     "captureLine": "Photos are sent to Google Gemini for AI analysis — never stored on our servers or used for ads.",
-    "detailsLink": "Details",
-    "introTitle": "Your photos, handled carefully"
+    "detailsLink": "Details"
   },
   "aiDisclaimer": {
     "line": "AI estimate for informational purposes only — not veterinary or professional advice."

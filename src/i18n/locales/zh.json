@@ -59,10 +59,9 @@
     "step5": "AI 检测植物是否生病",
     "getStarted": "开始使用",
     "captureTitle": "把你的丛林带进来！",
-    "captureSubtitle": "一次性拍摄所有植物 — {{count}} 个免费名额。",
+    "captureSubtitle": "拍摄你的植物（{{count}} 个免费名额）",
     "captureDone": "开始 AI 分析",
     "skipForNow": "暂时跳过",
-    "freeSlotsHint": "{{count}} 株免费植物 — Pro 版取消限制",
     "capturedCount": "已拍摄 {{count}}/{{total}}（免费）",
     "healthGrowthHint": "通过扫描了解健康与生长状况 — Pro 解锁",
     "identifying_one": "正在识别 {{count}} 株植物…",
@@ -185,6 +184,7 @@
     "uploadPhoto": "上传照片",
     "takePhoto": "拍照",
     "fromGallery": "从相册选择",
+    "replacePhoto": "更换照片",
     "identifying": "正在识别植物…",
     "enterManually": "手动输入详情",
     "plantName": "植物名称",
@@ -469,8 +469,7 @@
   },
   "privacyHint": {
     "captureLine": "照片会发送给 Google Gemini 进行 AI 分析——绝不会存储在我们的服务器上，也不会用于广告。",
-    "detailsLink": "详情",
-    "introTitle": "你的照片会被谨慎处理"
+    "detailsLink": "详情"
   },
   "aiDisclaimer": {
     "line": "这是仅供参考的AI估算，不构成兽医或专业建议。"
