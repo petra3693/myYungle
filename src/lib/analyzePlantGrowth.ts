@@ -1,7 +1,7 @@
 import { parseImageDataUrl, toUserFriendlyAnalysisError } from '@/lib/geminiImage'
 import { compressImageForGemini, isInlinePhoto } from '@/lib/imageCompress'
 import { parseAiJson } from '@/lib/aiJson'
-import { appApiHeaders } from '@/lib/apiAuth'
+import { apiUrl, appApiHeaders } from '@/lib/apiAuth'
 import type { AppLanguage } from '@/i18n/languages'
 
 export interface AnalyzePlantGrowthResult {
@@ -38,11 +38,13 @@ export async function analyzePlantGrowthImage(
 
     let response: Response
     try {
-      response = await fetch('/api/analyze-plant-growth', {
+      const url = apiUrl('/api/analyze-plant-growth')
+      response = await fetch(url, {
         method: 'POST',
         headers: appApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ imageBase64, mimeType: 'image/jpeg', language }),
       })
+      console.log(`[myJungle] analyze-plant-growth: fetch to ${url} resolved with status ${response.status}`)
     } catch (error) {
       console.error('[myJungle] analyze-plant-growth network error:', error)
       return { ok: false, error: 'Could not reach the plant growth service. Check your connection and try again.' }
