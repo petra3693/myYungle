@@ -7,6 +7,8 @@ export interface VercelRequest {
 export interface VercelResponse {
   status: (code: number) => VercelResponse
   json: (body: unknown) => void
+  setHeader: (name: string, value: string) => void
+  end: () => void
 }
 
 /** Parse JSON string bodies (some Vercel runtimes deliver raw strings). */

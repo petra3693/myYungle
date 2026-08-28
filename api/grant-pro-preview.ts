@@ -4,12 +4,16 @@ import {
   type VercelRequest,
   type VercelResponse,
 } from './_shared.js'
+import { applyCors, handlePreflight } from './_cors.js'
 import { getClientIp, isAuthorizedRequest } from './_auth.js'
 import { checkRateLimit } from './_rateLimit.js'
 
 const RATE_LIMIT = { limit: 3, windowMs: 24 * 60 * 60 * 1000 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  applyCors(req, res)
+  if (handlePreflight(req, res)) return
+
   try {
     if (req.method !== 'POST') {
       return res.status(405).json({ success: false, error: 'Method not allowed' })

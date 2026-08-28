@@ -78,6 +78,76 @@ control-character-free developer-assigned id (`src/server/revenueCatPreviewHandl
 format-rejected — is logged server-side (`appUserId`, source IP) for abuse
 monitoring; none of that detail is echoed back to the client.
 
+## New: CORS — the native app calls these endpoints cross-origin
+
+The native iOS/Android build has no same-origin web page to relatively fetch
+against (see `src/lib/apiAuth.ts`'s `apiUrl()` and the "Native build
+environment" section below) — its WebView serves the bundled app from a
+local scheme (`capacitor://localhost` on iOS) and calls the deployed API at
+`https://my-jungle-app.vercel.app` cross-origin from there. Because the
+request carries `Content-Type: application/json` and a custom `X-App-Token`
+header, the browser inside the WebView sends a CORS preflight (`OPTIONS`)
+ahead of every real `POST` — this is standard browser behavior, not
+something the app can opt out of.
+
+This used to break plant identification (and every other `/api/*` call)
+specifically on native, while the web deployment worked fine: every
+handler's first check was `if (req.method !== 'POST') return
+res.status(405)...`, so the preflight's `OPTIONS` request got a bare `405`
+with no CORS headers at all. A browser treats that as a failed preflight and
+never sends the real `POST` — the client saw a plain network error, which
+the UI could only describe as "couldn't identify this plant", with nothing
+in the response pointing at CORS as the cause. It never showed up in web
+testing because a same-origin request needs no preflight.
+
+`api/_cors.ts` fixes this with two functions, both required, in this exact
+order in every handler — **before** the try/catch, **before** the method
+check, and critically **before** `isAuthorizedRequest()`:
+
+```ts
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  applyCors(req, res)                      // 1. set CORS headers on every response
+  if (handlePreflight(req, res)) return    // 2. answer OPTIONS immediately, then stop
+
+  try {
+    if (req.method !== 'POST') { ... }     // 3. method check
+    if (!isAuthorizedRequest(req)) { ... } // 4. token check
+    const rate = checkRateLimit(...)       // 5. rate limit
+    ...                                    // 6. the actual handler
+  } catch (err) { ... }
+}
+```
+
+- **`applyCors(req, res)`** echoes the request's `Origin` back as
+  `Access-Control-Allow-Origin` only when it's in `_cors.ts`'s
+  `ALLOWED_ORIGINS` allowlist (`capacitor://localhost`, `ionic://localhost`,
+  `http://localhost`, the local dev server origins, and the production web
+  origin) — **never** a `*` wildcard, which would let any third-party site
+  script these token-gated endpoints using a visitor's browser as a relay.
+  It also sets `Vary: Origin` so a shared/CDN cache never serves one origin's
+  CORS headers to a different origin. It's called unconditionally, before
+  the try/catch, so the headers land on every response the handler can
+  possibly send — success, `401`, `429`, `405`, or a `sendServerError()`
+  `500` — since a cross-origin caller can't read a response body or status
+  that arrives without them either.
+- **`handlePreflight(req, res)`** answers an `OPTIONS` request with `204` and
+  the `Access-Control-Allow-Methods` / `Access-Control-Allow-Headers` /
+  `Access-Control-Max-Age` headers the browser's preflight is checking for,
+  then returns `true` so the caller returns immediately — before the method
+  check (which would otherwise 405 it) and before `isAuthorizedRequest()`.
+  That ordering is load-bearing, not a style choice: a real preflight never
+  carries the app's own `X-App-Token` header (the browser sends only its own
+  standard `OPTIONS` probe, never a copy of the real request's custom
+  headers), so gating `OPTIONS` behind the token check would reject every
+  cross-origin preflight the same way the original `405` did.
+
+**Adding a new `/api/*` endpoint**: give it the same two-line CORS prelude
+(`applyCors` then `handlePreflight`, both before the try/catch) as the five
+listed here, in that same position ahead of the method/auth/rate-limit
+chain. A new native scheme, a new dev port, or a new deployment domain
+calling the API means adding it to `ALLOWED_ORIGINS` in `api/_cors.ts` —
+never widening it to `*`.
+
 ## Error responses never leak internals
 
 Every one of the five hardened endpoints now funnels unexpected failures
