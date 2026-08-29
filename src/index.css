@@ -540,11 +540,18 @@
   }
   .btn-ai:disabled { opacity: 0.5; animation: none; cursor: not-allowed; }
 
-  /* ── Bottom tab bar: separate neobrutalist circle buttons ── */
+  /* ── Bottom tab bar: one floating white "capsule" housing all items, with a
+     green circular highlight behind the active icon. Floats above the bottom
+     edge (see the `bottom` offset on the wrapper in TabBar's JSX) rather than
+     docking flush against it. ── */
   .tab-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    background: var(--color-card);
+    border-radius: 9999px;
+    padding: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   }
   .tab-bar__item {
     display: flex;
@@ -559,18 +566,20 @@
        max-width plus the label's own ellipsis (below) caps how far any
        single label can grow — 5 x 64px + gaps still fits comfortably within
        343px of available width on the narrowest supported screen (iPhone SE,
-       375px, minus the tab bar's 16px side margins). */
-    min-width: 52px;
-    max-width: 64px;
-    height: 64px;
+       375px, minus the tab bar's 16px side margins and the capsule's own padding). */
+    min-width: 48px;
+    max-width: 60px;
+    height: 56px;
     padding: 0 4px;
     border-radius: 9999px;
     cursor: pointer;
     color: #000000;
-    background: var(--color-card);
+    /* Transparent by default — the item no longer carries its own white
+       circle/shadow now that the shared capsule behind it provides that. */
+    background: transparent;
     border: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
     flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease;
   }
   .tab-bar__item.is-active {
     background: var(--color-green);
