@@ -186,12 +186,23 @@ function TabBar({ active, onChange, onAdd, addActive }: { active: Tab | null; on
     </div>
   )
 }
+/**
+ * healthScoreColor/confidenceColor/severityColor's "good" tier is the lime
+ * brand color — reads fine on a black background (see e.g. HealthHubScreen's
+ * use of healthScoreColor as text on --color-surface), but these three icons
+ * sit on this card's light #E6E6E6 tiles, where lime is nearly invisible.
+ * Only remaps that one tier; amber/red pass through unchanged.
+ */
+function iconSafeColor(color: string): string {
+  return color === GREEN ? '#065f46' : color
+}
+
 function HealthReportCard({ photo, plantName, scannedAt, result }: {
   photo: string; plantName: string; scannedAt: string; result: AnalyzePlantHealthResult
 }) {
   const { t } = useTranslation()
-  const statusColor = healthScoreColor(result.healthScore)
-  const confColor = confidenceColor(result.confidence)
+  const statusColor = iconSafeColor(healthScoreColor(result.healthScore))
+  const confColor = iconSafeColor(confidenceColor(result.confidence))
   const isLowConfidence = result.confidence < 50
   return (
     <>
@@ -211,7 +222,7 @@ function HealthReportCard({ photo, plantName, scannedAt, result }: {
             <span className="font-body" style={{ fontSize: 11, color: 'var(--color-ink-dim)' }}>{t('health.status')}</span>
           </div>
           <div className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: '#E6E6E6' }}>
-            <div style={{ color: severityColor(result.severity) }}><IconRuler size={16} /></div>
+            <div style={{ color: iconSafeColor(severityColor(result.severity)) }}><IconRuler size={16} /></div>
             <span className="font-heading" style={{ fontSize: 13, lineHeight: 1.2 }}>{t(`health.severity${result.severity}`)}</span>
             <span className="font-body" style={{ fontSize: 11, color: 'var(--color-ink-dim)' }}>{t('health.severity')}</span>
           </div>

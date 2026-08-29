@@ -1,7 +1,6 @@
 import { CaptureCancelledError, captureNativePhoto } from '@/lib/cameraCapture'
 import { requestCameraPermission } from '@/lib/permissions'
 import { readAndCompressPhotoFile } from '@/lib/plantStorage'
-import { GREEN } from '@/screens/shared/constants'
 import { IconCheck, IconChevronLeft, IconChevronRight, IconLock, IconPlus, IconX } from '@/screens/shared/icons'
 import { PrivacyDetailsSheet } from '@/screens/shared/sheets'
 import { IconCircleBtn, PrivacyHintLine } from '@/screens/shared/ui'
@@ -206,7 +205,9 @@ function BatchCaptureScreen({
       </div>
       <div className="px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0">
         <div className="flex items-center justify-center gap-2 mb-4">
-          <div style={{ color: GREEN }}><IconCheck size={14} /></div>
+          {/* #065f46 (dark green), not the lime brand GREEN — lime reads at ~1.3:1 against this
+              screen's light background (#f4f4f0), effectively invisible. */}
+          <div style={{ color: '#065f46' }}><IconCheck size={14} /></div>
           <span className="font-body" style={{ fontSize: 13, color: '#666' }}>{t('onboarding.healthGrowthHint')}</span>
         </div>
         <button
