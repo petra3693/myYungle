@@ -335,7 +335,18 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Gated on nativeStorageLoaded: on native, `plants`/`settings` start out as
+  // empty/default (see the useState initializers above — the real data hasn't
+  // loaded yet at that point) before the async native-load effect below
+  // replaces them with the real, persisted values. Without this guard, THIS
+  // effect fires first (same mount), instantly overwriting the real native
+  // file with that empty/default placeholder before the async load below
+  // even finishes reading it — a real data-loss bug: if the app is closed
+  // (backgrounded/killed) before the load wins that race, the placeholder is
+  // what's left on disk. Once nativeStorageLoaded flips to true, both effects
+  // behave exactly as before.
   useEffect(() => {
+    if (!nativeStorageLoaded) return
     let cancelled = false
     void savePlants(plants).then((result) => {
       if (cancelled) return
@@ -343,8 +354,11 @@ export default function App() {
       else setStorageError(null)
     })
     return () => { cancelled = true }
-  }, [plants])
-  useEffect(() => { void saveSettings(settings) }, [settings])
+  }, [plants, nativeStorageLoaded])
+  useEffect(() => {
+    if (!nativeStorageLoaded) return
+    void saveSettings(settings)
+  }, [settings, nativeStorageLoaded])
 
   // Native-only: one-time migration off localStorage, then the real async
   // load from @capacitor/filesystem. Web already has real data synchronously
@@ -354,15 +368,24 @@ export default function App() {
     if (nativeStorageLoaded) return
     let cancelled = false
     async function loadFromNativeStorage() {
-      await migrateLocalStorageToNative()
-      const [loadedPlants, loadedSettings] = await Promise.all([
-        loadPlantsFromStorageAsync(normalizePlant),
-        loadSettingsAsync(),
-      ])
-      if (cancelled) return
-      setPlants(loadedPlants)
-      setSettings(loadedSettings)
-      setNativeStorageLoaded(true)
+      try {
+        await migrateLocalStorageToNative()
+        const [loadedPlants, loadedSettings] = await Promise.all([
+          loadPlantsFromStorageAsync(normalizePlant),
+          loadSettingsAsync(),
+        ])
+        if (cancelled) return
+        setPlants(loadedPlants)
+        setSettings(loadedSettings)
+      } catch (error) {
+        // Never let a native-storage failure strand the app on the splash screen
+        // forever (neither Onboarding nor Main would ever show) — fall back to
+        // whatever's already in state (the web-oriented defaults from the
+        // useState initializers) so the app can still proceed.
+        console.error('[myJungle] Native storage load failed, continuing with default state:', error)
+      } finally {
+        if (!cancelled) setNativeStorageLoaded(true)
+      }
     }
     void loadFromNativeStorage()
     return () => { cancelled = true }

@@ -66,22 +66,36 @@ export async function writeNativeSettings(json: string): Promise<void> {
 export async function migrateLocalStorageToNative(): Promise<void> {
   if (!isNativeStorage()) return
 
-  const existingPlants = await readNativeFile(PLANTS_FILE)
-  if (existingPlants === null) {
-    const legacyPlants = safeLocalStorageGet(PLANTS_KEY)
-    if (legacyPlants !== null) {
-      await writeNativeFile(PLANTS_FILE, legacyPlants)
-      safeLocalStorageRemove(PLANTS_KEY)
+  // Each block is independently try/caught — a write failure migrating plants
+  // (disk space, permissions, whatever) must never prevent the settings block
+  // below from running. Before this, an uncaught throw here propagated out of
+  // the caller's loadFromNativeStorage() (App.tsx) with nothing to catch it,
+  // so setNativeStorageLoaded(true) never ran and the app stayed on the splash
+  // screen forever — neither Onboarding nor Main ever appeared.
+  try {
+    const existingPlants = await readNativeFile(PLANTS_FILE)
+    if (existingPlants === null) {
+      const legacyPlants = safeLocalStorageGet(PLANTS_KEY)
+      if (legacyPlants !== null) {
+        await writeNativeFile(PLANTS_FILE, legacyPlants)
+        safeLocalStorageRemove(PLANTS_KEY)
+      }
     }
+  } catch (error) {
+    console.error('[myJungle] Failed to migrate plants from localStorage to native storage:', error)
   }
 
-  const existingSettings = await readNativeFile(SETTINGS_FILE)
-  if (existingSettings === null) {
-    const legacySettings = safeLocalStorageGet(SETTINGS_KEY)
-    if (legacySettings !== null) {
-      await writeNativeFile(SETTINGS_FILE, legacySettings)
-      safeLocalStorageRemove(SETTINGS_KEY)
+  try {
+    const existingSettings = await readNativeFile(SETTINGS_FILE)
+    if (existingSettings === null) {
+      const legacySettings = safeLocalStorageGet(SETTINGS_KEY)
+      if (legacySettings !== null) {
+        await writeNativeFile(SETTINGS_FILE, legacySettings)
+        safeLocalStorageRemove(SETTINGS_KEY)
+      }
     }
+  } catch (error) {
+    console.error('[myJungle] Failed to migrate settings from localStorage to native storage:', error)
   }
 }
 
