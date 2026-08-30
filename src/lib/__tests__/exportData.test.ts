@@ -62,6 +62,7 @@ function makeSettings(): AppSettings {
     proPreviewBannerDismissed: false,
     paywallDismissedCount: 0,
     lastPaywallShownAt: null,
+    hasSeenReviewPrompt: false,
   }
 }
 

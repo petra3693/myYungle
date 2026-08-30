@@ -17,7 +17,7 @@ Information provided according to applicable imprint / provider identification r
 ## Service
 
 myJungle Plant Watering Tracker
-Web: https://www.lumenapp.studio/
+Web: https://www.lumenapp.studio/myjungle
 
 ## Operator
 

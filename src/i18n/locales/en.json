@@ -257,6 +257,11 @@
     "language": "Language",
     "exportData": "Export my data",
     "resetData": "Reset all data",
+    "sectionSupport": "Support",
+    "rateApp": "Rate the app",
+    "reportBug": "Report a bug",
+    "suggestFeature": "Suggest a feature",
+    "emailSupport": "Email support",
     "sectionLegal": "Legal",
     "termsOfUse": "Terms of Use",
     "privacyPolicy": "Privacy Policy",
@@ -275,6 +280,24 @@
     "body": "Pro lets you add unlimited plants, plus health & growth tracking and priority support.",
     "unlockPro": "Unlock Pro",
     "cancel": "Cancel"
+  },
+  "reviewPrompt": {
+    "title": "How do you like myJungle?",
+    "starLabel": "Rate {{count}} out of 5",
+    "notNow": "Not now",
+    "feedbackTitle": "Sorry to hear that! How can we make the app better?",
+    "feedbackPlaceholder": "Tell us what's bothering you…",
+    "send": "Send",
+    "sending": "Sending…",
+    "thanksTitle": "Thanks for your feedback!"
+  },
+  "feedbackForm": {
+    "bugTitle": "Report a bug",
+    "featureTitle": "Suggest a feature",
+    "bugPlaceholder": "What went wrong? The more detail, the better.",
+    "featurePlaceholder": "What would you like to see in myJungle?",
+    "submit": "Submit",
+    "sentThanks": "Thanks! We've got your message."
   },
   "paywall": {
     "proBenefit1": "Unlimited AI health & disease diagnosis",
@@ -390,6 +413,7 @@
     "upToDateLabel": "All Schedules Up to Date"
   },
   "legal": {
+    "viewOnWebsite": "View on our website",
     "terms": {
       "lastUpdated": "Last updated: August 27, 2026",
       "intro": "By using myJungle (“the App”), you agree to use it for its intended purpose: tracking and caring for your houseplants. These Terms form an agreement between you and Petra Szakacs (operating as Lumen Studio) (“we”, “us”, “the operator”), the operator of the App.",
@@ -447,7 +471,7 @@
       "intro": "Information provided according to applicable imprint / provider identification requirements.",
       "serviceHeading": "Service",
       "serviceName": "myJungle Plant Watering Tracker",
-      "serviceWeb": "Web: https://www.lumenapp.studio/",
+      "serviceWeb": "Web: https://www.lumenapp.studio/myjungle",
       "operatorHeading": "Operator",
       "operatorCompanyName": "Company / sole trader name: Petra Szakacs (operating as Lumen Studio)",
       "operatorAddress": "Address: Einbecker Straße 64A, 10315 Berlin, Germany",

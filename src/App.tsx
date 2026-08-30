@@ -18,6 +18,7 @@ import { exportUserData, type ExportResult } from '@/lib/exportData'
 import { requestCameraPermission, requestNotificationPermission, type NotificationPermissionStatus } from '@/lib/permissions'
 import { FREE_PLANT_LIMIT, FREE_HEALTH_SCANS, ENTITLEMENT_PRO, PRODUCT_ANNUAL, PRODUCT_MONTHLY, PRODUCT_LIFETIME, PROMOTIONAL_STORE, canAddMorePlants, canStartHealthScan, isFoundingMember, canShowLifetimeOffer, canShowHabitUpsellCard, trialLengthFromIntroPrice, paywallCopyForSource, type PaywallSource } from '@/lib/monetization'
 import { requestProPreview } from '@/lib/revenueCatPreview'
+import { openStoreReviewPage } from '@/lib/appReview'
 import { logEvent } from '@/lib/analytics'
 import { LEGAL_TITLE_KEYS, type LegalDoc } from '@/legal/legalContent'
 import { getDeviceTimezone, syncWateringNotifications } from '@/lib/notifications'
@@ -30,7 +31,7 @@ import { GREEN, DAYS, DEFAULT_SETTINGS } from '@/screens/shared/constants'
 import { normalizePlant, loadPlants, savePlants, loadSettings, loadSettingsAsync, saveSettings, loadLanguage, saveLanguage, plantHistory } from '@/screens/shared/storage'
 import { todayISO, withMinDelay, identifyPhoto } from '@/screens/shared/helpers'
 import { AiThinkingScreen, TabBar } from '@/screens/shared/ui'
-import { LanguagePickerSheet, NotificationSettingsSheet, WateringScheduleSettingsSheet, LimitReachedSheet, ResetDataSheet } from '@/screens/shared/sheets'
+import { LanguagePickerSheet, NotificationSettingsSheet, WateringScheduleSettingsSheet, LimitReachedSheet, ResetDataSheet, ReviewPromptSheet, FeedbackFormSheet } from '@/screens/shared/sheets'
 import SplashScreen from '@/screens/SplashScreen'
 import OnboardingWelcome from '@/screens/OnboardingWelcome'
 import BatchCaptureScreen from '@/screens/BatchCaptureScreen'
@@ -94,6 +95,8 @@ export default function App() {
   const [storageError, setStorageError] = useState<string | null>(null)
   const [showLimitSheet, setShowLimitSheet] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [showReviewPrompt, setShowReviewPrompt] = useState(false)
+  const [feedbackFormMode, setFeedbackFormMode] = useState<'bug' | 'feature' | null>(null)
   const [aiThinkingLabel, setAiThinkingLabel] = useState<string | null>(null)
   const [healthFlowConfig, setHealthFlowConfig] = useState<{ mode: 'new' | 'existing'; presetPlant: Plant | null } | null>(null)
   const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null)
@@ -526,7 +529,11 @@ export default function App() {
 
   function handleSaveHealthLog(plantId: string, log: PlantHealthLog) {
     setPlants((prev) => prev.map((p) => (p.id === plantId ? { ...p, healthLogs: [log, ...p.healthLogs] } : p)))
+    const isFirstEverScan = settings.healthScansUsed === 0
     setSettings((s) => ({ ...s, healthScansUsed: s.healthScansUsed + 1 }))
+    if (isFirstEverScan && !settings.hasSeenReviewPrompt) {
+      setShowReviewPrompt(true)
+    }
   }
 
   /**
@@ -930,6 +937,8 @@ export default function App() {
           onPickLanguage={() => setShowLanguagePicker(true)}
           onChangePrimaryWateringDay={handleChangePrimaryWateringDay}
           onToggleNotifications={handleToggleNotifications}
+          onRateApp={openStoreReviewPage}
+          onOpenFeedback={setFeedbackFormMode}
         />
       )
     }
@@ -964,6 +973,14 @@ export default function App() {
           onCancel={() => setShowResetConfirm(false)}
           onConfirm={() => { setShowResetConfirm(false); handleReset() }}
         />
+      )}
+      {showReviewPrompt && (
+        <ReviewPromptSheet
+          onClose={() => { setShowReviewPrompt(false); setSettings((s) => ({ ...s, hasSeenReviewPrompt: true })) }}
+        />
+      )}
+      {feedbackFormMode && (
+        <FeedbackFormSheet mode={feedbackFormMode} onClose={() => setFeedbackFormMode(null)} />
       )}
       {showLanguagePicker && (
         <LanguagePickerSheet

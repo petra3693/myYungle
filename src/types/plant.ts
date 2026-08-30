@@ -110,4 +110,6 @@ export interface AppSettings {
   paywallDismissedCount: number
   /** ISO timestamp the paywall was shown for the dismissal immediately before the current one — null before the first-ever dismissal. */
   lastPaywallShownAt: string | null
+  /** The satisfaction/review prompt is shown at most once, ever — right after the first successful Health Check. */
+  hasSeenReviewPrompt: boolean
 }

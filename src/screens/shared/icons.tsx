@@ -70,5 +70,13 @@ const IconDotsHorizontal = (p: { size?: number }) => <Icon {...p}><circle cx="5"
 const IconChevronRight = (p: { size?: number }) => <Icon {...p}><path d="M9 5l7 7-7 7" /></Icon>
 const IconGlobe = (p: { size?: number }) => <Icon {...p}><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z" /></Icon>
 const IconRuler = (p: { size?: number }) => <Icon {...p}><rect x="3" y="8" width="18" height="8" rx="1.5" /><path d="M7 8v3M11 8v3M15 8v3" /></Icon>
+const IconMail = (p: { size?: number }) => <Icon {...p}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></Icon>
+const IconMessageCircle = (p: { size?: number }) => <Icon {...p}><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-4-1L3 20l1.5-4.5A8.38 8.38 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z" /></Icon>
+// Not built on the shared Icon() wrapper — needs a per-star solid/outline fill, which that wrapper hardcodes to none.
+const IconStar = ({ size = 20, filled = false }: { size?: number; filled?: boolean }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden>
+    <path d="M12 2.5l2.9 6.4 6.9.7-5.2 4.8 1.5 6.9-6.1-3.6-6.1 3.6 1.5-6.9-5.2-4.8 6.9-.7L12 2.5z" />
+  </svg>
+)
 
-export { Icon, NavIcon, IconNavHome, IconNavCalendar, IconNavAdd, IconNavHealth, IconNavSettings, IconLeaf, IconCalendar, IconChevronLeft, IconChevronDown, IconX, IconCamera, IconPlus, IconMenu, IconBell, IconBellOff, IconCheck, IconAlert, IconSparkles, IconDroplet, IconPaw, IconLock, IconSun, IconDownload, IconTrash, IconThermometer, IconDroplets, IconCalendarSmall, IconDotsHorizontal, IconChevronRight, IconGlobe, IconRuler }
+export { Icon, NavIcon, IconNavHome, IconNavCalendar, IconNavAdd, IconNavHealth, IconNavSettings, IconLeaf, IconCalendar, IconChevronLeft, IconChevronDown, IconX, IconCamera, IconPlus, IconMenu, IconBell, IconBellOff, IconCheck, IconAlert, IconSparkles, IconDroplet, IconPaw, IconLock, IconSun, IconDownload, IconTrash, IconThermometer, IconDroplets, IconCalendarSmall, IconDotsHorizontal, IconChevronRight, IconGlobe, IconRuler, IconMail, IconMessageCircle, IconStar }

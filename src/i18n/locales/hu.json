@@ -257,6 +257,11 @@
     "language": "Nyelv",
     "exportData": "Adataim exportálása",
     "resetData": "Összes adat visszaállítása",
+    "sectionSupport": "Támogatás",
+    "rateApp": "Értékeld az appot",
+    "reportBug": "Hiba bejelentése",
+    "suggestFeature": "Ötlet beküldése",
+    "emailSupport": "E-mail támogatás",
     "sectionLegal": "Jogi információk",
     "termsOfUse": "Felhasználási feltételek",
     "privacyPolicy": "Adatvédelmi szabályzat",
@@ -275,6 +280,24 @@
     "body": "A Pro-val korlátlan növényt adhatsz hozzá, plusz egészség- & növekedéskövetést és elsőbbségi támogatást kapsz.",
     "unlockPro": "Pro feloldása",
     "cancel": "Mégse"
+  },
+  "reviewPrompt": {
+    "title": "Hogy tetszik a myJungle?",
+    "starLabel": "{{count}}/5 csillag",
+    "notNow": "Most nem",
+    "feedbackTitle": "Sajnáljuk! Mivel tehetnénk jobbá az appot?",
+    "feedbackPlaceholder": "Mondd el, mi zavar…",
+    "send": "Küldés",
+    "sending": "Küldés…",
+    "thanksTitle": "Köszönjük a visszajelzést!"
+  },
+  "feedbackForm": {
+    "bugTitle": "Hiba bejelentése",
+    "featureTitle": "Ötlet beküldése",
+    "bugPlaceholder": "Mi történt? Minél részletesebben írod le, annál jobb.",
+    "featurePlaceholder": "Mit szeretnél látni a myJungle-ben?",
+    "submit": "Beküldés",
+    "sentThanks": "Köszönjük! Megkaptuk az üzeneted."
   },
   "paywall": {
     "proBenefit1": "Korlátlan AI egészség- & betegségdiagnosztika",
@@ -390,6 +413,7 @@
     "upToDateLabel": "Minden ütemterv naprakész"
   },
   "legal": {
+    "viewOnWebsite": "Megtekintés a weboldalunkon",
     "terms": {
       "lastUpdated": "Utoljára frissítve: 2026. augusztus 27.",
       "intro": "A myJungle („az Alkalmazás”) használatával elfogadod, hogy azt rendeltetésszerűen használod: szobanövényeid öntözésének nyomon követésére és gondozására. Ezek a Felhasználási feltételek megállapodást hoznak létre közted és Petra Szakacs (Lumen Studio néven működő) („mi”, „minket”, „az üzemeltető”) között, aki az Alkalmazás üzemeltetője.",
@@ -447,7 +471,7 @@
       "intro": "A vonatkozó impresszum- / szolgáltatóazonosítási követelmények szerint megadott információk.",
       "serviceHeading": "Szolgáltatás",
       "serviceName": "myJungle Plant Watering Tracker",
-      "serviceWeb": "Web: https://www.lumenapp.studio/",
+      "serviceWeb": "Web: https://www.lumenapp.studio/myjungle",
       "operatorHeading": "Üzemeltető",
       "operatorCompanyName": "Cég / egyéni vállalkozó neve: Petra Szakacs (Lumen Studio néven működik)",
       "operatorAddress": "Cím: Einbecker Straße 64A, 10315 Berlin, Németország",

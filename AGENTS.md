@@ -2,6 +2,32 @@
 
 React + Vite + Tailwind CSS project running inside Figma Make.
 
+## Operating principles
+
+- Be direct and action-oriented: make the exact code change or run the command rather than describing what you'd do.
+- Inspect before writing: read the relevant files, types, and existing helpers before assuming how something works — this repo has non-obvious project-specific helpers (e.g. `describeRevenueCatError()`, `resolvePackage()` in `src/lib/monetization.ts`).
+- Make incremental, targeted edits. Don't rewrite a whole file for a small fix, and don't refactor beyond what was asked.
+- Before declaring a task done, run the relevant verification command(s) from "Standard workflows" below (typecheck/build/test) and fix any failures yourself rather than reporting them back unresolved.
+
+## Coding standards
+
+- TypeScript strict mode: avoid `any`; use explicit types/interfaces for props, state, and API payloads.
+- Keep UI components presentational; put non-trivial logic in custom hooks (`useCamelCase`) rather than inline in components.
+- Wrap async operations (network requests, Filesystem/storage I/O) in `try/catch` with a real fallback state — see the RevenueCat `offeringsStatus`/`offeringsErrorDetail` pattern in `src/App.tsx` for the shape this repo already uses.
+- Naming: components `PascalCase`, hooks `useCamelCase`, helpers/utils `camelCase`, types/interfaces `PascalCase`.
+- See "Code quality" below for repo-specific gotchas (quoting, JSX, exports).
+
+## Standard workflows
+
+This project has no separate lint script — formatting is `oxfmt`, not ESLint/Prettier.
+
+- Development: `npm run dev` (Vite on `$PORT`, default 8443 — usually already running, see below)
+- Typecheck: `npm run typecheck` (`tsc --noEmit`)
+- Test: `npm run test` (`vitest run`)
+- Build verification: `npm run build` (`vite build` — also enforces the RevenueCat key guardrail in `vite.config.ts` for `mode === 'production'`)
+- Format: `npm run format` (oxfmt)
+- Native sync: `npm run sync:mobile` (build + `cap copy` + `cap sync`) before opening Xcode/Android Studio
+
 ## Development Server
 
 A Vite development server is **already running** on `$PORT` (default 8443). You don't need to start it manually.
@@ -27,6 +53,10 @@ This is the canonical project structure. Start with task-relevant files below. O
 - Styling: Tailwind CSS v4 with the `@tailwindcss/vite` plugin
 - Build tooling: Vite 8, TypeScript 5.7, and `@vitejs/plugin-react`
 - Formatting: oxfmt
+- State management: plain React state/hooks — no Zustand/Redux/React Query in this project
+- Storage: `localStorage` and `idb-keyval` on web; `@capacitor/filesystem` for native photo storage — no backend database
+- Native shell: Capacitor 8 (iOS + Android), bundle id `com.lumenappstudio.myjungle`
+- Monetization: `@revenuecat/purchases-capacitor` — see "Environment variables" below
 
 ## Styling
 

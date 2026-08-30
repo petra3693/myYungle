@@ -4,7 +4,7 @@ import { type ExportResult } from '@/lib/exportData'
 import { checkNotificationPermissionStatus, type NotificationPermissionStatus } from '@/lib/permissions'
 import { APP_VERSION, GREEN } from '@/screens/shared/constants'
 import { fullDayName } from '@/screens/shared/helpers'
-import { IconChevronRight, IconDownload, IconSparkles, IconTrash } from '@/screens/shared/icons'
+import { IconChevronRight, IconDownload, IconMail, IconMessageCircle, IconSparkles, IconStar, IconTrash } from '@/screens/shared/icons'
 import { DayPickerSheet } from '@/screens/shared/sheets'
 import { Toggle } from '@/screens/shared/ui'
 import { type AppSettings, type UserState } from '@/types/plant'
@@ -14,11 +14,16 @@ import { useTranslation } from 'react-i18next'
 
 // ─── Screen: Profile ────────────────────────────────────────────────────────
 
-function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, onOpenLegal, language, onPickLanguage, onChangePrimaryWateringDay, onToggleNotifications }: {
+function ProfileScreen({
+  settings, user, onSave, onExport, onReset, onShowPro, onOpenLegal, language, onPickLanguage, onChangePrimaryWateringDay, onToggleNotifications,
+  onRateApp, onOpenFeedback,
+}: {
   settings: AppSettings; user: UserState; onSave: (s: AppSettings) => void
   onExport: () => Promise<ExportResult>; onReset: () => void; onShowPro: () => void; onOpenLegal: (doc: LegalDoc) => void
   language: AppLanguage; onPickLanguage: () => void; onChangePrimaryWateringDay: (day: number) => void
   onToggleNotifications: () => Promise<void>
+  onRateApp: () => void
+  onOpenFeedback: (mode: 'bug' | 'feature') => void
 }) {
   const { t } = useTranslation()
   const [showNotifSettings, setShowNotifSettings] = useState(false)
@@ -149,6 +154,28 @@ function ProfileScreen({ settings, user, onSave, onExport, onReset, onShowPro, o
           <IconTrash size={18} />
           <span className="font-heading" style={{ fontSize: 16, color: '#FF3B30' }}>{t('settings.resetData')}</span>
         </button>
+
+        <span className="caption-eyebrow block px-5" style={{ color: 'var(--color-ink-dim)', paddingBottom: 8, paddingTop: 20 }}>{t('settings.sectionSupport')}</span>
+        <button type="button" onClick={onRateApp} className="flex items-center gap-3 w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <div style={{ color: '#F5A623' }}><IconStar size={18} filled /></div>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>{t('settings.rateApp')}</span>
+        </button>
+        <button type="button" onClick={() => onOpenFeedback('bug')} className="flex items-center gap-3 w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <div style={{ color: '#111' }}><IconMessageCircle size={18} /></div>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>{t('settings.reportBug')}</span>
+        </button>
+        <button type="button" onClick={() => onOpenFeedback('feature')} className="flex items-center gap-3 w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+          <div style={{ color: '#111' }}><IconSparkles size={18} /></div>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>{t('settings.suggestFeature')}</span>
+        </button>
+        <a
+          href={`mailto:contact@lumenapp.studio?subject=${encodeURIComponent('[myJungle Feedback]')}`}
+          className="flex items-center gap-3 w-full px-5 py-4"
+          style={{ borderBottom: '1px solid #eee' }}
+        >
+          <div style={{ color: '#111' }}><IconMail size={18} /></div>
+          <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>{t('settings.emailSupport')}</span>
+        </a>
 
         <span className="caption-eyebrow block px-5" style={{ color: 'var(--color-ink-dim)', paddingBottom: 8, paddingTop: 20 }}>{t('settings.sectionLegal')}</span>
         <button type="button" onClick={() => onOpenLegal('terms')} className="flex items-center justify-between w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>

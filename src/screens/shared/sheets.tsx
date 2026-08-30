@@ -1,10 +1,12 @@
 import { LANGUAGE_OPTIONS, type AppLanguage } from '@/i18n/languages'
 import { LEGAL_BLOCKS, LEGAL_TITLE_KEYS } from '@/legal/legalContent'
+import { openStoreReviewPage } from '@/lib/appReview'
+import { submitFeedback } from '@/lib/feedbackApi'
 import { FREE_PLANT_LIMIT } from '@/lib/monetization'
 import { checkNotificationPermissionStatus, type NotificationPermissionStatus } from '@/lib/permissions'
-import { FULL_DAY_NAMES, GREEN } from '@/screens/shared/constants'
+import { FULL_DAY_NAMES, GREEN, PRIVACY_POLICY_URL } from '@/screens/shared/constants'
 import { fullDayName } from '@/screens/shared/helpers'
-import { IconAlert, IconCheck, IconChevronRight, IconX } from '@/screens/shared/icons'
+import { IconAlert, IconCheck, IconChevronRight, IconStar, IconX } from '@/screens/shared/icons'
 import { IconCircleBtn, Toggle } from '@/screens/shared/ui'
 import { Capacitor } from '@capacitor/core'
 import { useEffect, useState } from 'react'
@@ -339,6 +341,14 @@ function PrivacyDetailsSheet({ onClose }: { onClose: () => void }) {
                 </p>
               ),
             )}
+            <button
+              type="button"
+              onClick={() => window.open(PRIVACY_POLICY_URL, '_blank')}
+              className="font-body text-left"
+              style={{ fontSize: 13, color: 'var(--color-ink-dim)', textDecoration: 'underline' }}
+            >
+              {t('legal.viewOnWebsite')}
+            </button>
           </div>
         </div>
       </div>
@@ -402,4 +412,198 @@ function ResetDataSheet({ onConfirm, onCancel }: { onConfirm: () => void; onCanc
   )
 }
 
-export { DayPickerSheet, ConfirmSheet, LanguagePickerSheet, NotificationSettingsSheet, WateringScheduleSettingsSheet, PrivacyDetailsSheet, LimitReachedSheet, ResetDataSheet }
+// ─── Review / Feedback ─────────────────────────────────────────────────────
+
+/**
+ * Two-step satisfaction prompt: a 4-5 star tap goes straight to the store's
+ * review page; a 1-3 star tap stays in-app with a short "how can we improve"
+ * form instead of sending an unhappy user to leave a public bad review.
+ * `onClose` fires for every exit path (backdrop, "not now", after opening the
+ * store, after a feedback send) — the caller marks hasSeenReviewPrompt on it
+ * unconditionally, since this is a one-time prompt, not a nag-until-rated one.
+ */
+function ReviewPromptSheet({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const [step, setStep] = useState<'rate' | 'feedback' | 'thanks'>('rate')
+  const [rating, setRating] = useState(0)
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
+  function close() { setOpen(false); setTimeout(onClose, 180) }
+
+  function handleRate(stars: number) {
+    setRating(stars)
+    if (stars >= 4) {
+      openStoreReviewPage()
+      close()
+    } else {
+      setStep('feedback')
+    }
+  }
+
+  async function handleSubmitFeedback() {
+    if (!text.trim()) return
+    setSending(true)
+    setError(null)
+    const result = await submitFeedback({ thought: text.trim() })
+    setSending(false)
+    if (result.ok) {
+      setStep('thanks')
+      setTimeout(close, 1400)
+    } else {
+      setError(result.error)
+    }
+  }
+
+  return createPortal(
+    <>
+      <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={close} />
+      <div className="fixed left-4 right-4 z-[100]" style={{ top: '50%', transform: 'translateY(-50%)' }}>
+        <div className={`modal-card ${open ? 'is-open' : ''} p-6 flex flex-col items-center gap-4 text-center`}>
+          {step === 'rate' && (
+            <>
+              <h2 className="font-heading" style={{ fontSize: 20, lineHeight: 1.2 }}>{t('reviewPrompt.title')}</h2>
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => handleRate(n)}
+                    aria-label={t('reviewPrompt.starLabel', { count: n })}
+                    style={{ color: n <= rating ? '#F5A623' : '#D8D8D8' }}
+                  >
+                    <IconStar size={32} filled={n <= rating} />
+                  </button>
+                ))}
+              </div>
+              <button type="button" onClick={close} className="font-body" style={{ fontSize: 13, color: 'var(--color-ink-dim)' }}>{t('reviewPrompt.notNow')}</button>
+            </>
+          )}
+          {step === 'feedback' && (
+            <>
+              <h2 className="font-heading" style={{ fontSize: 18, lineHeight: 1.3 }}>{t('reviewPrompt.feedbackTitle')}</h2>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={4}
+                placeholder={t('reviewPrompt.feedbackPlaceholder')}
+                className="font-body w-full"
+                style={{ fontSize: 14, color: '#111', background: '#E6E6E6', borderRadius: 14, border: 'none', padding: 12, resize: 'none' }}
+              />
+              {error && <p className="font-body" style={{ fontSize: 13, color: '#FF3B30' }}>{error}</p>}
+              <button
+                type="button"
+                onClick={() => void handleSubmitFeedback()}
+                disabled={sending || !text.trim()}
+                className="btn-fill w-full"
+                style={{ height: 52, opacity: sending || !text.trim() ? 0.5 : 1 }}
+              >
+                {sending ? t('reviewPrompt.sending') : t('reviewPrompt.send')}
+              </button>
+              <button type="button" onClick={close} className="font-body" style={{ fontSize: 13, color: 'var(--color-ink-dim)' }}>{t('common.cancel')}</button>
+            </>
+          )}
+          {step === 'thanks' && (
+            <>
+              <div className="flex items-center justify-center rounded-full" style={{ width: 64, height: 64, background: '#e8f7ee' }}>
+                <div style={{ color: '#0a8f3f' }}><IconCheck size={28} /></div>
+              </div>
+              <h2 className="font-heading" style={{ fontSize: 18 }}>{t('reviewPrompt.thanksTitle')}</h2>
+            </>
+          )}
+        </div>
+      </div>
+    </>,
+    document.body,
+  )
+}
+
+/** Settings → Contact & Feedback's "Report a bug" / "Suggest a feature" forms — same /api/feedback backend as ReviewPromptSheet, routed into the "issue" (bug) vs. "contact" (feature) field the server already formats separately. */
+function FeedbackFormSheet({ mode, onClose }: { mode: 'bug' | 'feature'; onClose: () => void }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
+
+  useEffect(() => { const f = requestAnimationFrame(() => setOpen(true)); return () => cancelAnimationFrame(f) }, [])
+  function close() { setOpen(false); setTimeout(onClose, 180) }
+
+  async function handleSubmit() {
+    if (!text.trim()) return
+    setSending(true)
+    setError(null)
+    const result = await submitFeedback(mode === 'bug' ? { issue: text.trim() } : { contact: text.trim() })
+    setSending(false)
+    if (result.ok) {
+      setSent(true)
+      setTimeout(close, 1400)
+    } else {
+      setError(result.error)
+    }
+  }
+
+  const title = mode === 'bug' ? t('feedbackForm.bugTitle') : t('feedbackForm.featureTitle')
+  const placeholder = mode === 'bug' ? t('feedbackForm.bugPlaceholder') : t('feedbackForm.featurePlaceholder')
+
+  return createPortal(
+    <>
+      <div className={`sheet-backdrop ${open ? 'is-open' : ''}`} onClick={close} />
+      <div className="fixed left-0 right-0 bottom-0 z-[100]">
+        <div className={`sheet-panel ${open ? 'is-open' : ''} p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-4`}>
+          <div className="flex items-center justify-between">
+            <span className="font-heading" style={{ fontSize: 18 }}>{title}</span>
+            <IconCircleBtn onClick={close} label={t('common.close')}><IconX size={16} /></IconCircleBtn>
+          </div>
+          {sent ? (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <div className="flex items-center justify-center rounded-full" style={{ width: 56, height: 56, background: '#e8f7ee' }}>
+                <div style={{ color: '#0a8f3f' }}><IconCheck size={24} /></div>
+              </div>
+              <p className="font-body" style={{ fontSize: 14, color: '#444' }}>{t('feedbackForm.sentThanks')}</p>
+            </div>
+          ) : (
+            <>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={5}
+                placeholder={placeholder}
+                className="font-body w-full"
+                style={{ fontSize: 14, color: '#111', background: '#E6E6E6', borderRadius: 14, border: 'none', padding: 12, resize: 'none' }}
+              />
+              {error && <p className="font-body" style={{ fontSize: 13, color: '#FF3B30' }}>{error}</p>}
+              <button
+                type="button"
+                onClick={() => void handleSubmit()}
+                disabled={sending || !text.trim()}
+                className="btn-fill w-full"
+                style={{ height: 52, opacity: sending || !text.trim() ? 0.5 : 1 }}
+              >
+                {sending ? t('reviewPrompt.sending') : t('feedbackForm.submit')}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </>,
+    document.body,
+  )
+}
+
+export {
+  DayPickerSheet,
+  ConfirmSheet,
+  LanguagePickerSheet,
+  NotificationSettingsSheet,
+  WateringScheduleSettingsSheet,
+  PrivacyDetailsSheet,
+  LimitReachedSheet,
+  ResetDataSheet,
+  ReviewPromptSheet,
+  FeedbackFormSheet,
+}
