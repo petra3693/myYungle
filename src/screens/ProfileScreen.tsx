@@ -22,7 +22,7 @@ function ProfileScreen({
   onExport: () => Promise<ExportResult>; onReset: () => void; onShowPro: () => void; onOpenLegal: (doc: LegalDoc) => void
   language: AppLanguage; onPickLanguage: () => void; onChangePrimaryWateringDay: (day: number) => void
   onToggleNotifications: () => Promise<void>
-  onRateApp: () => void
+  onRateApp: () => boolean
   onOpenFeedback: (mode: 'bug' | 'feature') => void
 }) {
   const { t } = useTranslation()
@@ -156,7 +156,12 @@ function ProfileScreen({
         </button>
 
         <span className="caption-eyebrow block px-5" style={{ color: 'var(--color-ink-dim)', paddingBottom: 8, paddingTop: 20 }}>{t('settings.sectionSupport')}</span>
-        <button type="button" onClick={onRateApp} className="flex items-center gap-3 w-full px-5 py-4" style={{ borderBottom: '1px solid #eee' }}>
+        <button
+          type="button"
+          onClick={() => { if (!onRateApp()) showToast(t('settings.rateAppUnavailable')) }}
+          className="flex items-center gap-3 w-full px-5 py-4"
+          style={{ borderBottom: '1px solid #eee' }}
+        >
           <div style={{ color: '#F5A623' }}><IconStar size={18} filled /></div>
           <span className="font-heading" style={{ fontSize: 16, color: '#111' }}>{t('settings.rateApp')}</span>
         </button>

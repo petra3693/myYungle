@@ -437,8 +437,15 @@ function ReviewPromptSheet({ onClose }: { onClose: () => void }) {
   function handleRate(stars: number) {
     setRating(stars)
     if (stars >= 4) {
-      openStoreReviewPage()
-      close()
+      // openStoreReviewPage() returns false on iOS while APP_STORE_ID is still
+      // unset (no store listing yet) — still thank them instead of just
+      // silently closing with nothing having visibly happened.
+      if (openStoreReviewPage()) {
+        close()
+      } else {
+        setStep('thanks')
+        setTimeout(close, 1400)
+      }
     } else {
       setStep('feedback')
     }

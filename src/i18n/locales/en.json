@@ -259,6 +259,7 @@
     "resetData": "Reset all data",
     "sectionSupport": "Support",
     "rateApp": "Rate the app",
+    "rateAppUnavailable": "Not available yet — check back once the app is live on the store.",
     "reportBug": "Report a bug",
     "suggestFeature": "Suggest a feature",
     "emailSupport": "Email support",
